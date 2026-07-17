@@ -47,7 +47,7 @@ export default function ServicePage() {
       </header>
 
       <main className={styles.page}>
-        <SubHero en="SERVICE / OUR BUSINESS" ja="事業案内" lead="現場を支える、6つの事業。板金塗装から車両陸送まで、確かな技術でワンストップ対応します。" />
+        <SubHero en="SERVICE / OUR BUSINESS" ja="事業案内" lead="現場を支える、6つの事業。板金塗装から車両陸送まで、確かな技術でワンストップ対応します。" bg="/service-hero-bg.webp" />
 
         <section className={styles.cardsBand} aria-label="T-REXの6つの事業">
           <span className={styles.sideTab} aria-hidden="true">NEVER STOP THE SITE</span>
