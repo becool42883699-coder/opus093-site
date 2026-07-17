@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./recruit.module.css";
+import { SubHero } from "../components/SubpageShell";
 import TrmMotion from "../components/TrmMotion";
 import TrmMenu from "../components/TrmMenu";
 
@@ -57,14 +58,13 @@ export default function RecruitPage() {
         <TrmMenu />
       </header>
 
-      <section className={styles.hero} aria-labelledby="recruit-title">
-        <div className={styles.heroCopy}>
-          <p>RECRUIT / 採用情報</p>
-          <h1 id="recruit-title">一緒に、<br />現場の未来をつくろう。</h1>
-          <span>T-REXは、現場を支える仲間を募集しています。<br />未経験者も大歓迎。技術を身につけながら、自分らしく働ける環境です。</span>
-        </div>
+      <SubHero
+        en="RECRUIT / 採用情報"
+        ja={<>一緒に、<br />現場の未来をつくろう。</>}
+        lead={<>T-REXは、現場を支える仲間を募集しています。<br />未経験者も大歓迎。技術を身につけながら、自分らしく働ける環境です。</>}
+      >
         <a className={styles.heroCta} href="#positions">募集職種を見る <b aria-hidden="true">↓</b></a>
-      </section>
+      </SubHero>
 
       <section className={styles.intro} id="positions" aria-labelledby="positions-title">
         <div className={styles.sectionHeading}>

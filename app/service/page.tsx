@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./service.module.css";
+import { SubHero } from "../components/SubpageShell";
 import TrmMotion from "../components/TrmMotion";
 import TrmMenu from "../components/TrmMenu";
 
@@ -46,13 +47,7 @@ export default function ServicePage() {
       </header>
 
       <main className={styles.page}>
-        <section className={styles.hero} aria-labelledby="service-title">
-          <h1 id="service-title" className={styles.srOnly}>SERVICE 事業案内</h1>
-          <picture>
-            <source media="(max-width: 860px)" srcSet="/service-hero-sp.webp" />
-            <Image src="/service-hero.webp" alt="SERVICE 事業案内。現場を支える、6つの事業。" width={1536} height={413} priority sizes="100vw" />
-          </picture>
-        </section>
+        <SubHero en="SERVICE / OUR BUSINESS" ja="事業案内" lead="現場を支える、6つの事業。板金塗装から車両陸送まで、確かな技術でワンストップ対応します。" />
 
         <section className={styles.cardsBand} aria-label="T-REXの6つの事業">
           <span className={styles.sideTab} aria-hidden="true">NEVER STOP THE SITE</span>

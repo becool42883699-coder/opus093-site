@@ -65,11 +65,46 @@ export default function TrmFx() {
 
       const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
       const isTop = !!document.querySelector("main#top");
-      if (!finePointer && !isTop) return;
+      const disposers: Array<() => void> = [];
+
+      /* ---- 2-0. スクロール中に発光するページ枠(全ページ・全デバイス) ---- */
+      {
+        const frameEl = document.createElement("div");
+        frameEl.className = "trm-frame";
+        frameEl.setAttribute("aria-hidden", "true");
+        document.body.appendChild(frameEl);
+        let glow = 0;
+        let lastY = window.scrollY;
+        let frameRaf = 0;
+        const decay = () => {
+          glow = Math.max(0, glow - 0.026);
+          frameEl.style.opacity = glow < 0.015 ? "0" : glow.toFixed(3);
+          frameRaf = glow > 0.015 ? window.requestAnimationFrame(decay) : 0;
+        };
+        const onFrameScroll = () => {
+          const y = window.scrollY;
+          glow = Math.min(1, glow + Math.abs(y - lastY) / 260);
+          lastY = y;
+          if (!frameRaf) frameRaf = window.requestAnimationFrame(decay);
+        };
+        window.addEventListener("scroll", onFrameScroll, { passive: true });
+        disposers.push(() => {
+          window.removeEventListener("scroll", onFrameScroll);
+          if (frameRaf) window.cancelAnimationFrame(frameRaf);
+          frameEl.remove();
+        });
+      }
+
+      if (!finePointer && !isTop) {
+        cleanup = () => disposers.forEach((d) => d());
+        return;
+      }
 
       const { gsap } = await import("gsap");
-      if (cancelled) return;
-      const disposers: Array<() => void> = [];
+      if (cancelled) {
+        disposers.forEach((d) => d());
+        return;
+      }
 
       /* ---- 2-1. カスタムカーソル(PCのみ・システムカーソルは隠さない) ---- */
       if (finePointer) {

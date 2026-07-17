@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import styles from "./subpage.module.css";
 import TrmMotion from "./TrmMotion";
 import TrmMenu from "./TrmMenu";
@@ -19,8 +20,8 @@ export function SubHeader({ active }: { active?: string }) {
   </header>;
 }
 
-export function SubHero({ en, ja, lead }: { en:string; ja:string; lead:string }) {
-  return <section className={styles.hero}><div><p>{en}</p><h1>{ja}</h1><span>{lead}</span></div><b aria-hidden="true">T-REX</b></section>;
+export function SubHero({ en, ja, lead, children }: { en:string; ja:ReactNode; lead:ReactNode; children?:ReactNode }) {
+  return <section className={styles.hero}><div><p>{en}</p><h1>{ja}</h1><span>{lead}</span></div><b aria-hidden="true">T-REX</b>{children}</section>;
 }
 
 export function SubFooter() {
