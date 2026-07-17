@@ -522,3 +522,89 @@ h1 .trm-char {
   .trm-subNav { transition: none; }
   .trm-subNav.isOpen > a { opacity: 1; transform: none; animation: none; }
 }
+
+/* === TRM-FX: cinematic layer(TrmFx.tsx が制御・接頭辞trm-) ================ */
+
+/* 1. 初回ローディング演出(セッション1回のみ・JSレンダリングなので JS無効時は非表示) */
+.trm-loader {
+  position: fixed; inset: 0; z-index: 400;
+  display: grid; place-items: center;
+  background: var(--bg);
+  transition: opacity .5s ease, visibility .5s;
+}
+.trm-loaderLeaving { opacity: 0; visibility: hidden; pointer-events: none; }
+.trm-loaderInner { display: grid; justify-items: center; gap: 16px; animation: trmLoaderIn .5s cubic-bezier(.16,1,.3,1) both; }
+.trm-loaderLeaving .trm-loaderInner { animation: trmLoaderOut .45s ease both; }
+.trm-loaderInner img { width: 64px; height: 64px; border-radius: 50%; box-shadow: 0 0 42px rgba(0,174,234,.4); }
+.trm-loaderType { color: var(--text); font-size: 15px; font-weight: 900; letter-spacing: .34em; text-indent: .34em; }
+.trm-loaderBar { position: relative; width: 148px; height: 2px; overflow: hidden; background: rgba(151,180,201,.22); }
+.trm-loaderBar i { position: absolute; inset: 0; transform-origin: left center; background: linear-gradient(90deg, var(--cyan), #68dcff); animation: trmLoaderBar 1.15s cubic-bezier(.6,.05,.28,.99) .1s both; }
+@keyframes trmLoaderIn { from { opacity: 0; transform: translateY(14px); } }
+@keyframes trmLoaderOut { to { opacity: 0; transform: translateY(-16px); filter: blur(4px); } }
+@keyframes trmLoaderBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* 2. カスタムカーソル(PC・ファインポインタのみJSが生成。システムカーソルは隠さない) */
+.trm-cursorDot, .trm-cursorRing {
+  position: fixed; top: 0; left: 0; z-index: 380;
+  pointer-events: none; border-radius: 50%;
+  opacity: 0; visibility: hidden; will-change: transform;
+}
+.trm-cursorDot { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: var(--cyan); }
+.trm-cursorRing {
+  width: 36px; height: 36px; margin: -18px 0 0 -18px;
+  border: 1px solid rgba(0,174,234,.55);
+  transition: width .28s ease, height .28s ease, margin .28s ease, border-color .28s, background .28s;
+}
+.trm-cursorRing.trm-cursorActive {
+  width: 54px; height: 54px; margin: -27px 0 0 -27px;
+  border-color: rgba(104,220,255,.9); background: rgba(0,174,234,.08);
+}
+@media (hover: none), (pointer: coarse) { .trm-cursorDot, .trm-cursorRing { display: none; } }
+
+/* 3. 背景ノイズ(薄いフィルムグレイン・静止・PCのみ) */
+@media (min-width: 768px) {
+  body::before {
+    content: ""; position: fixed; inset: 0; z-index: 360; pointer-events: none;
+    opacity: .045; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+/* 4. SVG線画(aboutScene内・スクロールで一度だけ描画。dasharrayはJSが設定) */
+.trm-lineArt {
+  position: absolute; inset: 0; z-index: 1;
+  width: 100%; height: 100%;
+  pointer-events: none; opacity: .5; mix-blend-mode: screen;
+}
+.trm-lineArt path {
+  fill: none; stroke: #7edbff; stroke-width: 1.3;
+  stroke-linecap: round; stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* 5. スクロール固定(スティッキー)見出し: SERVICE/WORKS/CONTACT・PCのみ */
+@media (min-width: 981px) {
+  .services .sectionIntro, .works .sectionIntro { position: sticky; top: 118px; align-self: start; }
+  .contactSection .contactIntro { position: sticky; top: 118px; align-self: start; }
+}
+
+/* 6. フッター直前CTAの強調(1回だけ柔らかく発光・点滅なし) */
+.trm-ctaGlow { animation: trmCtaGlow 2.8s ease-in-out 2; }
+@keyframes trmCtaGlow {
+  0%, 100% { box-shadow: 0 0 0 rgba(0,174,234,0); }
+  50% { box-shadow: 0 0 44px rgba(0,174,234,.55); }
+}
+
+/* 7. ページ遷移フェード(内部リンクのみ・トップページ) */
+.trm-pageExit body { transition: opacity .24s ease; opacity: 0; }
+
+/* 8. reduced-motion では全演出を停止 */
+@media (prefers-reduced-motion: reduce) {
+  .trm-loader, .trm-cursorDot, .trm-cursorRing { display: none !important; }
+  body::before { display: none; }
+  .trm-ctaGlow { animation: none; }
+  .trm-pageExit body { transition: none; opacity: 1; }
+  @media (min-width: 981px) {
+    .services .sectionIntro, .works .sectionIntro, .contactSection .contactIntro { position: static; }
+  }
+}
