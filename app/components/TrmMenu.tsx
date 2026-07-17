@@ -6,6 +6,7 @@
  * (ヘッダー内に置くとiOSのbackdrop-filterバグでfixedが親基準に化けるため)
  */
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -47,9 +48,9 @@ export default function TrmMenu() {
         createPortal(
           <nav className={open ? "trm-subNav isOpen" : "trm-subNav"} id="trm-subnav" aria-label="メニュー">
             {items.map(([label, href]) => (
-              <a key={href} href={href} onClick={() => setOpen(false)}>{label}</a>
+              <Link key={href} href={href} onClick={() => setOpen(false)}>{label}</Link>
             ))}
-            <a className="headerCta" href="/contact" onClick={() => setOpen(false)}>お問い合わせ</a>
+            <Link className="headerCta" href="/contact" onClick={() => setOpen(false)}>お問い合わせ</Link>
           </nav>,
           document.body
         )}

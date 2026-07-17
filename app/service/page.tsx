@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import styles from "./service.module.css";
 import TrmMotion from "../components/TrmMotion";
 import TrmMenu from "../components/TrmMenu";
@@ -20,10 +21,10 @@ const services = [
 
 function Brand() {
   return (
-    <a className={styles.brand} href="/" aria-label="T-REX トップへ">
+    <Link className={styles.brand} href="/" aria-label="T-REX トップへ">
       <span className={styles.brandMark}><Image src="/icons/brand-tx.svg" alt="" width={48} height={48} /></span>
       <span className={styles.brandType}><strong>T-REX</strong><small>T-REX CO., LTD.</small></span>
-    </a>
+    </Link>
   );
 }
 
@@ -34,12 +35,12 @@ export default function ServicePage() {
         <TrmMotion />
         <Brand />
         <nav className={styles.nav} aria-label="メインナビゲーション">
-          <a className={styles.active} href="/service">サービス</a>
-          <a href="/works">施工実績</a>
-          <a href="/about">会社案内</a>
-          <a href="/company">会社情報</a>
-          <a href="/recruit">採用情報</a>
-          <a className={styles.headerCta} href="/contact">お問い合わせ</a>
+          <Link className={styles.active} href="/service">サービス</Link>
+          <Link href="/works">施工実績</Link>
+          <Link href="/about">会社案内</Link>
+          <Link href="/company">会社情報</Link>
+          <Link href="/recruit">採用情報</Link>
+          <Link className={styles.headerCta} href="/contact">お問い合わせ</Link>
         </nav>
         <TrmMenu />
       </header>
@@ -57,26 +58,26 @@ export default function ServicePage() {
           <span className={styles.sideTab} aria-hidden="true">NEVER STOP THE SITE</span>
           <div className={styles.cardsGrid}>
             {services.map(([number, title, description, icon]) => (
-              <a className={styles.card} href="/contact" key={number}>
+              <Link className={styles.card} href="/contact" key={number}>
                 <Image className={styles.cardIcon} src={`/icons/${icon}.svg`} alt="" width={96} height={76} />
                 <b>{number}</b>
                 <h2>{title}</h2>
                 <p>{description}</p>
                 <span>詳しく見る <i>→</i></span>
-              </a>
+              </Link>
             ))}
           </div>
         </section>
 
         <section className={styles.skyline} aria-label="お問い合わせへのご案内">
           <Image src="/service-skyline.webp" alt="北九州の街並みを描いたT-REXブループリント" width={1536} height={172} sizes="100vw" />
-          <a className={styles.skylineLink} href="/contact" aria-label="事業内容について問い合わせる" />
+          <Link className={styles.skylineLink} href="/contact" aria-label="事業内容について問い合わせる" />
         </section>
       </main>
 
       <footer className={styles.footer}>
         <Brand />
-        <div><a href="/service">サービス</a><a href="/works">施工実績</a><a href="/about">会社案内</a><a href="/company">会社情報</a><a href="/recruit">採用情報</a><a href="/contact">お問い合わせ</a></div>
+        <div><Link href="/service">サービス</Link><Link href="/works">施工実績</Link><Link href="/about">会社案内</Link><Link href="/company">会社情報</Link><Link href="/recruit">採用情報</Link><Link href="/contact">お問い合わせ</Link></div>
         <small>© T-REX CO., LTD. All Rights Reserved.</small>
       </footer>
     </>
