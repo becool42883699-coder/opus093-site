@@ -266,6 +266,16 @@ export default function Home() {
         <section className="aboutSection" id="about" aria-labelledby="about-title">
           <div className="aboutCopy"><p className="sectionLabel">ABOUT</p><h2 id="about-title">T-REXについて</h2><p>T-REX CO., LTD.は、現場の最前線を支えるプロフェッショナル集団です。お客様の課題に真摯に向き合い、スピード・品質・安全のすべてに妥協せず、信頼されるパートナーであり続けます。</p><a className="outlineButton" href="/contact">会社案内を見る <Arrow /></a></div>
           <div className="aboutScene" aria-hidden="true">
+            <svg className="trm-lineArt" viewBox="0 0 800 560" preserveAspectRatio="xMidYMax slice" focusable="false">
+              <path d="M0 470 H800" />
+              <path d="M60 470 V330 H150 V470 M78 352 H132 M78 386 H132 M78 420 H132" />
+              <path d="M150 470 V392 H232 V470 M168 414 H214 M168 442 H214" />
+              <path d="M640 470 V302 H726 V470 M658 326 H708 M658 360 H708 M658 394 H708 M658 428 H708" />
+              <path d="M330 470 V120 M318 470 V440 M342 470 V440" />
+              <path d="M330 120 L620 152 M330 120 L240 134" />
+              <path d="M330 78 V120 M330 78 L620 152 M330 78 L240 134" />
+              <path d="M540 143 V222 M526 222 H554 M526 222 V244 H554 V222" />
+            </svg>
             <div className="aboutSceneType"><span>FIELD</span><strong>PARTNER</strong><small>T-REX CO., LTD.</small></div>
             <Image className="aboutMascot" src="/hero-trex-v3-cropped.webp" alt="" width={1008} height={1013} sizes="(max-width: 767px) 88vw, 42vw" />
             <div className="aboutSceneBadge"><UiIcon name="location-pin" /><span>FUKUOKA / YAMAGUCHI</span><b>現場へ、駆けつける。</b></div>
