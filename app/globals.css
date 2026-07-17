@@ -598,9 +598,30 @@ h1 .trm-char {
 /* 7. ページ遷移フェード(内部リンクのみ・トップページ) */
 .trm-pageExit body { transition: opacity .24s ease; opacity: 0; }
 
+/* 9. スクロール中に発光するページ枠(TrmFxが不透明度を制御) */
+.trm-frame {
+  position: fixed; inset: 9px; z-index: 340;
+  pointer-events: none; opacity: 0; will-change: opacity;
+  border: 1px solid rgba(0,174,234,.6);
+  box-shadow: 0 0 24px rgba(0,174,234,.42), inset 0 0 32px rgba(0,174,234,.14);
+  background:
+    linear-gradient(#8ae5ff,#8ae5ff) left top/26px 2px,
+    linear-gradient(#8ae5ff,#8ae5ff) left top/2px 26px,
+    linear-gradient(#8ae5ff,#8ae5ff) right top/26px 2px,
+    linear-gradient(#8ae5ff,#8ae5ff) right top/2px 26px,
+    linear-gradient(#8ae5ff,#8ae5ff) left bottom/26px 2px,
+    linear-gradient(#8ae5ff,#8ae5ff) left bottom/2px 26px,
+    linear-gradient(#8ae5ff,#8ae5ff) right bottom/26px 2px,
+    linear-gradient(#8ae5ff,#8ae5ff) right bottom/2px 26px;
+  background-repeat: no-repeat;
+}
+@media (max-width: 767px) {
+  .trm-frame { inset: 5px; border-color: rgba(0,174,234,.5); }
+}
+
 /* 8. reduced-motion では全演出を停止 */
 @media (prefers-reduced-motion: reduce) {
-  .trm-loader, .trm-cursorDot, .trm-cursorRing { display: none !important; }
+  .trm-loader, .trm-cursorDot, .trm-cursorRing, .trm-frame { display: none !important; }
   body::before { display: none; }
   .trm-ctaGlow { animation: none; }
   .trm-pageExit body { transition: none; opacity: 1; }
