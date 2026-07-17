@@ -91,6 +91,7 @@ export default function Home() {
           return;
         }
 
+        if (!coarsePointer) {
         gsap.to(".heroContent", {
           yPercent: -18,
           opacity: 0.42,
@@ -110,6 +111,7 @@ export default function Home() {
           ease: "none",
           scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: 1 },
         });
+        }
 
         gsap.utils.toArray<HTMLElement>("main > section:not(.hero), .siteFooter").forEach((section) => {
           const children = Array.from(section.children);
