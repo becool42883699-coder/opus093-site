@@ -1,0 +1,19 @@
+{
+  "optimized_assets": {
+    "/hero-blue-particles.png": "/hero-blue-particles.webp",
+    "/hero-trex-construction-final.jpg": "/hero-trex-construction-final.webp",
+    "/hero-trex-v3-cropped.png": "/hero-trex-v3-cropped.webp",
+    "/recruit-hero.png": "/recruit-hero.webp",
+    "/recruit-hero-mobile.png": "/recruit-hero-mobile.webp",
+    "/hero-trex-v2.png": "/hero-trex-v2.webp",
+    "/hero-construction-bg.jpg": "/hero-construction-bg.webp"
+  },
+  "changes": [
+    "Converted all runtime raster images to WebP",
+    "Removed unused source/intermediate raster images",
+    "Removed comparison screenshots and reference images",
+    "Removed duplicate pnpm lock/workspace files; retained package-lock.json",
+    "Updated all application image references to WebP",
+    "No layout, copy, or component behavior intentionally changed"
+  ]
+}
