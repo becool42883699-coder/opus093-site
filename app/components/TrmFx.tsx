@@ -153,8 +153,8 @@ export default function TrmFx() {
         });
       }
 
-      /* ---- トップページ専用(サブページはTrmMotionが担当) ---- */
-      if (!isTop) {
+      /* ---- トップページ専用(サブページはTrmMotionが担当)・PCのみ ---- */
+      if (!isTop || !finePointer) {
         cleanup = () => disposers.forEach((d) => d());
         return;
       }
