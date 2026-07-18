@@ -693,3 +693,12 @@ header.trm-headerPeek {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* TRM: モバイルのスクロール阻害対策(横あふれ根絶)
+   トップの恐竜画像等が横幅を押し広げ、iOSで縦スクロールが戻される問題への恒久対策 */
+@media (max-width: 1024px) {
+  html, body { overflow-x: clip; }
+  main { overflow-x: clip; max-width: 100vw; }
+  .aboutScene { overflow: clip; }
+  .aboutMascot { max-width: 100%; }
+}
