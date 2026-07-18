@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./recruit.module.css";
-import { SubHero } from "../components/SubpageShell";
-import TrmMotion from "../components/TrmMotion";
-import TrmMenu from "../components/TrmMenu";
+import { SubHeader, SubHero } from "../components/SubpageShell";
 
 export const metadata: Metadata = {
   title: "採用情報 | T-REX CO., LTD.",
@@ -45,18 +43,7 @@ const jobs = [
 export default function RecruitPage() {
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
-        <TrmMotion />
-        <Link className={styles.brand} href="/" aria-label="T-REX トップページへ">
-          <Image src="/icons/brand-tx.svg" alt="" width={46} height={46} />
-          <span><strong>T-REX</strong><small>T-REX CO., LTD.</small></span>
-        </Link>
-        <nav aria-label="採用ページナビゲーション">
-          <Link href="/">トップへ戻る</Link>
-          <a className={styles.headerCta} href="tel:09075315428">電話で応募</a>
-        </nav>
-        <TrmMenu />
-      </header>
+      <SubHeader active="/recruit" />
 
       <SubHero
         bg="/recruit-hero-bg.webp"

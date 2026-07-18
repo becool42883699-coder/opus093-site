@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
 const navItems = [
+  ["トップ", "/"],
   ["サービス", "/service"],
   ["施工実績", "/works"],
   ["会社案内", "/about"],

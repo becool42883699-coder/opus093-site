@@ -153,6 +153,32 @@ export default function TrmFx() {
         });
       }
 
+      /* ---- 2-2. PCはヘッダーを常時非表示にし、カーソルが画面上部に来たら出現 ---- */
+      if (finePointer) {
+        const header = document.querySelector<HTMLElement>("header");
+        if (header) {
+          header.style.animation = "none";
+          header.classList.add("trm-headerPeek");
+          const show = () => header.classList.add("trm-headerPeekShow");
+          const hide = () => header.classList.remove("trm-headerPeekShow");
+          const onPeekMove = (event: MouseEvent) => {
+            if (event.clientY < 90) show();
+            else if (event.clientY > 180 && !header.contains(document.activeElement)) hide();
+          };
+          window.addEventListener("mousemove", onPeekMove, { passive: true });
+          // キーボード操作時はフォーカスで出現させる(アクセシビリティ)
+          header.addEventListener("focusin", show);
+          header.addEventListener("focusout", hide);
+          disposers.push(() => {
+            window.removeEventListener("mousemove", onPeekMove);
+            header.removeEventListener("focusin", show);
+            header.removeEventListener("focusout", hide);
+            header.classList.remove("trm-headerPeek", "trm-headerPeekShow");
+            header.style.removeProperty("animation");
+          });
+        }
+      }
+
       /* ---- トップページ専用(サブページはTrmMotionが担当)・PCのみ ---- */
       if (!isTop || !finePointer) {
         cleanup = () => disposers.forEach((d) => d());
@@ -165,32 +191,6 @@ export default function TrmFx() {
         return;
       }
       gsap.registerPlugin(ScrollTrigger);
-
-      /* ---- 2-2. ヘッダーのスクロール方向連動 表示/非表示 ---- */
-      const header = document.querySelector<HTMLElement>("header.siteHeader");
-      if (header) {
-        let lastY = window.scrollY;
-        let armed = false;
-        const onDirection = () => {
-          const y = window.scrollY;
-          if (y > 280 && !armed) {
-            // 入場アニメーション(fill:both)がtransformを固定するため解除してから制御
-            armed = true;
-            header.style.animation = "none";
-            header.classList.add("trm-headerAware");
-          }
-          if (!armed) return;
-          if (y > lastY + 6 && y > 280) header.classList.add("trm-headerHidden");
-          else if (y < lastY - 6 || y <= 280) header.classList.remove("trm-headerHidden");
-          lastY = y;
-        };
-        window.addEventListener("scroll", onDirection, { passive: true });
-        disposers.push(() => {
-          window.removeEventListener("scroll", onDirection);
-          header.classList.remove("trm-headerAware", "trm-headerHidden");
-          header.style.removeProperty("animation");
-        });
-      }
 
       /* ---- 2-3. ヒーローh1の文字分割(SR用テキストはaria-labelで保持) ---- */
       const heroTitle = document.querySelector<HTMLElement>(".hero h1");
