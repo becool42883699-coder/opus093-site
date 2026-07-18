@@ -6,8 +6,7 @@ import TrmMotion from "./TrmMotion";
 import TrmMenu from "./TrmMenu";
 
 const nav = [
-  ["トップ", "/"], ["サービス", "/service"], ["施工実績", "/works"], ["会社案内", "/about"],
-  ["会社情報", "/company"], ["採用情報", "/recruit"], ["お問い合わせ", "/contact"],
+  ["トップ", "/"], ["サービス", "/service"], ["施工実績", "/works"], ["会社概要", "/company"], ["採用情報", "/recruit"], ["お問い合わせ", "/contact"],
 ];
 
 export function SubHeader({ active }: { active?: string }) {

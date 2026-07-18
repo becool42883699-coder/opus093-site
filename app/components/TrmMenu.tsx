@@ -14,8 +14,7 @@ const items = [
   ["トップ", "/"],
   ["サービス", "/service"],
   ["施工実績", "/works"],
-  ["会社案内", "/about"],
-  ["会社情報", "/company"],
+  ["会社概要", "/company"],
   ["採用情報", "/recruit"],
   ["お問い合わせ", "/contact"],
 ];
