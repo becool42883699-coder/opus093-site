@@ -637,3 +637,6 @@ header.trm-headerPeek {
   transition: transform .34s cubic-bezier(.33,1,.36,1) !important;
 }
 header.trm-headerPeek.trm-headerPeekShow { transform: none !important; }
+
+/* SEO/MEO: 対応エリア明記 */
+.trm-areaNote { margin-top: 22px; max-width: 340px; color: var(--muted); font-size: 12px; line-height: 1.9; }

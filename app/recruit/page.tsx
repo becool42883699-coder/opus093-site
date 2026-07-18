@@ -5,11 +5,13 @@ import styles from "./recruit.module.css";
 import { SubHeader, SubHero } from "../components/SubpageShell";
 
 export const metadata: Metadata = {
-  title: "採用情報 | T-REX CO., LTD.",
-  description: "T-REXの採用情報。現場を支える仲間を募集しています。未経験者も歓迎します。",
+  title: "採用情報|福岡・山口 T-REX",
+  description: "福岡県・山口県の現場を支えるT-REXの採用情報。管理・作業、鈑金・塗装、出張サービス、事務サポートの各職種を募集中。未経験者歓迎、技術を身につけながら働ける環境です。",
+  alternates: { canonical: "/recruit/" },
   openGraph: {
-    title: "採用情報 | T-REX CO., LTD.",
+    title: "採用情報|T-REX CO., LTD.",
     description: "一緒に、現場の未来をつくろう。T-REX採用情報。",
+    images: ["/recruit-hero-bg.webp"],
   },
 };
 
