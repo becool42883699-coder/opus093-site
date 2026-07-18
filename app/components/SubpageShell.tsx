@@ -22,9 +22,9 @@ export function SubHeader({ active }: { active?: string }) {
   </header>;
 }
 
-export function SubHero({ en, ja, lead, bg, children }: { en:string; ja:ReactNode; lead:ReactNode; bg?:string; children?:ReactNode }) {
+export function SubHero({ en, ja, lead, bg, bgFit, children }: { en:string; ja:ReactNode; lead:ReactNode; bg?:string; bgFit?:"cover"|"contain"; children?:ReactNode }) {
   return <section className={styles.hero}>
-    {bg && <i className={styles.heroBg} style={{ backgroundImage: `url(${process.env.NEXT_PUBLIC_BASE_PATH || ""}${bg})` }} aria-hidden="true" />}
+    {bg && <i className={styles.heroBg} style={{ backgroundImage: `url(${process.env.NEXT_PUBLIC_BASE_PATH || ""}${bg})`, ...(bgFit === "contain" ? { backgroundSize: "contain", backgroundPosition: "center right" } : {}) }} aria-hidden="true" />}
     <div><p>{en}</p><h1>{ja}</h1><span>{lead}</span></div><b aria-hidden="true">T-REX</b>{children}</section>;
 }
 
