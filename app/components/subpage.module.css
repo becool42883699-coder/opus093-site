@@ -2,3 +2,5 @@
 
 .heroBg{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;background-repeat:no-repeat;font-style:normal}.heroBg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(2,10,22,.5),rgba(2,8,18,.86))}
 .heroBgContain{background-size:cover;background-position:center bottom}
+
+.photoGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:44px}.photoGrid figure{margin:0;overflow:hidden;border:1px solid rgba(151,180,201,.25);background:#050f1c}.photoGrid img{display:block;width:100%;height:260px;object-fit:cover;transition:transform .5s cubic-bezier(.16,1,.3,1)}.photoGrid figure:hover img{transform:scale(1.04)}.photoGrid figcaption{padding:12px 14px;color:#b7c6d1;font-size:12px}@media(max-width:900px){.photoGrid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.photoGrid{grid-template-columns:1fr}.photoGrid img{height:230px}}
