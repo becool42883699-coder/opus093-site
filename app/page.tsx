@@ -147,6 +147,7 @@ export default function Home() {
           });
         });
 
+        if (!coarsePointer) {
         gsap.utils.toArray<HTMLElement>(".workScene").forEach((scene) => {
           gsap.fromTo(scene, { scale: 1.1 }, {
             scale: 1,
@@ -167,6 +168,7 @@ export default function Home() {
           ease: "none",
           scrollTrigger: { trigger: ".aboutSection", start: "top bottom", end: "bottom top", scrub: 1 },
         });
+        }
       });
 
       ScrollTrigger.refresh();
