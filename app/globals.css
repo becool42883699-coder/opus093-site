@@ -341,7 +341,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--cyan); outline-
   .stats { margin-bottom: 15px; }
   .stats div { padding: 0 12px; text-align: center; }
   .stats div:first-child { padding-left: 0; }
-  .stats dt { font-size: 29px; }
+  .stats dt { font-size: 27px; white-space: nowrap; }
   .stats dd { font-size: 9px; }
   .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .chips li { min-width: 0; justify-content: center; gap: 4px; padding: 0 4px; font-size: 8px; white-space: nowrap; }
@@ -407,10 +407,10 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--cyan); outline-
 }
 
 @media (max-width: 420px) {
-  .hero { min-height: 690px; padding-top:76px; }
+  .hero { min-height: 760px; padding-top:76px; }
   .hero h1 { font-size:clamp(36px,10.5vw,42px); }
   .hero .brandHeadline { font-size:clamp(42px,11vw,48px); }
-  .heroActions { top:350px; }
+  .heroActions { top:340px; }
   .heroVisual { height:455px; }
   .heroProof { bottom:14px; }
 }
