@@ -153,26 +153,36 @@ export default function TrmFx() {
         });
       }
 
-      /* ---- 2-2. PCはヘッダーを常時非表示にし、カーソルが画面上部に来たら出現 ---- */
-      if (finePointer) {
+      /* ---- 2-2. ヘッダーの常時連動: 下スクロールで収納・上スクロールで出現。
+              PCはカーソルが画面上部に来たときも出現。キーボードフォーカスでも出現 ---- */
+      {
         const header = document.querySelector<HTMLElement>("header");
         if (header) {
           header.style.animation = "none";
           header.classList.add("trm-headerPeek");
           const show = () => header.classList.add("trm-headerPeekShow");
-          const hide = () => header.classList.remove("trm-headerPeekShow");
-          const onPeekMove = (event: MouseEvent) => {
-            if (event.clientY < 90) show();
-            else if (event.clientY > 180 && !header.contains(document.activeElement)) hide();
+          const hide = () => {
+            if (!header.contains(document.activeElement)) header.classList.remove("trm-headerPeekShow");
           };
-          window.addEventListener("mousemove", onPeekMove, { passive: true });
-          // キーボード操作時はフォーカスで出現させる(アクセシビリティ)
+          let lastY = window.scrollY;
+          // モバイルはメニュー操作のためページ最上部では表示しておく
+          if (!finePointer && window.scrollY < 80) show();
+          const onScrollDir = () => {
+            const y = window.scrollY;
+            if (y > lastY + 6 && y > 120) hide();
+            else if (y < lastY - 6 || (!finePointer && y < 80)) show();
+            lastY = y;
+          };
+          window.addEventListener("scroll", onScrollDir, { passive: true });
+          const onPeekMove = finePointer
+            ? (event: MouseEvent) => { if (event.clientY < 90) show(); }
+            : null;
+          if (onPeekMove) window.addEventListener("mousemove", onPeekMove, { passive: true });
           header.addEventListener("focusin", show);
-          header.addEventListener("focusout", hide);
           disposers.push(() => {
-            window.removeEventListener("mousemove", onPeekMove);
+            window.removeEventListener("scroll", onScrollDir);
+            if (onPeekMove) window.removeEventListener("mousemove", onPeekMove);
             header.removeEventListener("focusin", show);
-            header.removeEventListener("focusout", hide);
             header.classList.remove("trm-headerPeek", "trm-headerPeekShow");
             header.style.removeProperty("animation");
           });
