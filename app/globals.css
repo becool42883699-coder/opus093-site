@@ -683,3 +683,13 @@ header.trm-headerPeek.trm-headerPeekShow { transform: none !important; }
 .trm-stagesBar { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid rgba(151,180,201,.25); }
 .trm-stagesBar span { padding: 12px 8px; text-align: center; color: #7f93a2; font-size: 11px; font-weight: 800; letter-spacing: .12em; transition: color .25s, background .25s; }
 .trm-stagesBar .trm-stageOn { color: #041018; background: linear-gradient(90deg, #00aeea, #68dcff); }
+
+/* TRM: 全ページ共通 — ヘッダー背景の透明化 */
+.siteHeader,
+header[class*="header"],
+header.trm-headerPeek {
+  background: transparent !important;
+  border-bottom-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
