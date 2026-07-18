@@ -59,6 +59,7 @@ export default function RecruitPage() {
       </header>
 
       <SubHero
+        bg="/recruit-hero-bg.webp"
         en="RECRUIT / 採用情報"
         ja={<>一緒に、<br />現場の未来をつくろう。</>}
         lead={<>T-REXは、現場を支える仲間を募集しています。<br />未経験者も大歓迎。技術を身につけながら、自分らしく働ける環境です。</>}
