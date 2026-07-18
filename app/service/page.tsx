@@ -32,7 +32,7 @@ export default function ServicePage() {
       }))} />
 
       <main className={styles.page}>
-        <SubHero en="SERVICE / OUR BUSINESS" ja="事業案内" lead="福岡県・山口県の現場を支える6つの事業。板金塗装から車両陸送まで、確かな技術でワンストップ対応します。" bg="/service-hero-bg.webp" />
+        <SubHero en="SERVICE / OUR BUSINESS" ja="事業案内" lead="福岡県・山口県の現場を支える6つの事業。板金塗装から車両陸送まで、確かな技術でワンストップ対応します。" bg="/service-hero-bg.webp" bgFit="contain" />
 
         <section className={styles.cardsBand} aria-label="T-REXの6つの事業">
           <span className={styles.sideTab} aria-hidden="true">NEVER STOP THE SITE</span>
