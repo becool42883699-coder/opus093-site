@@ -640,3 +640,14 @@ header.trm-headerPeek.trm-headerPeekShow { transform: none !important; }
 
 /* SEO/MEO: 対応エリア明記 */
 .trm-areaNote { margin-top: 22px; max-width: 340px; color: var(--muted); font-size: 12px; line-height: 1.9; }
+
+/* TRM: モバイルのスクロール阻害対策 — 常時ループするCSSアニメーションを停止
+   (background-clip:text + filterの毎フレーム再描画がタッチスクロールを妨げるため。
+    入場アニメーションは維持し、グラデーションは静止状態で表示) */
+@media (max-width: 1024px) {
+  h1 em { animation: none; }
+  .brandHeadline { animation: heroCopyIn .9s cubic-bezier(.16,1,.3,1) .4s both; }
+  .siteHeader .brandMark { animation: none; }
+  .primaryButton::after { animation: none; content: none; }
+  .heroProof .stats > div, .heroProof .chips > li { will-change: auto; }
+}
