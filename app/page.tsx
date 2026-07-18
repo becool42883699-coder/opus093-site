@@ -8,8 +8,7 @@ const navItems = [
   ["トップ", "/"],
   ["サービス", "/service"],
   ["施工実績", "/works"],
-  ["会社案内", "/about"],
-  ["会社情報", "/company"],
+  ["会社概要", "/company"],
   ["採用情報", "/recruit"],
   ["お問い合わせ", "/contact"],
 ];
@@ -268,7 +267,7 @@ export default function Home() {
           <div className="workGrid">{[['荷台換装・修理','大型ダンプ 荷台換装・修理','2024.05'],['車両陸送・軽運送','車両陸送・軽運送対応','2024.04'],['板金塗装','特殊車両 全塗装','2024.03'],['出張修理','建設機械 油圧部修理','2024.02']].map(([tag,title,date],i) => <article className={`workCard work${i+1}`} key={title}><div className="workScene"><span /><i /></div><div><small>{tag}</small><h3>{title}</h3><time>{date}</time><Link href="/contact" aria-label={`${title}の詳細`}><Arrow /></Link></div></article>)}</div>
         </section>
         <section className="aboutSection" id="about" aria-labelledby="about-title">
-          <div className="aboutCopy"><p className="sectionLabel">ABOUT</p><h2 id="about-title">T-REXについて</h2><p>T-REX CO., LTD.は、現場の最前線を支えるプロフェッショナル集団です。お客様の課題に真摯に向き合い、スピード・品質・安全のすべてに妥協せず、信頼されるパートナーであり続けます。</p><Link className="outlineButton" href="/contact">会社案内を見る <Arrow /></Link></div>
+          <div className="aboutCopy"><p className="sectionLabel">ABOUT</p><h2 id="about-title">T-REXについて</h2><p>T-REX CO., LTD.は、現場の最前線を支えるプロフェッショナル集団です。お客様の課題に真摯に向き合い、スピード・品質・安全のすべてに妥協せず、信頼されるパートナーであり続けます。</p><Link className="outlineButton" href="/company">会社概要を見る <Arrow /></Link></div>
           <div className="aboutScene" aria-hidden="true">
             <svg className="trm-lineArt" viewBox="0 0 800 560" preserveAspectRatio="xMidYMax slice" focusable="false">
               <path d="M0 470 H800" />
@@ -321,7 +320,7 @@ export default function Home() {
           </form>
         </section>
       </main>
-      <footer className="siteFooter"><Brand /><div><Link href="/service">サービス</Link><Link href="/works">施工実績</Link><Link href="/about">会社案内</Link><Link href="/company">会社情報</Link><Link href="/recruit">採用情報</Link><Link href="/contact">お問い合わせ</Link></div><small>© T-REX CO., LTD. All Rights Reserved.</small></footer>
+      <footer className="siteFooter"><Brand /><div><Link href="/service">サービス</Link><Link href="/works">施工実績</Link><Link href="/company">会社概要</Link><Link href="/recruit">採用情報</Link><Link href="/contact">お問い合わせ</Link></div><small>© T-REX CO., LTD. All Rights Reserved.</small></footer>
     </>
   );
 }
