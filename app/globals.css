@@ -629,3 +629,13 @@ h1 .trm-char {
     .services .sectionIntro, .works .sectionIntro, .contactSection .contactIntro { position: static; }
   }
 }
+
+/* TRM-FX: PCヘッダーのカーソル出現(常時表示をやめ、画面上部ホバーで表示) */
+@media (hover: hover) and (pointer: fine) {
+  header.trm-headerPeek {
+    position: fixed !important; top: 0; left: 0; right: 0; z-index: 90;
+    transform: translateY(-102%) !important;
+    transition: transform .34s cubic-bezier(.33,1,.36,1) !important;
+  }
+  header.trm-headerPeek.trm-headerPeekShow { transform: none !important; }
+}

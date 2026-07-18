@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 const items = [
+  ["トップ", "/"],
   ["サービス", "/service"],
   ["施工実績", "/works"],
   ["会社案内", "/about"],

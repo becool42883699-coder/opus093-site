@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./service.module.css";
-import { SubHero } from "../components/SubpageShell";
-import TrmMotion from "../components/TrmMotion";
-import TrmMenu from "../components/TrmMenu";
+import { SubFooter, SubHeader, SubHero } from "../components/SubpageShell";
 
 export const metadata: Metadata = {
   title: "事業案内 | T-REX CO., LTD.",
@@ -20,31 +18,10 @@ const services = [
   ["06", "車両陸送・軽運送", "安全・確実な車両輸送と\n軽貨物運送を行います。", "rapid-response-tools"],
 ] as const;
 
-function Brand() {
-  return (
-    <Link className={styles.brand} href="/" aria-label="T-REX トップへ">
-      <span className={styles.brandMark}><Image src="/icons/brand-tx.svg" alt="" width={48} height={48} /></span>
-      <span className={styles.brandType}><strong>T-REX</strong><small>T-REX CO., LTD.</small></span>
-    </Link>
-  );
-}
-
 export default function ServicePage() {
   return (
     <>
-      <header className={styles.header}>
-        <TrmMotion />
-        <Brand />
-        <nav className={styles.nav} aria-label="メインナビゲーション">
-          <Link className={styles.active} href="/service">サービス</Link>
-          <Link href="/works">施工実績</Link>
-          <Link href="/about">会社案内</Link>
-          <Link href="/company">会社情報</Link>
-          <Link href="/recruit">採用情報</Link>
-          <Link className={styles.headerCta} href="/contact">お問い合わせ</Link>
-        </nav>
-        <TrmMenu />
-      </header>
+      <SubHeader active="/service" />
 
       <main className={styles.page}>
         <SubHero en="SERVICE / OUR BUSINESS" ja="事業案内" lead="現場を支える、6つの事業。板金塗装から車両陸送まで、確かな技術でワンストップ対応します。" bg="/service-hero-bg.webp" />
@@ -70,11 +47,7 @@ export default function ServicePage() {
         </section>
       </main>
 
-      <footer className={styles.footer}>
-        <Brand />
-        <div><Link href="/service">サービス</Link><Link href="/works">施工実績</Link><Link href="/about">会社案内</Link><Link href="/company">会社情報</Link><Link href="/recruit">採用情報</Link><Link href="/contact">お問い合わせ</Link></div>
-        <small>© T-REX CO., LTD. All Rights Reserved.</small>
-      </footer>
+      <SubFooter />
     </>
   );
 }
