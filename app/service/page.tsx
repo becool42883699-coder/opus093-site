@@ -3,10 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import styles from "./service.module.css";
 import { SubFooter, SubHeader, SubHero } from "../components/SubpageShell";
+import { JsonLd, SITE_URL } from "../components/TrmSeo";
 
 export const metadata: Metadata = {
-  title: "事業案内 | T-REX CO., LTD.",
-  description: "板金塗装、荷台修理・架装、出張修理、事故対応、点検、車両陸送まで。T-REXの6つの事業をご案内します。",
+  title: "事業案内|福岡・山口の板金塗装/出張修理 T-REX",
+  description: "福岡県・山口県対応。板金塗装、荷台修理・架装、出張修理、事故対応・保険修理、メンテナンス・点検、車両陸送・軽運送の6事業をワンストップで提供するT-REXの事業案内です。",
+  alternates: { canonical: "/service/" },
+  openGraph: { title: "事業案内|T-REX CO., LTD.", description: "福岡・山口対応の6つの事業をご案内。", images: ["/service-hero-bg.webp"] },
 };
 
 const services = [
@@ -22,9 +25,14 @@ export default function ServicePage() {
   return (
     <>
       <SubHeader active="/service" />
+      <JsonLd data={services.map(([, title, description]) => ({
+        "@context": "https://schema.org", "@type": "Service", name: title,
+        description: description.replace("\n", ""), provider: { "@id": `${SITE_URL}/#business` },
+        areaServed: ["福岡県", "山口県"],
+      }))} />
 
       <main className={styles.page}>
-        <SubHero en="SERVICE / OUR BUSINESS" ja="事業案内" lead="現場を支える、6つの事業。板金塗装から車両陸送まで、確かな技術でワンストップ対応します。" bg="/service-hero-bg.webp" />
+        <SubHero en="SERVICE / OUR BUSINESS" ja="事業案内" lead="福岡県・山口県の現場を支える6つの事業。板金塗装から車両陸送まで、確かな技術でワンストップ対応します。" bg="/service-hero-bg.webp" />
 
         <section className={styles.cardsBand} aria-label="T-REXの6つの事業">
           <span className={styles.sideTab} aria-hidden="true">NEVER STOP THE SITE</span>

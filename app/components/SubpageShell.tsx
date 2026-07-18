@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import styles from "./subpage.module.css";
+import { breadcrumbLd, JsonLd } from "./TrmSeo";
 import TrmMotion from "./TrmMotion";
 import TrmMenu from "./TrmMenu";
 
@@ -10,7 +11,9 @@ const nav = [
 ];
 
 export function SubHeader({ active }: { active?: string }) {
+  const current = nav.find(([, href]) => href === active && href !== "/");
   return <header className={styles.header}>
+    {current && <JsonLd data={breadcrumbLd(current[0], current[1])} />}
     <TrmMotion />
     <Link className={styles.brand} href="/"><Image src="/icons/brand-tx.svg" alt="" width={46} height={46}/><span><strong>T-REX</strong><small>T-REX CO., LTD.</small></span></Link>
     <nav>{nav.map(([label, href]) => <Link key={href} className={active===href?styles.active:""} href={href}>{label}</Link>)}</nav>

@@ -308,7 +308,7 @@ export default function Home() {
           <div className="mapPending" aria-label="Googleマップ設置予定"><UiIcon name="location-pin" /><div><strong>Google Map</strong><span>所在地情報を確認後、地図を表示します。</span></div></div>
         </section>
         <section className="contactSection" id="contact" aria-labelledby="contact-title">
-          <div className="contactIntro"><p className="sectionLabel">CONTACT</p><h2 id="contact-title">お問い合わせ</h2><span>現場のことなら、T-REXにご相談ください。</span><div className="phone"><small><UiIcon name="phone" /> お電話でのお問い合わせ</small><a href="tel:09075315428">090-7531-5428</a><span>営業時間 9:00〜18:00</span></div><a className="mailAddress" href="mailto:info@t-rex-works.com"><UiIcon name="mail" /> info@t-rex-works.com</a></div>
+          <div className="contactIntro"><p className="sectionLabel">CONTACT</p><h2 id="contact-title">お問い合わせ</h2><span>現場のことなら、T-REXにご相談ください。</span><div className="phone"><small><UiIcon name="phone" /> お電話でのお問い合わせ</small><a href="tel:09075315428">090-7531-5428</a><span>営業時間 9:00〜18:00</span></div><a className="mailAddress" href="mailto:info@t-rex-works.com"><UiIcon name="mail" /> info@t-rex-works.com</a><p className="trm-areaNote">対応エリア: 福岡県(北九州市・福岡市ほか全域)/山口県(下関市ほか全域)。その他の地域もご相談ください。出張修理・持込修理どちらも対応します。</p></div>
           <form className="contactForm" onSubmit={handleContactSubmit}>
             <label>お名前<span>必須</span><input name="name" autoComplete="name" required /></label>
             <label>会社名<input name="company" autoComplete="organization" /></label>
