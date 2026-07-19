@@ -1,6 +1,7 @@
 import styles from "./becool.module.css";
 import { MobileMenu, RevealController, ToTopButton } from "./BecoolClient";
 import BecoolHeroIntro from "./BecoolHeroIntro";
+import { CAR_VIEWBOX, CAR_STOPS, CAR_D } from "./carLogo";
 
 /* サブパス配信(GitHub Pages等)でも画像が解決できるようベースパスを前置 */
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -95,8 +96,20 @@ const SHOPS = [
   },
 ];
 
-/* ---- ロゴ変形アニメの5ステージ(ユーザー提供のメタリック画像) ---------- */
-const STAGES = [1, 2, 3, 4, 5];
+/* ---- 新ロゴ(車シルエット)。輪郭(logo-edge)を光らせて描き→塗り(logo-fill)を出す --- */
+function HeroCarLogo() {
+  return (
+    <svg className={styles.heroCarSvg} viewBox={CAR_VIEWBOX} role="img" aria-label="GARAGE BeCool ロゴ">
+      <defs>
+        <linearGradient id="carGrad" x1="0%" y1="20%" x2="100%" y2="80%">
+          {CAR_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
+        </linearGradient>
+      </defs>
+      <path className="logo-fill" d={CAR_D} fill="url(#carGrad)" />
+      <path className="logo-edge" d={CAR_D} fill="none" pathLength={1} aria-hidden="true" />
+    </svg>
+  );
+}
 
 function GbSymbol({ size = 34 }: { size?: number }) {
   return (
@@ -130,24 +143,15 @@ export default function BecoolPage() {
             <img src={asset("/becool/img/photo-porsche.webp")} alt="GARAGE BeCool 店頭に並ぶ白いポルシェ 718 ケイマン" />
           </div>
           <div className={styles.heroInner} data-hero-stage data-intro="play">
-            <div className={`stage-stack ${styles.stageStack}`}>
+            <div className={`logo-zone ${styles.logoZone}`}>
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
-              {STAGES.map((n) => (
-                <img
-                  key={n}
-                  className={`stage-img stage-${n} ${styles.stageImg}`}
-                  src={asset(`/becool/img/stage-0${n}.webp`)}
-                  alt={n === 5 ? "GARAGE BeCool ロゴ" : ""}
-                  aria-hidden={n !== 5}
-                  loading="eager"
-                />
-              ))}
+              <HeroCarLogo />
             </div>
             <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
-          {/* JS無効時は変形演出をスキップし、最終ロゴ(stage 5)を表示する */}
+          {/* JS無効時は線画演出をスキップし、完成ロゴ(塗り)を表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .stage-5,[data-hero-stage] .hero-tagline{opacity:1!important}[data-hero-stage] .stage-1,[data-hero-stage] .stage-2,[data-hero-stage] .stage-3,[data-hero-stage] .stage-4{display:none!important}`}</style>
+            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline{opacity:1!important}[data-hero-stage] .logo-edge{display:none!important}`}</style>
           </noscript>
           <BecoolHeroIntro />
           <span className={styles.scrollCue} aria-hidden="true" />

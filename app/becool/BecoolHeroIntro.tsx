@@ -45,29 +45,21 @@ export default function BecoolHeroIntro() {
       const ctx = gsap.context(() => {
         const q = gsap.utils.selector(stage);
 
-        // --- 初期状態(1枚目=GBキューブを表示、以降は非表示) ---
-        gsap.set(q(".stage-img"), { opacity: 0 });
-        gsap.set(q(".stage-1"), { opacity: 1 });
+        // --- 初期状態(輪郭は未描画、塗りは非表示) ---
+        gsap.set(q(".logo-edge"), { strokeDashoffset: 1, autoAlpha: 1 });
+        gsap.set(q(".logo-fill"), { autoAlpha: 0 });
         gsap.set(q(".hero-tagline"), { autoAlpha: 0, y: 8 });
-        gsap.set(q(".stage-stack"), { scale: 0.96 });
 
-        tl = gsap.timeline({ defaults: { ease: "power1.inOut" } });
+        tl = gsap.timeline({ defaults: { ease: "power2.inOut" } });
 
-        // 全体をゆっくり詰めて(scale)、生きた変形感を出す
-        tl.to(q(".stage-stack"), { scale: 1, duration: 4.6, ease: "power1.out" }, 0);
-
-        // 1→2→3→4→5 を順にクロスフェード(重なる瞬間だけ両方が半透明)
-        const dwell = 0.8;   // 各ステージの滞在
-        const xfade = 0.6;   // クロスフェード時間
-        let t = 1.05;
-        for (let i = 1; i < 5; i++) {
-          tl.to(q(`.stage-${i}`), { opacity: 0, duration: xfade }, t);
-          tl.to(q(`.stage-${i + 1}`), { opacity: 1, duration: xfade }, t);
-          t += dwell;
-        }
-
-        // 完成後にタグライン
-        tl.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" }, t + 0.15);
+        // 1) ロゴの輪郭(辺)を光らせながら描く(0.3〜2.4s)
+        tl.to(q(".logo-edge"), { strokeDashoffset: 0, duration: 2.1, ease: "power1.inOut" }, 0.3);
+        // 2) 描き終わりに合わせて塗り(完成ロゴ)がフェードイン(2.1〜3.0s)
+        tl.to(q(".logo-fill"), { autoAlpha: 1, duration: 0.9, ease: "power2.out" }, 2.05);
+        // 3) 輪郭の光を消す(2.5〜3.2s)
+        tl.to(q(".logo-edge"), { autoAlpha: 0, duration: 0.7, ease: "power2.inOut" }, 2.5);
+        // 4) タグライン(2.9〜3.6s)
+        tl.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" }, 2.9);
 
         // 完成状態を確定
         tl.add(() => stage.setAttribute("data-intro", "complete"), ">-0.05");
