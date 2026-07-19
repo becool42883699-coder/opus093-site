@@ -11,24 +11,34 @@
    ===================================================================== */
 
 .becool {
-  /* ---- Color: monochrome base + one restrained accent ---------------- */
+  /* ---- Brand core (from the garage becool brand guide) --------------- */
+  --bc-charcoal:     #4a4f55;   /* CHARCOAL GRAY — brand              */
+  --bc-blue:         #1f63b6;   /* COOL BLUE — brand accent           */
+  --bc-blue-mid:     #31557c;   /* gradient mid stop                  */
+  --bc-blue-light:   #5b9be6;   /* lighter blue for text on dark      */
+  --bc-gradient:     linear-gradient(135deg, #4a4f55 0%, #31557c 55%, #1f63b6 100%);
+
+  /* ---- Surface / text: light base, charcoal ink, blue accent -------- */
   --bc-white:        #ffffff;   /* page / header background            */
-  --bc-paper:        #f1f0ec;   /* halftone-lightened photo & off-white */
-  --bc-ink:          #1a1a1a;   /* primary text                        */
-  --bc-ink-soft:     #2a2a2a;   /* statement bands / footer            */
-  --bc-panel-black:  #111111;   /* full-bleed service panel (dark)     */
-  --bc-panel-gray:   #464646;   /* full-bleed service panel (mid)      */
-  --bc-muted:        #6b6b6b;   /* sub text / captions                 */
-  --bc-line:         #e5e3de;   /* hairline borders                    */
-  --bc-works-bg:     #dce3e6;   /* works/portfolio backdrop            */
-  --bc-mark-idle:    #8f8f8f;   /* logo mark settled (dimmed) state    */
-  --bc-accent:       #e8735a;   /* coral — likes/active only, tiny area */
-  --bc-on-dark:      #f4f3f0;   /* text on dark panels                 */
-  --bc-on-dark-mut:  #b8b8b3;   /* muted text on dark panels           */
+  --bc-paper:        #eef0f2;   /* halftone-lightened photo & off-white */
+  --bc-ink:          #23272b;   /* primary text (charcoal-leaning)     */
+  --bc-ink-soft:     #2b2f33;   /* statement bands / footer            */
+  --bc-panel-black:  #15181b;   /* full-bleed service panel (dark)     */
+  --bc-panel-gray:   #4a4f55;   /* full-bleed service panel (charcoal) */
+  --bc-muted:        #6b7178;   /* sub text / captions                 */
+  --bc-line:         #e3e6e9;   /* hairline borders                    */
+  --bc-works-bg:     #dce2e8;   /* works/portfolio backdrop            */
+  --bc-mark-idle:    #8f9298;   /* logo mark settled (dimmed) state    */
+  --bc-accent:       #1f63b6;   /* COOL BLUE — links / CTA / active     */
+  --bc-on-dark:      #f4f5f6;   /* text on dark panels                 */
+  --bc-on-dark-mut:  #b6bbc0;   /* muted text on dark panels           */
 
   /* ---- Typography --------------------------------------------------- */
+  /* Japanese body: Noto Sans JP. Wordmark/headings: Exo 2 SemiBold.
+     Tagline: Montserrat Medium. next/font vars fall back to system stacks. */
   --bc-font-sans: "Noto Sans JP", "Yu Gothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
-  --bc-font-display: "Helvetica Neue", "Arial", "Noto Sans JP", sans-serif; /* heavy geometric feel */
+  --bc-font-display: var(--font-exo, "Exo 2"), "Noto Sans JP", system-ui, sans-serif;
+  --bc-font-tagline: var(--font-montserrat, "Montserrat"), var(--font-exo, "Exo 2"), sans-serif;
 
   --bc-fw-body:    400;
   --bc-fw-medium:  500;

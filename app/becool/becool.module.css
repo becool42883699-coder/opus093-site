@@ -55,10 +55,11 @@
 }
 .brand { display: inline-flex; align-items: center; gap: 12px; }
 .brand svg { width: 34px; height: 34px; }
-.brandName { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: 1.25rem; letter-spacing: 0.02em; color: var(--bc-ink); }
-.navDesktop { display: flex; align-items: center; gap: clamp(1.4rem, 2.6vw, 2.8rem); font-size: 0.82rem; font-weight: var(--bc-fw-bold); letter-spacing: var(--bc-ls-head); }
+.brandName { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.2rem; letter-spacing: 0.01em; color: var(--bc-ink); }
+.brandName b { font-weight: var(--bc-fw-bold); color: var(--bc-blue); }
+.navDesktop { display: flex; align-items: center; gap: clamp(1.4rem, 2.6vw, 2.8rem); font-family: var(--bc-font-display); font-size: 0.82rem; font-weight: var(--bc-fw-bold); letter-spacing: var(--bc-ls-head); }
 .navDesktop a { position: relative; padding: 0.4rem 0; color: var(--bc-ink); }
-.navDesktop a::after { content: ""; position: absolute; left: 0; right: 100%; bottom: 0; height: 1px; background: var(--bc-ink); transition: right 0.28s var(--bc-ease); }
+.navDesktop a::after { content: ""; position: absolute; left: 0; right: 100%; bottom: 0; height: 2px; background: var(--bc-blue); transition: right 0.28s var(--bc-ease); }
 .navDesktop a:hover::after, .navDesktop a:focus-visible::after { right: 0; }
 .menuButton { display: none; width: 44px; height: 44px; border: 0; background: transparent; cursor: pointer; }
 .menuButton span { display: block; width: 24px; height: 2px; margin: 5px auto; background: var(--bc-ink); transition: transform 0.28s var(--bc-ease), opacity 0.2s; }
@@ -82,24 +83,27 @@
 .heroBg img { width: 100%; height: 100%; object-fit: cover; }
 .heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
 
-.heroLogo { width: clamp(120px, 22vw, 210px); height: auto; }
-.markPath { fill: none; stroke: var(--bc-ink); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; }
-.markFill { fill: var(--bc-ink); fill-opacity: 0; }
+.heroLogo { width: clamp(140px, 24vw, 230px); height: auto; overflow: visible; }
+.markPath { fill: none; stroke: var(--bc-blue); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
+.symbolReveal { transform-box: fill-box; transform-origin: center; }
 
-.wordmark { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-hero); line-height: 1; letter-spacing: 0.01em; color: var(--bc-ink); }
-.tagline { font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-ink-soft); padding-left: var(--bc-ls-tagline); }
+.wordmark { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: var(--bc-fs-hero); line-height: 1; letter-spacing: -0.01em; color: var(--bc-ink); }
+.wordmark .wmBlue { color: var(--bc-blue); }
+.tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-ink-soft); padding-left: var(--bc-ls-tagline); }
 
-/* --- hero intro animation (pure CSS, plays on load) --- */
-.markPath { stroke-dasharray: 1; stroke-dashoffset: 1; animation: bcDraw var(--bc-dur-draw) var(--bc-ease-soft) 0.2s forwards; }
-.markFill { animation: bcFill var(--bc-dur-fill) var(--bc-ease) calc(var(--bc-dur-draw) + 0.1s) forwards; }
+/* --- hero intro animation (pure CSS, plays on load):
+       blue hexagon line-draw -> real GB symbol reveals -> wordmark/tagline rise --- */
+.markPath { stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0.9; animation: bcDraw var(--bc-dur-draw) var(--bc-ease-soft) 0.2s forwards, bcFade 0.6s var(--bc-ease) calc(var(--bc-dur-draw) + 0.35s) forwards; }
+.symbolReveal { opacity: 0; transform: scale(0.9); animation: bcReveal var(--bc-dur-fade) var(--bc-ease) calc(var(--bc-dur-draw) + 0.05s) forwards; }
 .wordmark, .tagline { opacity: 0; transform: translateY(14px); }
-.wordmark { animation: bcRise var(--bc-dur-fade) var(--bc-ease) calc(var(--bc-dur-draw) + 0.25s) forwards; }
-.tagline { animation: bcRise var(--bc-dur-fade) var(--bc-ease) calc(var(--bc-dur-draw) + 0.5s) forwards; }
-.scrollCue { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); width: 1px; height: 46px; background: var(--bc-ink); opacity: 0; animation: bcRise 0.8s var(--bc-ease) calc(var(--bc-dur-draw) + 0.8s) forwards; transform-origin: top; }
-.scrollCue::after { content: ""; position: absolute; inset: 0; background: var(--bc-white); animation: bcCue 1.8s var(--bc-ease) calc(var(--bc-dur-draw) + 1s) infinite; }
+.wordmark { animation: bcRise var(--bc-dur-fade) var(--bc-ease) calc(var(--bc-dur-draw) + 0.3s) forwards; }
+.tagline { animation: bcRise var(--bc-dur-fade) var(--bc-ease) calc(var(--bc-dur-draw) + 0.55s) forwards; }
+.scrollCue { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); width: 1px; height: 46px; background: var(--bc-blue); opacity: 0; animation: bcRise 0.8s var(--bc-ease) calc(var(--bc-dur-draw) + 0.9s) forwards; transform-origin: top; overflow: hidden; }
+.scrollCue::after { content: ""; position: absolute; inset: 0; background: var(--bc-white); animation: bcCue 1.8s var(--bc-ease) calc(var(--bc-dur-draw) + 1.1s) infinite; }
 
 @keyframes bcDraw { to { stroke-dashoffset: 0; } }
-@keyframes bcFill { to { fill-opacity: 1; } }
+@keyframes bcFade { to { opacity: 0; } }
+@keyframes bcReveal { to { opacity: 1; transform: none; } }
 @keyframes bcRise { to { opacity: 1; transform: none; } }
 @keyframes bcCue { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
 
@@ -140,6 +144,7 @@
 .serviceIcon { width: 64px; height: 64px; }
 .serviceIcon svg { width: 100%; height: 100%; fill: none; stroke: var(--bc-on-dark); stroke-width: 4; }
 .servicePanel h3 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h3); letter-spacing: 0.14em; }
+.serviceJp { color: var(--bc-blue-light) !important; font-size: 0.82rem !important; font-weight: var(--bc-fw-medium); letter-spacing: 0.16em; margin-top: -0.4rem; }
 .servicePanel p { color: var(--bc-on-dark-mut); font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); }
 
 /* =====================  WORKS  ===================== */
@@ -159,8 +164,8 @@
 .newsItem h3 { font-size: 1.02rem; font-weight: var(--bc-fw-bold); line-height: 1.6; }
 .newsFoot { display: flex; align-items: center; gap: 1.2rem; font-size: 0.78rem; color: var(--bc-muted); }
 .newsHeart { color: var(--bc-accent); }
-.readMore { display: block; width: fit-content; margin: clamp(2rem, 5vw, 3rem) auto 0; padding: 0.9rem 2.4rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); letter-spacing: 0.1em; color: var(--bc-ink); border: 1px solid var(--bc-ink); border-radius: var(--bc-radius-sm); transition: background 0.28s var(--bc-ease), color 0.28s var(--bc-ease); }
-.readMore:hover { background: var(--bc-ink); color: var(--bc-white); }
+.readMore { display: block; width: fit-content; margin: clamp(2rem, 5vw, 3rem) auto 0; padding: 0.9rem 2.4rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); letter-spacing: 0.1em; color: var(--bc-blue); border: 1px solid var(--bc-blue); border-radius: var(--bc-radius-sm); transition: background 0.28s var(--bc-ease), color 0.28s var(--bc-ease); }
+.readMore:hover { background: var(--bc-blue); color: var(--bc-white); }
 
 /* =====================  FOOTER  ===================== */
 .footer { position: relative; background: var(--bc-ink-soft); color: var(--bc-on-dark); padding: clamp(3rem, 7vw, 5rem) var(--bc-gutter) 2rem; }
@@ -168,7 +173,8 @@
 .footBrand { display: inline-flex; align-items: center; gap: 12px; }
 .footBrand svg { width: 34px; height: 34px; }
 .footBrand svg path, .footBrand svg polygon { stroke: var(--bc-on-dark); }
-.footBrand span { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: 1.25rem; }
+.footWordmark { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.2rem; color: var(--bc-on-dark); }
+.footWordmark b { font-weight: var(--bc-fw-bold); color: var(--bc-blue-light); }
 .footDesc { max-width: 40ch; color: var(--bc-on-dark-mut); line-height: 1.9; font-size: 0.92rem; }
 .footMeta { color: var(--bc-on-dark-mut); font-size: 0.9rem; line-height: 1.9; letter-spacing: 0.03em; }
 .footSocial { display: flex; gap: 0.8rem; }

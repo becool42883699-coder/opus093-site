@@ -5,7 +5,7 @@ import { MobileMenu, RevealController, ToTopButton } from "./BecoolClient";
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const asset = (p: string) => `${BASE}${p}`;
 
-/* ---- shared data (placeholder / original content) ------------------- */
+/* ---- nav ------------------------------------------------------------ */
 const NAV = [
   { href: "#about", label: "ABOUT" },
   { href: "#service", label: "SERVICE" },
@@ -14,86 +14,97 @@ const NAV = [
   { href: "#contact", label: "CONTACT" },
 ];
 
+/* ---- services (automotive / placeholder copy) ----------------------- */
 const SERVICES = [
   {
-    title: "BRANDING",
-    body: "ロゴやコンセプト設計から、伝わる世界観を一貫して組み立てます。お店や企業の「らしさ」を、ぶれない軸としてカタチにします。",
+    title: "CUSTOM",
+    jp: "カスタム・ドレスアップ",
+    body: "エアロ・ホイール・マフラーまで。あなたのイメージを一台に落とし込み、世界で一台だけの相棒に仕上げます。",
     icon: (
       <svg viewBox="0 0 64 64" aria-hidden="true">
-        <circle cx="26" cy="26" r="16" /><circle cx="40" cy="38" r="16" />
+        <circle cx="32" cy="32" r="10" /><circle cx="32" cy="32" r="21" />
+        <path d="M32 11v8M32 45v8M11 32h8M45 32h8" />
       </svg>
     ),
   },
   {
-    title: "GRAPHIC",
-    body: "名刺・チラシ・ポスター・パンフレットまで。紙のうえで手に取った瞬間に伝わる、丁寧な印刷物のデザインを行います。",
+    title: "MAINTENANCE",
+    jp: "整備・メンテナンス",
+    body: "オイル交換から定期点検まで。長く安心して乗れるよう、クルマの状態を丁寧に見極めて整えます。",
     icon: (
       <svg viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M18 10h20l8 8v36H18z" /><path d="M38 10v8h8" />
+        <path d="M44 20a10 10 0 0 1-13 13L18 46a5 5 0 0 1-7-7l13-13a10 10 0 0 1 13-13l-7 7 4 8 8 4z" />
       </svg>
     ),
   },
   {
-    title: "WEB DESIGN",
-    body: "見た目と使いやすさを両立した、成果につながるWebサイトを。最新のトレンドを取り入れつつ、無理のない運用まで見据えて設計します。",
+    title: "BODYWORK",
+    jp: "板金・塗装",
+    body: "小さなキズからフルペイントまで。純正以上の仕上がりを目指し、色と質感にこだわって蘇らせます。",
     icon: (
       <svg viewBox="0 0 64 64" aria-hidden="true">
-        <rect x="10" y="14" width="44" height="30" rx="2" /><path d="M26 54h12M32 44v10" />
+        <path d="M14 44l24-24 6 6-24 24H14z" /><path d="M38 20l6-6 6 6-6 6" />
       </svg>
     ),
   },
   {
-    title: "PHOTO",
-    body: "商品・料理・空間・人物まで。ブランドの温度が伝わる一枚を撮影し、そのまま各媒体で活きるかたちに仕上げます。",
+    title: "INSPECTION",
+    jp: "車検・法定点検",
+    body: "国家資格を持つ整備士が、法定基準をしっかり満たしながら、余計な費用をかけない車検をご提案します。",
     icon: (
       <svg viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M10 20h10l4-6h16l4 6h10v28H10z" /><circle cx="32" cy="33" r="9" />
+        <path d="M32 8l20 7v13c0 12-8.5 23-20 28C20.5 51 12 40 12 28V15z" /><path d="M24 31l6 6 12-13" />
       </svg>
     ),
   },
 ];
 
 const WORKS = [
-  { src: asset("/becool/img/work-1.svg"), cap: "BRAND LOGO — Cafe" },
-  { src: asset("/becool/img/work-2.svg"), cap: "PAMPHLET — Clinic" },
-  { src: asset("/becool/img/work-3.svg"), cap: "WEB SITE — Salon" },
-  { src: asset("/becool/img/work-4.svg"), cap: "POSTER — Event" },
-  { src: asset("/becool/img/work-5.svg"), cap: "PACKAGE — Sweets" },
-  { src: asset("/becool/img/work-6.svg"), cap: "PHOTO — Product" },
+  { src: asset("/becool/img/work-1.svg"), cap: "DEMO CAR — Sedan" },
+  { src: asset("/becool/img/work-2.svg"), cap: "CUSTOM — SUV" },
+  { src: asset("/becool/img/work-3.svg"), cap: "BODY PAINT — Coupe" },
+  { src: asset("/becool/img/work-4.svg"), cap: "WHEEL — Hatch" },
+  { src: asset("/becool/img/work-5.svg"), cap: "AERO — Wagon" },
+  { src: asset("/becool/img/work-6.svg"), cap: "RESTORE — Classic" },
 ];
 
 const NEWS = [
-  { date: "2026.06.28", cat: "WORKS", title: "アロマサロン様のブランドサイトを公開しました。" },
-  { date: "2026.05.14", cat: "NEWS", title: "定額制デザインプランの受付を再開しました。" },
-  { date: "2026.04.02", cat: "BLOG", title: "「伝わる名刺」をつくるために意識している3つのこと。" },
+  { date: "2026.06.20", cat: "WORKS", title: "デモカーのフルカスタムが完成しました。" },
+  { date: "2026.05.08", cat: "INFO", title: "夏のエアコン・冷却系点検キャンペーンを開始しました。" },
+  { date: "2026.04.15", cat: "BLOG", title: "はじめてのホイール選び、失敗しないための基本。" },
 ];
 
-/* ---- original geometric monogram (drawn in the hero) ---------------- */
-const HEX = "M50 6 L88 28 L88 72 L50 94 L12 72 L12 28 Z";
-const STEM = "M38 32 L38 68";
-const BOWL_TOP = "M38 32 L62 42 L38 50";
-const BOWL_BOTTOM = "M38 50 L66 60 L38 68";
+/* ---- brand marks ---------------------------------------------------- */
+const HEX = "M725 195 L917 306 L917 571 L725 683 L533 571 L533 306 Z";
+const SYMBOL =
+  "M 864 421 L 865 425 L 851 467 L 816 490 L 816 535 L 818 535 L 865 505 L 867 505 L 868 506 L 868 539 L 832 563 L 799 583 L 797 581 L 797 462 L 800 459 Z M 915 334 L 903 340 L 898 344 L 893 346 L 888 350 L 883 352 L 873 359 L 846 374 L 841 378 L 748 433 L 748 680 L 915 571 L 915 472 L 896 456 L 903 437 L 915 411 Z M 534 334 L 534 571 L 631 632 L 637 637 L 647 642 L 664 654 L 724 691 L 724 411 L 619 477 L 619 534 L 620 535 L 669 504 L 672 505 L 672 589 L 669 590 L 598 546 L 587 538 L 587 515 L 588 514 L 587 513 L 587 483 L 588 482 L 587 479 L 588 477 L 588 467 L 587 466 L 587 457 L 588 456 L 587 452 L 587 423 L 588 422 L 587 366 L 552 345 L 536 334 Z M 724 313 L 716 319 L 616 381 L 616 438 L 724 369 Z M 537 311 L 540 314 L 586 341 L 588 341 L 725 255 L 864 341 L 913 312 L 912 310 L 904 306 L 901 303 L 896 301 L 859 277 L 725 195 Z";
 
 function HeroMark() {
   return (
-    <svg className={styles.heroLogo} viewBox="0 0 100 100" role="img" aria-label="Be Cool ロゴマーク">
-      <polygon className={styles.markFill} points="38,32 62,42 38,50" />
-      <polygon className={styles.markFill} points="38,50 66,60 38,68" />
+    <svg className={styles.heroLogo} viewBox="510 171 429 544" role="img" aria-label="garage becool GBキューブロゴ">
+      <defs>
+        <linearGradient id="gbHero" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#4A4F55" />
+          <stop offset="55%" stopColor="#31557C" />
+          <stop offset="100%" stopColor="#1F63B6" />
+        </linearGradient>
+      </defs>
       <path className={styles.markPath} pathLength={1} d={HEX} />
-      <path className={styles.markPath} pathLength={1} d={STEM} />
-      <path className={styles.markPath} pathLength={1} d={BOWL_TOP} />
-      <path className={styles.markPath} pathLength={1} d={BOWL_BOTTOM} />
+      <path className={styles.symbolReveal} d={SYMBOL} fill="url(#gbHero)" fillRule="evenodd" />
     </svg>
   );
 }
 
-function StaticMark() {
+/* full-color GB symbol (gradient preserved) for header / footer */
+function GbSymbol({ size = 34 }: { size?: number }) {
   return (
-    <svg viewBox="0 0 100 100" role="img" aria-label="Be Cool">
-      <polygon points="38,32 62,42 38,50" fill="currentColor" />
-      <polygon points="38,50 66,60 38,68" fill="currentColor" />
-      <path d={HEX} fill="none" stroke="currentColor" strokeWidth={5} strokeLinejoin="round" />
-    </svg>
+    <img src={asset("/becool/img/symbol.svg")} alt="" width={size} height={size} style={{ width: size, height: "auto" }} />
+  );
+}
+
+function Wordmark({ className }: { className?: string }) {
+  return (
+    <span className={className}>garage <b>becool</b></span>
   );
 }
 
@@ -102,9 +113,9 @@ export default function BecoolPage() {
     <div className={`becool ${styles.root}`}>
       {/* ---------- HEADER ---------- */}
       <header className={styles.header}>
-        <a className={styles.brand} href="#top" aria-label="Be Cool トップへ">
-          <span style={{ color: "var(--bc-ink)", width: 34, height: 34, display: "block" }}><StaticMark /></span>
-          <span className={styles.brandName}>Be Cool</span>
+        <a className={styles.brand} href="#top" aria-label="garage becool トップへ">
+          <GbSymbol size={36} />
+          <Wordmark className={styles.brandName} />
         </a>
         <nav className={styles.navDesktop} aria-label="メインナビゲーション">
           {NAV.map((n) => <a key={n.href} href={n.href}>{n.label}</a>)}
@@ -116,12 +127,12 @@ export default function BecoolPage() {
         {/* ---------- HERO ---------- */}
         <section className={styles.hero} aria-label="ヒーロー">
           <div className={`${styles.heroBg} ${styles.halftone}`}>
-            <img src={asset("/becool/img/hero.svg")} alt="制作の現場で手を動かすデザイナーたちの様子（イメージ）" />
+            <img src={asset("/becool/img/hero.svg")} alt="ガレージでクルマを整備・カスタムする様子（イメージ）" />
           </div>
           <div className={styles.heroInner}>
             <HeroMark />
-            <p className={styles.wordmark}>Be Cool</p>
-            <p className={styles.tagline}>Graphic Design Studio — since 2020</p>
+            <p className={styles.wordmark}>garage <span className={styles.wmBlue}>becool</span></p>
+            <p className={styles.tagline}>Car Customize &amp; Maintenance — since 1999</p>
           </div>
           <span className={styles.scrollCue} aria-hidden="true" />
         </section>
@@ -129,16 +140,16 @@ export default function BecoolPage() {
         {/* ---------- CONCEPT ---------- */}
         <section className={styles.concept} aria-label="コンセプト">
           <div className={`${styles.conceptPhoto} ${styles.halftone}`}>
-            <img src={asset("/becool/img/concept.svg")} alt="デザイン制作物が並ぶ机（イメージ）" />
+            <img src={asset("/becool/img/concept.svg")} alt="ガレージのピットとクルマ（イメージ）" />
           </div>
           <div className={styles.conceptBand}>
             <p data-reveal className={styles.reveal}>
-              デザインとは、言葉にならない想いを、<br />
-              目に見えるカタチへ変えていく仕事。
+              クルマは、ただの移動手段じゃない。<br />
+              あなたの毎日を、ちょっとかっこよくする相棒だ。
             </p>
           </div>
           <div className={`${styles.cardsPhoto} ${styles.halftone}`}>
-            <img src={asset("/becool/img/card-mockup.svg")} alt="Be Cool の名刺デザイン（イメージ）" />
+            <img src={asset("/becool/img/card-mockup.svg")} alt="garage becool のツールとパーツ（イメージ）" />
           </div>
         </section>
 
@@ -146,23 +157,20 @@ export default function BecoolPage() {
         <section id="about" className={styles.section} aria-labelledby="about-h">
           <div data-reveal className={`${styles.sectionHead} ${styles.reveal}`}>
             <h2 id="about-h">ABOUT US</h2>
-            <span>Be Cool について</span>
+            <span>garage becool について</span>
           </div>
           <div data-reveal className={`${styles.aboutBody} ${styles.reveal}`}>
             <p>
-              デザインって、いったい何だろう——。わたしたちは、そんな問いから仕事を始めます。
-              お店を開くとき、商品を届けたいとき、イベントを知らせたいとき。人はいつも、
-              <em>「伝えたい」</em>という気持ちを抱えています。
+              1999年、一台のクルマへの「かっこよくしたい」という想いから、garage becool は始まりました。
+              以来わたしたちは、<em>クルマと過ごす時間そのものを豊かにする</em>ことを大切にしています。
             </p>
             <p>
-              その気持ちを、見た人がまっすぐ受け取れる「かたち」にすること。それが、
-              わたしたちの考えるデザインです。かっこよさや華やかさよりも先に、
-              「何を、誰に、どう伝えるか」を丁寧にほどいていきます。
+              カスタムも、整備も、板金塗装も。手を入れるのは車体だけでなく、それに乗る人の毎日です。
+              「どんなふうに乗りたいか」をじっくり聞かせてもらうことから、すべての作業が始まります。
             </p>
             <p>
-              Be Cool は、ロゴやチラシといった小さな一枚から、ブランド全体の設計、
-              Webサイトや写真まで。お客様の想いを、ともにカタチにしていく
-              デザインスタジオです。どんなに小さなご相談でも、どうぞお気軽にお声がけください。
+              ホイール一本の相談から、フルカスタムの一台まで。国家資格を持つ整備士が、
+              安全とデザインの両方に責任を持って向き合います。クルマのことなら、どうぞお気軽にご相談ください。
             </p>
           </div>
         </section>
@@ -174,6 +182,7 @@ export default function BecoolPage() {
               <div data-reveal className={`${styles.serviceInner} ${styles.reveal}`}>
                 <span className={styles.serviceIcon}>{s.icon}</span>
                 <h3>{s.title}</h3>
+                <p className={styles.serviceJp}>{s.jp}</p>
                 <p>{s.body}</p>
               </div>
             </div>
@@ -184,12 +193,12 @@ export default function BecoolPage() {
         <section id="works" className={styles.section + " " + styles.works} aria-labelledby="works-h">
           <div data-reveal className={`${styles.sectionHead} ${styles.reveal}`}>
             <h2 id="works-h">WORKS</h2>
-            <span>制作実績</span>
+            <span>制作・施工実績</span>
           </div>
           <ul data-reveal className={`${styles.worksGrid} ${styles.reveal}`}>
             {WORKS.map((w) => (
               <li key={w.src} className={`${styles.workItem} ${styles.halftone}`}>
-                <img src={w.src} alt={`制作実績: ${w.cap}（イメージ）`} loading="lazy" />
+                <img src={w.src} alt={`施工実績: ${w.cap}（イメージ）`} loading="lazy" />
                 <span className={styles.workCap}>{w.cap}</span>
               </li>
             ))}
@@ -210,11 +219,6 @@ export default function BecoolPage() {
                   <span className={styles.newsCat}>{n.cat}</span>
                 </div>
                 <h3>{n.title}</h3>
-                <div className={styles.newsFoot}>
-                  <span>👁 16</span>
-                  <span>💬 0</span>
-                  <span className={styles.newsHeart} aria-label="いいね">♥ 8</span>
-                </div>
               </article>
             ))}
           </div>
@@ -225,17 +229,18 @@ export default function BecoolPage() {
       {/* ---------- FOOTER ---------- */}
       <footer id="contact" className={styles.footer}>
         <div className={styles.footInner}>
-          <span className={styles.footBrand} style={{ color: "var(--bc-on-dark)" }}>
-            <span style={{ width: 34, height: 34, display: "block" }}><StaticMark /></span>
-            <span>Be Cool</span>
+          <span className={styles.footBrand}>
+            <GbSymbol size={38} />
+            <Wordmark className={styles.footWordmark} />
           </span>
           <p className={styles.footDesc}>
-            東京にある小さなデザインスタジオ。ロゴ・チラシ・パンフレット・
-            Webサイト・写真撮影などを行っています。伝えたい想いを、ともにカタチに。
+            1999年創業のカーガレージ。カスタム・整備・板金塗装・車検まで、
+            クルマを楽しむすべてをサポートします。あなたの一台を、もっとかっこよく。
           </p>
           <p className={styles.footMeta}>
             〒000-0000　東京都サンプル区サンプル町0-0-0<br />
-            Email: hello@example.com
+            TEL: 000-0000-0000　Email: hello@example.com<br />
+            営業時間 9:00–19:00 / 定休日 水曜
           </p>
           <div className={styles.footSocial}>
             <a href="#contact" aria-label="Instagram">
@@ -248,7 +253,7 @@ export default function BecoolPage() {
           <div className={styles.footLinks}>
             <a href="#contact">プライバシーポリシー</a><span>｜</span><a href="#contact">Q &amp; A</a>
           </div>
-          <p className={styles.copyright}>© 2020 Be Cool</p>
+          <p className={styles.copyright}>© 1999 garage becool</p>
         </div>
         <ToTopButton />
       </footer>
