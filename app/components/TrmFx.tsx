@@ -25,7 +25,8 @@ export default function TrmFx() {
   /* ---- 1. 初回ローディング演出(セッション内1回のみ・約1.6秒) ---- */
   useLayoutEffect(() => {
     // Be Cool ルートは独自の世界観のため、T-REX共通FXを一切適用しない
-    if (window.location.pathname.startsWith("/becool")) return;
+    // (basePath付きの公開URL /xxx/becool/ にも対応するため includes で判定)
+    if (window.location.pathname.includes("/becool")) return;
     let frame = 0;
     let leaveTimer = 0;
     let doneTimer = 0;
@@ -63,7 +64,7 @@ export default function TrmFx() {
 
     const setup = async () => {
       // Be Cool ルートは独自の世界観のため、T-REX共通FXを一切適用しない
-      if (window.location.pathname.startsWith("/becool")) return;
+      if (window.location.pathname.includes("/becool")) return;
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (reduceMotion) return;
 
