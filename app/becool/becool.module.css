@@ -93,20 +93,30 @@
 .tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.5); padding-left: var(--bc-ls-tagline); }
 
 /* --- hero intro animation (pure CSS, plays on load):
-       blue hexagon line-draw -> real GB symbol reveals -> wordmark/tagline rise --- */
-.markPath { stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0.9; animation: bcDraw var(--bc-dur-draw) var(--bc-ease-soft) 0.2s forwards, bcFade 0.6s var(--bc-ease) calc(var(--bc-dur-draw) + 0.35s) forwards; }
-.symbolReveal { opacity: 0; transform: scale(0.9); animation: bcReveal var(--bc-dur-fade) var(--bc-ease) calc(var(--bc-dur-draw) + 0.05s) forwards; }
-.wordmark, .tagline { opacity: 0; transform: translateY(14px); }
-.wordmark { animation: bcRise var(--bc-dur-fade) var(--bc-ease) calc(var(--bc-dur-draw) + 0.3s) forwards; }
-.tagline { animation: bcRise var(--bc-dur-fade) var(--bc-ease) calc(var(--bc-dur-draw) + 0.55s) forwards; }
-.scrollCue { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); width: 1px; height: 46px; background: var(--bc-blue); opacity: 0; animation: bcRise 0.8s var(--bc-ease) calc(var(--bc-dur-draw) + 0.9s) forwards; transform-origin: top; overflow: hidden; }
-.scrollCue::after { content: ""; position: absolute; inset: 0; background: var(--bc-white); animation: bcCue 1.8s var(--bc-ease) calc(var(--bc-dur-draw) + 1.1s) infinite; }
+       (same sequence as the reference site) single line-draws the mark outline
+       -> the logo fills in from the bottom -> wordmark grows in -> tagline fades. */
+.markPath { stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0.95; animation: bcDraw var(--bc-dur-draw) var(--bc-ease-soft) 0.25s forwards, bcFade 0.5s var(--bc-ease) calc(var(--bc-dur-draw) + 0.45s) forwards; }
+/* logo "fills in" from bottom to top, as if the drawn outline is being painted */
+.symbolReveal { clip-path: inset(100% 0 0 0); animation: bcFill2 0.7s var(--bc-ease) calc(var(--bc-dur-draw) + 0.15s) forwards; }
+/* wordmark grows in from the centre (scale + fade), tagline fades last */
+.wordmark { opacity: 0; transform: scale(0.9); transform-origin: center; animation: bcGrow var(--bc-dur-fade) var(--bc-ease) calc(var(--bc-dur-draw) + 0.55s) forwards; }
+.tagline { opacity: 0; animation: bcFadeIn 0.8s var(--bc-ease) calc(var(--bc-dur-draw) + 0.85s) forwards; }
+.scrollCue { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); width: 1px; height: 46px; background: var(--bc-blue); opacity: 0; animation: bcFadeIn 0.8s var(--bc-ease) calc(var(--bc-dur-draw) + 1.15s) forwards; transform-origin: top; overflow: hidden; }
+.scrollCue::after { content: ""; position: absolute; inset: 0; background: var(--bc-white); animation: bcCue 1.8s var(--bc-ease) calc(var(--bc-dur-draw) + 1.35s) infinite; }
 
 @keyframes bcDraw { to { stroke-dashoffset: 0; } }
 @keyframes bcFade { to { opacity: 0; } }
-@keyframes bcReveal { to { opacity: 1; transform: none; } }
-@keyframes bcRise { to { opacity: 1; transform: none; } }
+@keyframes bcFill2 { from { clip-path: inset(100% 0 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes bcGrow { to { opacity: 1; transform: none; } }
+@keyframes bcFadeIn { to { opacity: 1; } }
 @keyframes bcCue { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
+
+/* reduced-motion: skip the intro entirely, show the final logo + text at once */
+@media (prefers-reduced-motion: reduce) {
+  .markPath { animation: none; opacity: 0; }
+  .symbolReveal { animation: none; clip-path: none; }
+  .wordmark, .tagline, .scrollCue { animation: none; opacity: 1; transform: none; }
+}
 
 /* =====================  CONCEPT BAND  ===================== */
 .concept { position: relative; }
