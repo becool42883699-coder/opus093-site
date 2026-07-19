@@ -85,7 +85,21 @@
 .heroInner { position: relative; display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
 /* 完成の瞬間に発光するグロー(GSAPで制御) */
 .heroGlow { position: absolute; top: 44%; left: 50%; width: min(64vw, 540px); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(31, 99, 182, 0.55), rgba(31, 99, 182, 0) 62%); filter: blur(16px); opacity: 0; pointer-events: none; z-index: 0; }
-.heroInner .heroLogo, .heroInner .wordmark, .heroInner .tagline { position: relative; z-index: 1; }
+.heroInner .wordmark, .heroInner .tagline { position: relative; z-index: 1; }
+/* キューブ / モーフ / 完成ロゴ を同じ場所に重ねるゾーン */
+.logoZone { position: relative; z-index: 1; display: grid; place-items: center; width: min(90vw, 520px); }
+.logoZone > * { grid-area: 1 / 1; }
+.logoMorph { width: clamp(300px, 60vw, 500px); height: auto; overflow: visible; }
+.logoMorph :global(.logo-morph) { transform-box: fill-box; transform-origin: 50% 50%; }
+.logoCarFinal { width: clamp(300px, 60vw, 500px); height: auto; }
+
+/* 表示状態: 既定/完成は車ロゴ、再生中はキューブ+モーフ */
+.heroInner :global(.logo-morphStage) { opacity: 0; }
+.heroInner[data-intro="play"] :global(.logo-car-final) { opacity: 0; }
+.heroInner[data-intro="complete"] .heroLogo,
+.heroInner[data-intro="complete"] :global(.logo-morphStage) { opacity: 0; }
+.heroInner[data-intro="done"] .heroLogo,
+.heroInner[data-intro="done"] :global(.logo-morphStage) { display: none; }
 
 .heroLogo { width: clamp(150px, 26vw, 250px); height: auto; overflow: visible; }
 

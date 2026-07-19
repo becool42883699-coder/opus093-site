@@ -121,7 +121,7 @@ const GUIDE_REG =
 
 function HeroMark() {
   return (
-    <svg className={styles.heroLogo} viewBox="510 171 429 544" role="img" aria-label="GARAGE BeCool GBキューブロゴ">
+    <svg className={styles.heroLogo} viewBox="510 171 429 544" aria-hidden="true">
       <defs>
         <linearGradient id="gbHero" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#4A4F55" />
@@ -185,13 +185,29 @@ export default function BecoolPage() {
           </div>
           <div className={styles.heroInner} data-hero-stage data-intro="play">
             <span className={`hero-glow ${styles.heroGlow}`} aria-hidden="true" />
-            <HeroMark />
-            <p className={`${styles.wordmark} hero-wordmark`}>GARAGE <span className={styles.wmBlue}>BeCool</span></p>
+            <div className={styles.logoZone}>
+              <HeroMark />
+              {/* GBキューブ→車ロゴへ変形するモーフ用パス(GSAP+flubberで制御) */}
+              <svg className={`logo-morphStage ${styles.logoMorph}`} viewBox="0 0 1099 412" aria-hidden="true">
+                <defs>
+                  <linearGradient id="gbCar" x1="0%" y1="20%" x2="100%" y2="80%">
+                    <stop offset="0%" stopColor="#25272c" />
+                    <stop offset="24%" stopColor="#41464f" />
+                    <stop offset="49%" stopColor="#293b55" />
+                    <stop offset="72%" stopColor="#164678" />
+                    <stop offset="100%" stopColor="#005bb6" />
+                  </linearGradient>
+                </defs>
+                <path className="logo-morph" fill="url(#gbCar)" />
+              </svg>
+              {/* 変形後の最終ロゴ(本物・くっきり) */}
+              <img className={`logo-car-final ${styles.logoCarFinal}`} src={asset("/becool/img/logo-car.svg")} alt="GARAGE BeCool ロゴ" />
+            </div>
             <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
-          {/* JS無効時は組み立て前提の初期非表示を解除し、完成ロゴを表示する */}
+          {/* JS無効時は変形演出をスキップし、最終ロゴを表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .logo-part,[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important}[data-hero-stage] .logo-guide,[data-hero-stage] .logo-outline{display:none!important}`}</style>
+            <style>{`[data-hero-stage] .logo-car-final,[data-hero-stage] .hero-tagline{opacity:1!important}[data-hero-stage] .heroLogo,[data-hero-stage] .logo-morphStage{display:none!important}`}</style>
           </noscript>
           <BecoolHeroIntro />
           <span className={styles.scrollCue} aria-hidden="true" />
