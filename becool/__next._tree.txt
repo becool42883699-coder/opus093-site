@@ -5,9 +5,9 @@
 :HL["/opus093-site/_next/static/media/2e38944bf61518f6-s.p.2j4u47cw2wp62.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/opus093-site/_next/static/media/a626ed2fbe2db1bf-s.p.342nhdmq3f7um.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/opus093-site/_next/static/media/ad9c66e761fed85a-s.p.17y412u0mab7-.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-:HL["/opus093-site/_next/static/chunks/3ncqkbc80vpl1.css","style"]
+:HL["/opus093-site/_next/static/chunks/1der1c0_hl-ma.css","style"]
 :HL["/opus093-site/becool/img/symbol.svg","image"]
 :HL["/opus093-site/becool/img/photo-porsche.webp","image"]
 :HL["/opus093-site/becool/img/store-exterior.webp","image"]
 :HL["/opus093-site/becool/img/photo-alphard.webp","image"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"lfxAgRLND3Kj_bEU5_JbC"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"73d51OqeAX-sClLFtRzo9"}
