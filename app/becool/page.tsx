@@ -217,12 +217,12 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- CONCEPT ---------- */}
-        <section className={styles.concept} aria-label="コンセプト">
+        <section data-reveal className={`${styles.concept} ${styles.reveal}`} aria-label="コンセプト">
           <div className={`${styles.conceptPhoto} ${styles.halftone}`}>
             <img src={asset("/becool/img/store-exterior.webp")} alt="GARAGE BeCool の店舗外観（夕景）" />
           </div>
           <div className={styles.conceptBand}>
-            <p data-reveal className={styles.reveal}>
+            <p>
               地域のカーライフを、<br />
               もっと安心に、もっと楽しく。
             </p>
@@ -233,12 +233,12 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- ABOUT ---------- */}
-        <section id="about" className={styles.section} aria-labelledby="about-h">
-          <div data-reveal className={`${styles.sectionHead} ${styles.reveal}`}>
+        <section id="about" data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="about-h">
+          <div className={styles.sectionHead}>
             <h2 id="about-h">ABOUT US</h2>
             <span>GARAGE BeCool について</span>
           </div>
-          <div data-reveal className={`${styles.aboutBody} ${styles.reveal}`}>
+          <div className={styles.aboutBody}>
             <p>
               GARAGE BeCool は<em>1999年創業</em>、福岡県北九州市小倉南区を中心とする地域密着型のカーショップです。
               中古車の販売だけでなく、買取・車検・整備・メンテナンスまで一括で対応しています。
@@ -256,10 +256,10 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- SERVICES ---------- */}
-        <section id="service" className={styles.services} aria-label="サービス">
+        <section id="service" data-reveal className={`${styles.services} ${styles.reveal}`} aria-label="サービス">
           {SERVICES.map((s) => (
             <div key={s.title} className={styles.servicePanel}>
-              <div data-reveal className={`${styles.serviceInner} ${styles.reveal}`}>
+              <div className={styles.serviceInner}>
                 <span className={styles.serviceIcon}>{s.icon}</span>
                 <h3>{s.title}</h3>
                 <p className={styles.serviceJp}>{s.jp}</p>
@@ -270,12 +270,12 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- PICK UP CAR ---------- */}
-        <section id="car" className={styles.section + " " + styles.works} aria-labelledby="car-h">
-          <div data-reveal className={`${styles.sectionHead} ${styles.reveal}`}>
+        <section id="car" data-reveal className={`${styles.section} ${styles.works} ${styles.reveal}`} aria-labelledby="car-h">
+          <div className={styles.sectionHead}>
             <h2 id="car-h">PICK UP</h2>
             <span>販売車両</span>
           </div>
-          <ul data-reveal className={`${styles.pickupGrid} ${styles.reveal}`}>
+          <ul className={styles.pickupGrid}>
             {CARS.map((c) => (
               <li key={c.name} className={`${styles.pickupItem} ${styles.halftone}`}>
                 <img src={c.src} alt={c.alt} loading="lazy" />
@@ -290,12 +290,12 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- SHOP ---------- */}
-        <section id="shop" className={styles.section + " " + styles.shop} aria-labelledby="shop-h">
-          <div data-reveal className={`${styles.sectionHead} ${styles.reveal}`}>
+        <section id="shop" data-reveal className={`${styles.section} ${styles.shop} ${styles.reveal}`} aria-labelledby="shop-h">
+          <div className={styles.sectionHead}>
             <h2 id="shop-h">SHOP</h2>
             <span>店舗案内</span>
           </div>
-          <div data-reveal className={`${styles.storeGrid} ${styles.reveal}`}>
+          <div className={styles.storeGrid}>
             {SHOPS.map((s) => (
               <article key={s.name} className={styles.storeCard}>
                 {s.comingSoon ? (
@@ -329,7 +329,7 @@ export default function BecoolPage() {
 
       {/* ---------- FOOTER ---------- */}
       <footer id="contact" className={styles.footer}>
-        <div className={styles.footInner}>
+        <div data-reveal className={`${styles.footInner} ${styles.reveal}`}>
           <span className={styles.footBrand}>
             <GbSymbol size={38} />
             <Wordmark className={styles.footWordmark} />

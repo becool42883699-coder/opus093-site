@@ -63,7 +63,8 @@ export function RevealController() {
           if (e.isIntersecting) { e.target.classList.add(styles.isIn); io.unobserve(e.target); }
         });
       },
-      { threshold: 0.16, rootMargin: "0px 0px -8% 0px" }
+      // セクション丸ごと持ち上げるため、縦長のセクションでも早めに発火するよう低めの threshold
+      { threshold: 0.08, rootMargin: "0px 0px -10% 0px" }
     );
     nodes.forEach((n) => io.observe(n));
     return () => io.disconnect();
