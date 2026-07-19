@@ -82,30 +82,41 @@
 .heroBg img { width: 100%; height: 100%; object-fit: cover; }
 /* cinematic scrim so the logo + wordmark read over any part of the photo */
 .hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse at 50% 52%, rgba(21,24,27,0.30), rgba(21,24,27,0.52) 78%); }
-.heroInner { position: relative; display: grid; justify-items: center; gap: 1.4rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
+.heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
 
-/* 新ロゴを重ねるゾーン(下地＋ロゴを同じ場所に) */
-.logoZone { position: relative; display: grid; place-items: center; width: min(92vw, 560px); }
-.logoZone > * { grid-area: 1 / 1; }
-/* 写真の上でもロゴが埋もれないよう、柔らかな明るい下地を敷く */
-.logoBacking { width: min(96vw, 640px); aspect-ratio: 2.6 / 1; border-radius: 50%; background: radial-gradient(ellipse, rgba(240, 244, 250, 0.22), rgba(240, 244, 250, 0) 66%); filter: blur(24px); pointer-events: none; opacity: 0; animation: bcFadeIn 1.2s var(--bc-ease) 0.2s both; }
-/* 新ロゴ本体(視認性のため drop-shadow で輪郭を持ち上げる) */
-.heroCarLogo { position: relative; width: clamp(300px, 62vw, 520px); height: auto; filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.5)); opacity: 0; transform: scale(0.94); animation: bcLogoIn 1s var(--bc-ease) 0.2s both; }
+.heroLogo { width: clamp(150px, 26vw, 250px); height: auto; overflow: visible; }
 
-.tagline { position: relative; font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); padding-left: var(--bc-ls-tagline); opacity: 0; animation: bcFadeIn 0.8s var(--bc-ease) 0.95s both; }
+/* --- blueprint guide lines (製図ガイド・GSAPで描画→フェード) --- */
+.logoGuide { fill: none; stroke: var(--bc-blue); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.logoGuide :global(.logo-frame) { stroke-width: 3; }
+.logoGuide :global(.logo-sketch),
+.logoGuide :global(.logo-axis),
+.logoGuide :global(.logo-cross) { stroke-width: 1.8; opacity: 0.85; }
+.logoGuide :global(.logo-draw) { stroke-dasharray: 1; } /* pathLength=1 で長さ正規化 */
 
-.scrollCue { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); width: 1px; height: 46px; background: var(--bc-blue); transform-origin: top; overflow: hidden; }
-.scrollCue::after { content: ""; position: absolute; inset: 0; background: var(--bc-white); animation: bcCue 1.8s var(--bc-ease) 1.2s infinite; }
+/* --- assembled GB cube parts --- */
+.logoParts :global(.logo-part) { transform-box: fill-box; transform-origin: 50% 50%; filter: blur(var(--pblur, 0px)); }
 
-@keyframes bcLogoIn { to { opacity: 1; transform: none; } }
-@keyframes bcFadeIn { to { opacity: 1; } }
+.wordmark { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: var(--bc-fs-hero); line-height: 1; letter-spacing: -0.01em; color: var(--bc-on-dark); text-shadow: 0 2px 20px rgba(0, 0, 0, 0.45); }
+.wordmark .wmBlue { color: var(--bc-blue-light); }
+.tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.5); padding-left: var(--bc-ls-tagline); }
+
+/* 既定(SSR / JS無効 / done): 完成状態を表示。ガイド線は隠す */
+.heroInner :global(.logo-guide) { opacity: 0; }
+/* JSが data-intro=play にした瞬間、GSAP実行前のちらつきを防ぐ初期非表示 */
+.heroInner[data-intro="play"] :global(.logo-part) { opacity: 0; }
+.heroInner[data-intro="play"] .wordmark,
+.heroInner[data-intro="play"] .tagline { opacity: 0; }
+/* reduced-motion / 2回目以降: 完成状態を短フェードで表示 */
+.heroInner[data-intro="done"] { animation: bcHeroFade 0.5s var(--bc-ease) both; }
+
+/* --- scroll cue: 通常は表示、イントロ再生中のみ隠す --- */
+.scrollCue { position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%); width: 1px; height: 46px; background: var(--bc-blue); opacity: 1; transition: opacity 0.6s var(--bc-ease); transform-origin: top; overflow: hidden; }
+.heroInner[data-intro="play"] ~ .scrollCue { opacity: 0; }
+.scrollCue::after { content: ""; position: absolute; inset: 0; background: var(--bc-white); animation: bcCue 1.8s var(--bc-ease) 0.6s infinite; }
+
+@keyframes bcHeroFade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes bcCue { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }
-
-/* reduced-motion: 演出なしで即表示 */
-@media (prefers-reduced-motion: reduce) {
-  .heroCarLogo, .logoBacking, .tagline { animation: none; opacity: 1; transform: none; }
-  .scrollCue::after { animation: none; }
-}
 
 /* =====================  CONCEPT BAND  ===================== */
 .concept { position: relative; }
