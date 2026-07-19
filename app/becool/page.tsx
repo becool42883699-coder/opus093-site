@@ -1,5 +1,6 @@
 import styles from "./becool.module.css";
 import { MobileMenu, RevealController, ToTopButton } from "./BecoolClient";
+import BecoolHeroIntro from "./BecoolHeroIntro";
 
 /* サブパス配信(GitHub Pages等)でも画像が解決できるようベースパスを前置 */
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -92,10 +93,24 @@ const SHOPS = [
   },
 ];
 
-/* ---- brand marks ---------------------------------------------------- */
-const HEX = "M725 195 L917 306 L917 571 L725 683 L533 571 L533 306 Z";
-const SYMBOL =
-  "M 864 421 L 865 425 L 851 467 L 816 490 L 816 535 L 818 535 L 865 505 L 867 505 L 868 506 L 868 539 L 832 563 L 799 583 L 797 581 L 797 462 L 800 459 Z M 915 334 L 903 340 L 898 344 L 893 346 L 888 350 L 883 352 L 873 359 L 846 374 L 841 378 L 748 433 L 748 680 L 915 571 L 915 472 L 896 456 L 903 437 L 915 411 Z M 534 334 L 534 571 L 631 632 L 637 637 L 647 642 L 664 654 L 724 691 L 724 411 L 619 477 L 619 534 L 620 535 L 669 504 L 672 505 L 672 589 L 669 590 L 598 546 L 587 538 L 587 515 L 588 514 L 587 513 L 587 483 L 588 482 L 587 479 L 588 477 L 588 467 L 587 466 L 587 457 L 588 456 L 587 452 L 587 423 L 588 422 L 587 366 L 552 345 L 536 334 Z M 724 313 L 716 319 L 616 381 L 616 438 L 724 369 Z M 537 311 L 540 314 L 586 341 L 588 341 L 725 255 L 864 341 L 913 312 L 912 310 L 904 306 L 901 303 L 896 301 L 859 277 L 725 195 Z";
+/* ---- brand mark: GBキューブを組み立て可能なパーツに分解 -------------------
+   symbol.svg の複合パスを 5 パーツに分割(屋根面 / 左G面 / 右B面 / 前面小片 /
+   小ノッチ)。各パーツと製図ガイド線に意味のある class を付け、GSAP で個別制御。 */
+const PART_NOTCH =
+  "M 864 421 L 865 425 L 851 467 L 816 490 L 816 535 L 818 535 L 865 505 L 867 505 L 868 506 L 868 539 L 832 563 L 799 583 L 797 581 L 797 462 L 800 459 Z";
+const PART_RIGHT =
+  "M 915 334 L 903 340 L 898 344 L 893 346 L 888 350 L 883 352 L 873 359 L 846 374 L 841 378 L 748 433 L 748 680 L 915 571 L 915 472 L 896 456 L 903 437 L 915 411 Z";
+const PART_LEFT =
+  "M 534 334 L 534 571 L 631 632 L 637 637 L 647 642 L 664 654 L 724 691 L 724 411 L 619 477 L 619 534 L 620 535 L 669 504 L 672 505 L 672 589 L 669 590 L 598 546 L 587 538 L 587 515 L 588 514 L 587 513 L 587 483 L 588 482 L 587 479 L 588 477 L 588 467 L 587 466 L 587 457 L 588 456 L 587 452 L 587 423 L 588 422 L 587 366 L 552 345 L 536 334 Z";
+const PART_FRONT = "M 724 313 L 716 319 L 616 381 L 616 438 L 724 369 Z";
+const PART_TOP =
+  "M 537 311 L 540 314 L 586 341 L 588 341 L 725 255 L 864 341 L 913 312 L 912 310 L 904 306 L 901 303 L 896 301 L 859 277 L 725 195 Z";
+
+/* 製図ガイド(外枠六角・中心軸・アイソメ稜線・十字) */
+const GUIDE_FRAME = "M725 195 L915 334 L915 571 L724 691 L534 571 L534 334 Z";
+const GUIDE_AXIS = "M725 150 L725 725";
+const GUIDE_ISO = "M725 455 L534 344 M725 455 L916 344 M725 455 L725 691";
+const GUIDE_CROSS = "M686 455 L764 455 M725 416 L725 494";
 
 function HeroMark() {
   return (
@@ -107,8 +122,21 @@ function HeroMark() {
           <stop offset="100%" stopColor="#1F63B6" />
         </linearGradient>
       </defs>
-      <path className={styles.markPath} pathLength={1} d={HEX} />
-      <path className={styles.symbolReveal} d={SYMBOL} fill="url(#gbHero)" fillRule="evenodd" />
+      {/* 製図ガイド線(装飾・SRからは除外) */}
+      <g className={`logo-guide ${styles.logoGuide}`} aria-hidden="true">
+        <path className="logo-frame logo-draw" pathLength={1} d={GUIDE_FRAME} />
+        <path className="logo-sketch logo-draw" pathLength={1} d={GUIDE_ISO} />
+        <path className="logo-axis logo-draw" pathLength={1} d={GUIDE_AXIS} />
+        <path className="logo-cross logo-draw" pathLength={1} d={GUIDE_CROSS} />
+      </g>
+      {/* GBキューブ各パーツ */}
+      <g className={styles.logoParts} fill="url(#gbHero)">
+        <path className="logo-part part-top" d={PART_TOP} />
+        <path className="logo-part part-left" d={PART_LEFT} fillRule="evenodd" />
+        <path className="logo-part part-right" d={PART_RIGHT} />
+        <path className="logo-part part-front" d={PART_FRONT} />
+        <path className="logo-part part-notch" d={PART_NOTCH} />
+      </g>
     </svg>
   );
 }
@@ -144,11 +172,16 @@ export default function BecoolPage() {
           <div className={`${styles.heroBg} ${styles.halftone}`}>
             <img src={asset("/becool/img/photo-porsche.webp")} alt="GARAGE BeCool 店頭に並ぶ白いポルシェ 718 ケイマン" />
           </div>
-          <div className={styles.heroInner}>
+          <div className={styles.heroInner} data-hero-stage data-intro="play">
             <HeroMark />
-            <p className={styles.wordmark}>GARAGE <span className={styles.wmBlue}>BeCool</span></p>
-            <p className={styles.tagline}>Used Car &amp; Car Life Support — since 1999</p>
+            <p className={`${styles.wordmark} hero-wordmark`}>GARAGE <span className={styles.wmBlue}>BeCool</span></p>
+            <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
+          {/* JS無効時は組み立て前提の初期非表示を解除し、完成ロゴを表示する */}
+          <noscript>
+            <style>{`[data-hero-stage] .logo-part,[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}`}</style>
+          </noscript>
+          <BecoolHeroIntro />
           <span className={styles.scrollCue} aria-hidden="true" />
         </section>
 
