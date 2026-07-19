@@ -35,9 +35,7 @@ const SERVICES = [
     photo: "/becool/img/service-inspection.webp",
     body: "車検・法定点検から、オイル・タイヤ・バッテリー交換、警告灯や異音の診断まで。国家資格を持つ整備士が対応します。代車のご用意、LINEでの整備予約にも対応。",
     icon: (
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M44 20a10 10 0 0 1-13 13L18 46a5 5 0 0 1-7-7l13-13a10 10 0 0 1 13-13l-7 7 4 8 8 4z" />
-      </svg>
+      <img className={styles.serviceIconImg} src={asset("/becool/img/icon-inspection.svg")} alt="" width={512} height={512} />
     ),
   },
   {
