@@ -1,0 +1,118 @@
+/* =====================================================================
+   Be Cool — Design Tokens (STEP2)
+   ---------------------------------------------------------------------
+   Extracted from the "form design" reference site's design LANGUAGE
+   (halftone-lightened monochrome, full-bleed dark panels, line-draw logo).
+   Values are re-derived for an ORIGINAL brand ("Be Cool") — not a copy.
+
+   Scoped under `.becool` so it never collides with the existing
+   T-Rex site tokens declared on :root in app/globals.css.
+   Every Be Cool section references ONLY these variables.
+   ===================================================================== */
+
+.becool {
+  /* ---- Brand core (from the garage becool brand guide) --------------- */
+  --bc-charcoal:     #4a4f55;   /* CHARCOAL GRAY — brand              */
+  --bc-blue:         #1f63b6;   /* COOL BLUE — brand accent           */
+  --bc-blue-mid:     #31557c;   /* gradient mid stop                  */
+  --bc-blue-light:   #5b9be6;   /* lighter blue for text on dark      */
+  --bc-gradient:     linear-gradient(135deg, #4a4f55 0%, #31557c 55%, #1f63b6 100%);
+
+  /* ---- Surface / text: light base, charcoal ink, blue accent -------- */
+  --bc-white:        #ffffff;   /* page / header background            */
+  --bc-paper:        #eef0f2;   /* halftone-lightened photo & off-white */
+  --bc-ink:          #23272b;   /* primary text (charcoal-leaning)     */
+  --bc-ink-soft:     #2b2f33;   /* statement bands / footer            */
+  --bc-panel-black:  #15181b;   /* full-bleed service panel (dark)     */
+  --bc-panel-gray:   #4a4f55;   /* full-bleed service panel (charcoal) */
+  --bc-muted:        #6b7178;   /* sub text / captions                 */
+  --bc-line:         #e3e6e9;   /* hairline borders                    */
+  --bc-works-bg:     #dce2e8;   /* works/portfolio backdrop            */
+  --bc-mark-idle:    #8f9298;   /* logo mark settled (dimmed) state    */
+  --bc-accent:       #1f63b6;   /* COOL BLUE — links / CTA / active     */
+  --bc-on-dark:      #f4f5f6;   /* text on dark panels                 */
+  --bc-on-dark-mut:  #b6bbc0;   /* muted text on dark panels           */
+
+  /* ---- Typography --------------------------------------------------- */
+  /* Japanese body: Noto Sans JP. Wordmark/headings: Exo 2 SemiBold.
+     Tagline: Montserrat Medium. next/font vars fall back to system stacks. */
+  --bc-font-sans: "Noto Sans JP", "Yu Gothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  --bc-font-display: var(--font-exo, "Exo 2"), "Noto Sans JP", system-ui, sans-serif;
+  --bc-font-tagline: var(--font-montserrat, "Montserrat"), var(--font-exo, "Exo 2"), sans-serif;
+
+  --bc-fw-body:    400;
+  --bc-fw-medium:  500;
+  --bc-fw-bold:    700;
+  --bc-fw-black:   900;   /* wordmark / big English headings */
+
+  /* fluid type scale */
+  --bc-fs-hero:   clamp(2.4rem, 6vw,   4.5rem);   /* hero wordmark        */
+  --bc-fs-h2:     clamp(1.9rem, 4vw,   3rem);     /* ABOUT US / section   */
+  --bc-fs-h3:     clamp(1.3rem, 2.4vw, 1.75rem);  /* BRANDING panel title */
+  --bc-fs-lead:   clamp(1.15rem,2.2vw, 1.5rem);   /* statement band copy  */
+  --bc-fs-body:   clamp(0.95rem,1.3vw, 1.05rem);  /* body                 */
+  --bc-fs-small:  0.8rem;                          /* meta / tagline       */
+
+  --bc-lh-body:    1.95;   /* generous JP line-height */
+  --bc-lh-heading: 1.14;
+  --bc-ls-tagline: 0.28em; /* "since 20XX" wide tracking */
+  --bc-ls-head:    0.06em;
+  --bc-ls-body:    0.02em;
+
+  /* ---- Spacing scale (4px base) ------------------------------------- */
+  --bc-space-1: 0.5rem;
+  --bc-space-2: 1rem;
+  --bc-space-3: 1.5rem;
+  --bc-space-4: 2rem;
+  --bc-space-5: 3rem;
+  --bc-space-6: 4rem;
+  --bc-space-7: 6rem;
+  --bc-space-8: 8rem;
+
+  --bc-section-y: clamp(4rem, 10vw, 9rem);  /* vertical section padding  */
+  --bc-gutter:    clamp(1.25rem, 5vw, 4rem);/* horizontal page gutter    */
+  --bc-maxw:      1200px;                    /* content max width         */
+  --bc-maxw-text: 720px;                     /* readable text column      */
+
+  /* ---- Radius (direct-angle base) ----------------------------------- */
+  --bc-radius-0:      0;       /* photos / blocks are square-cornered   */
+  --bc-radius-sm:     3px;     /* buttons only                          */
+  --bc-radius-pill:   999px;
+  --bc-radius-circle: 50%;     /* TOP button, social chips              */
+
+  /* ---- Elevation (flat by default) ---------------------------------- */
+  --bc-shadow-none:  none;
+  --bc-shadow-card:  0 10px 30px rgba(0, 0, 0, 0.08);  /* mockups only   */
+  --bc-shadow-hover: 0 16px 44px rgba(0, 0, 0, 0.14);  /* image hover    */
+
+  /* ---- Halftone / mesh texture (the signature overlay) -------------- */
+  --bc-dot-color: rgba(38, 38, 38, 0.30);
+  --bc-dot-gap:   4px;   /* tile size of the dot grid */
+  --bc-dot-r:     0.7px; /* dot radius                */
+  /* reusable dot pattern layer */
+  --bc-halftone: radial-gradient(var(--bc-dot-color) var(--bc-dot-r), transparent calc(var(--bc-dot-r) + 0.6px));
+
+  /* ---- Motion ------------------------------------------------------- */
+  --bc-ease:       cubic-bezier(0.16, 1, 0.3, 1);
+  --bc-ease-soft:  cubic-bezier(0.45, 0, 0.2, 1);
+  --bc-dur-draw:   1.6s;   /* logo stroke draw            */
+  --bc-dur-fill:   0.5s;   /* outline -> solid fill       */
+  --bc-dur-fade:   0.9s;   /* wordmark / text reveal      */
+  --bc-dur-scroll: 0.8s;   /* on-scroll section reveal    */
+  --bc-reveal-shift: 24px; /* upward slide distance       */
+
+  /* ---- Layout helpers ----------------------------------------------- */
+  --bc-header-h: clamp(64px, 8vw, 84px);
+  --bc-z-header: 50;
+}
+
+/* Respect reduced-motion: neutralize durations/shift so tokens still resolve */
+@media (prefers-reduced-motion: reduce) {
+  .becool {
+    --bc-dur-draw: 0.01ms;
+    --bc-dur-fill: 0.01ms;
+    --bc-dur-fade: 0.01ms;
+    --bc-dur-scroll: 0.01ms;
+    --bc-reveal-shift: 0px;
+  }
+}
