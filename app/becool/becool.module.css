@@ -184,6 +184,10 @@
 .storeGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(1.2rem, 3vw, 2.2rem); max-width: var(--bc-maxw); margin: 0 auto; }
 .storeCard { background: var(--bc-white); border: 1px solid var(--bc-line); display: flex; flex-direction: column; }
 .storePhoto { aspect-ratio: 16 / 10; }
+/* 写真準備中プレースホルダー */
+.storeComingSoon { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bc-panel-gray); background-image: var(--bc-halftone); background-size: var(--bc-dot-gap) var(--bc-dot-gap); color: var(--bc-on-dark); }
+.storeComingSoon span { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.4rem; letter-spacing: 0.12em; }
+.storeComingSoon small { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--bc-on-dark-mut); }
 .storeBody { padding: clamp(1.4rem, 3vw, 2rem); display: grid; gap: 0.7rem; }
 .storeName { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.25rem; color: var(--bc-ink); }
 .storeName span { color: var(--bc-blue); }

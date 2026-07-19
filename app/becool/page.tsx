@@ -73,8 +73,9 @@ const CARS = [
 const SHOPS = [
   {
     name: "中吉田店",
-    photo: asset("/becool/img/photo-showroom.webp"),
-    alt: "GARAGE BeCool 中吉田店のショールーム内観",
+    photo: asset("/becool/img/store-nakayoshida.webp"),
+    alt: "GARAGE BeCool 中吉田店の外観",
+    comingSoon: false,
     zip: "〒800-0204",
     addr: "福岡県北九州市小倉南区中吉田6丁目18-5",
     tel: "093-967-2345",
@@ -83,8 +84,9 @@ const SHOPS = [
   },
   {
     name: "沼店",
-    photo: asset("/becool/img/photo-reception.webp"),
-    alt: "GARAGE BeCool 沼店のレセプション・ラウンジ内観",
+    photo: "",
+    alt: "GARAGE BeCool 沼店（写真準備中）",
+    comingSoon: true,
     zip: "〒800-0205",
     addr: "福岡県北九州市小倉南区沼本町2丁目778-2",
     tel: "093-967-2345",
@@ -191,7 +193,7 @@ export default function BecoolPage() {
         {/* ---------- CONCEPT ---------- */}
         <section className={styles.concept} aria-label="コンセプト">
           <div className={`${styles.conceptPhoto} ${styles.halftone}`}>
-            <img src={asset("/becool/img/photo-lounge.webp")} alt="GARAGE BeCool のラウンジ内観" />
+            <img src={asset("/becool/img/store-exterior.webp")} alt="GARAGE BeCool の店舗外観（夕景）" />
           </div>
           <div className={styles.conceptBand}>
             <p data-reveal className={styles.reveal}>
@@ -270,9 +272,16 @@ export default function BecoolPage() {
           <div data-reveal className={`${styles.storeGrid} ${styles.reveal}`}>
             {SHOPS.map((s) => (
               <article key={s.name} className={styles.storeCard}>
-                <div className={`${styles.storePhoto} ${styles.halftone}`}>
-                  <img src={s.photo} alt={s.alt} loading="lazy" />
-                </div>
+                {s.comingSoon ? (
+                  <div className={`${styles.storePhoto} ${styles.storeComingSoon}`} role="img" aria-label={s.alt}>
+                    <span>準備中</span>
+                    <small>Photo Coming Soon</small>
+                  </div>
+                ) : (
+                  <div className={`${styles.storePhoto} ${styles.halftone}`}>
+                    <img src={s.photo} alt={s.alt} loading="lazy" />
+                  </div>
+                )}
                 <div className={styles.storeBody}>
                   <h3 className={styles.storeName}>GARAGE <span>BeCool</span> {s.name}</h3>
                   <p className={styles.storeMeta}>
