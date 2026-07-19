@@ -64,8 +64,8 @@ const SERVICES = [
 
 /* ---- pick-up cars (real photos) ------------------------------------- */
 const CARS = [
-  { src: asset("/becool/img/photo-porsche.webp"), name: "PORSCHE 718 CAYMAN", tag: "SPORTS", alt: "GARAGE BeCool 店頭の白いポルシェ 718 ケイマン" },
-  { src: asset("/becool/img/photo-alphard.webp"), name: "TOYOTA ALPHARD", tag: "CUSTOM", alt: "GARAGE BeCool でカスタムした黒いトヨタ アルファード" },
+  { src: asset("/becool/img/photo-porsche.webp"), name: "PORSCHE 718 CAYMAN", tag: "SPORTS", price: "¥6,980,000", alt: "GARAGE BeCool 店頭の白いポルシェ 718 ケイマン" },
+  { src: asset("/becool/img/photo-alphard.webp"), name: "TOYOTA ALPHARD", tag: "CUSTOM", price: "¥5,480,000", alt: "GARAGE BeCool でカスタムした黒いトヨタ アルファード" },
 ];
 
 /* ---- shops (from the official store info) --------------------------- */
@@ -76,7 +76,7 @@ const SHOPS = [
     alt: "GARAGE BeCool 中吉田店のショールーム内観",
     zip: "〒800-0204",
     addr: "福岡県北九州市小倉南区中吉田6丁目18-5",
-    tel: "0078-6043-7919",
+    tel: "093-967-2345",
     hours: "10:00〜20:00／年中無休",
     map: "https://www.google.com/maps/search/?api=1&query=福岡県北九州市小倉南区中吉田6丁目18-5",
   },
@@ -86,7 +86,7 @@ const SHOPS = [
     alt: "GARAGE BeCool 沼店のレセプション・ラウンジ内観",
     zip: "〒800-0205",
     addr: "福岡県北九州市小倉南区沼本町2丁目778-2",
-    tel: "0078-6045-2266",
+    tel: "093-967-2345",
     hours: "10:00〜20:00／年中無休",
     map: "https://www.google.com/maps/search/?api=1&query=福岡県北九州市小倉南区沼本町2丁目778-2",
   },
@@ -176,7 +176,7 @@ export default function BecoolPage() {
           </div>
           <div data-reveal className={`${styles.aboutBody} ${styles.reveal}`}>
             <p>
-              GARAGE BeCool は、福岡県北九州市小倉南区を中心とする<em>地域密着型のカーショップ</em>です。
+              GARAGE BeCool は<em>1999年創業</em>、福岡県北九州市小倉南区を中心とする地域密着型のカーショップです。
               中古車の販売だけでなく、買取・車検・整備・メンテナンスまで一括で対応しています。
             </p>
             <p>
@@ -215,7 +215,10 @@ export default function BecoolPage() {
             {CARS.map((c) => (
               <li key={c.name} className={`${styles.pickupItem} ${styles.halftone}`}>
                 <img src={c.src} alt={c.alt} loading="lazy" />
-                <span className={styles.pickupCap}><strong>{c.name}</strong><span>{c.tag}</span></span>
+                <span className={styles.pickupCap}>
+                  <span className={styles.pickupName}><strong>{c.name}</strong><span>{c.tag}</span></span>
+                  <span className={styles.pickupPrice}>{c.price}<small>（税込）</small></span>
+                </span>
               </li>
             ))}
           </ul>
