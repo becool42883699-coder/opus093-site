@@ -144,21 +144,32 @@
 .sectionHead { text-align: center; margin-bottom: clamp(2rem, 5vw, 3.5rem); }
 .sectionHead h2 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h2); letter-spacing: 0.08em; line-height: var(--bc-lh-heading); color: var(--bc-ink); }
 .sectionHead span { display: block; margin-top: 0.7rem; font-size: var(--bc-fs-small); font-weight: var(--bc-fw-bold); letter-spacing: 0.2em; color: var(--bc-muted); }
+/* ABOUT: テキスト + グレーディング写真の2カラム(モバイルは縦積み) */
+.aboutGrid { max-width: 1060px; margin: 0 auto; display: grid; gap: clamp(2rem, 4vw, 3.5rem); align-items: center; }
+@media (min-width: 880px) { .aboutGrid { grid-template-columns: 1.05fr 1fr; } }
 .aboutBody { max-width: var(--bc-maxw-text); margin: 0 auto; }
 .aboutBody p { font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); }
 .aboutBody p + p { margin-top: 1.4rem; }
 .aboutBody em { font-style: normal; font-weight: var(--bc-fw-bold); }
+.aboutMedia { margin: 0; border-radius: var(--bc-radius-sm); overflow: hidden; box-shadow: var(--bc-shadow-card); }
+.aboutMedia img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* =====================  SERVICES (full-bleed alternating panels)  ===================== */
 .services { display: block; }
 .servicePanel {
+  position: relative;
+  overflow: hidden;
   padding: clamp(3.4rem, 8vw, 6rem) var(--bc-gutter);
   color: var(--bc-on-dark);
   text-align: center;
 }
 .servicePanel:nth-child(odd) { background: var(--bc-panel-black); }
 .servicePanel:nth-child(even) { background: var(--bc-panel-gray); }
-.serviceInner { max-width: var(--bc-maxw-text); margin: 0 auto; display: grid; justify-items: center; gap: 1.2rem; }
+/* パネル背景写真: グレーディング済みを薄く敷き、上に暗幕でテキスト可読性を確保 */
+.servicePhoto { position: absolute; inset: 0; z-index: 0; }
+.servicePhoto img { width: 100%; height: 100%; object-fit: cover; opacity: 0.38; }
+.servicePhoto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18, 21, 25, 0.55), rgba(18, 21, 25, 0.28) 45%, rgba(18, 21, 25, 0.62)); }
+.serviceInner { position: relative; z-index: 1; max-width: var(--bc-maxw-text); margin: 0 auto; display: grid; justify-items: center; gap: 1.2rem; }
 .serviceIcon { width: 64px; height: 64px; }
 .serviceIcon svg { width: 100%; height: 100%; fill: none; stroke: var(--bc-on-dark); stroke-width: 4; }
 .servicePanel h3 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h3); letter-spacing: 0.14em; }

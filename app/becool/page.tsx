@@ -23,6 +23,7 @@ const SERVICES = [
   {
     title: "CAR SALES",
     jp: "車両販売・乗り換え",
+    photo: "/becool/img/service-sales.webp",
     body: "店頭在庫のご案内から、全国のオークション・流通在庫を使ったお車探しまで。ご希望の車種・年式・予算に合わせて、ぴったりの一台をご提案します。買取・査定・ローンのご相談も。",
     icon: (
       <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -34,6 +35,7 @@ const SERVICES = [
   {
     title: "INSPECTION",
     jp: "車検・整備・点検",
+    photo: "/becool/img/service-inspection.webp",
     body: "車検・法定点検から、オイル・タイヤ・バッテリー交換、警告灯や異音の診断まで。国家資格を持つ整備士が対応します。代車のご用意、LINEでの整備予約にも対応。",
     icon: (
       <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -44,6 +46,7 @@ const SERVICES = [
   {
     title: "CUSTOM",
     jp: "ドレスアップ・取付",
+    photo: "/becool/img/service-custom.webp",
     body: "エアロ・アルミホイール・オーディオなどのドレスアップ、カーナビや各種パーツの取り付けに対応。あなたのイメージを一台に落とし込み、思いどおりの仕上がりへ。",
     icon: (
       <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -55,6 +58,7 @@ const SERVICES = [
   {
     title: "CAR LIFE",
     jp: "カーライフサポート",
+    photo: "/becool/img/service-carlife.webp",
     body: "購入後のアフターサポートや乗り換えのご相談まで、末永くお付き合いします。全国納車にも対応。クルマのことなら、はじめての方もお気軽にご相談ください。",
     icon: (
       <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -238,20 +242,25 @@ export default function BecoolPage() {
             <h2 id="about-h">ABOUT US</h2>
             <span>GARAGE BeCool について</span>
           </div>
-          <div className={styles.aboutBody}>
-            <p>
-              GARAGE BeCool は<em>1999年創業</em>、福岡県北九州市小倉南区を中心とする地域密着型のカーショップです。
-              中古車の販売だけでなく、買取・車検・整備・メンテナンスまで一括で対応しています。
-            </p>
-            <p>
-              大切にしているのは、車選びから購入後のカーライフまでをトータルでサポートすること。
-              全国から車両を仕入れ、人気の一台を求めやすくお届けします。はじめての方でも相談しやすい店づくりと、
-              購入後も気軽に頼れる体制を整えています。
-            </p>
-            <p>
-              整備は国家資格を持つスタッフが担当し、安全と品質に責任を持って向き合います。
-              沼店・中吉田店の2店舗で、あなたのカーライフを「もっと安心に、もっと楽しく」お手伝いします。
-            </p>
+          <div className={styles.aboutGrid}>
+            <div className={styles.aboutBody}>
+              <p>
+                GARAGE BeCool は<em>1999年創業</em>、福岡県北九州市小倉南区を中心とする地域密着型のカーショップです。
+                中古車の販売だけでなく、買取・車検・整備・メンテナンスまで一括で対応しています。
+              </p>
+              <p>
+                大切にしているのは、車選びから購入後のカーライフまでをトータルでサポートすること。
+                全国から車両を仕入れ、人気の一台を求めやすくお届けします。はじめての方でも相談しやすい店づくりと、
+                購入後も気軽に頼れる体制を整えています。
+              </p>
+              <p>
+                整備は国家資格を持つスタッフが担当し、安全と品質に責任を持って向き合います。
+                沼店・中吉田店の2店舗で、あなたのカーライフを「もっと安心に、もっと楽しく」お手伝いします。
+              </p>
+            </div>
+            <figure className={`${styles.aboutMedia} ${styles.halftone}`}>
+              <img src={asset("/becool/img/about-detail.webp")} alt="GARAGE BeCool 店頭のポルシェ 718 ケイマン（ブルーグレーディング）" loading="lazy" />
+            </figure>
           </div>
         </section>
 
@@ -259,6 +268,9 @@ export default function BecoolPage() {
         <section id="service" data-reveal className={`${styles.services} ${styles.reveal}`} aria-label="サービス">
           {SERVICES.map((s) => (
             <div key={s.title} className={styles.servicePanel}>
+              <div className={styles.servicePhoto} aria-hidden="true">
+                <img src={asset(s.photo)} alt="" loading="lazy" />
+              </div>
               <div className={styles.serviceInner}>
                 <span className={styles.serviceIcon}>{s.icon}</span>
                 <h3>{s.title}</h3>
