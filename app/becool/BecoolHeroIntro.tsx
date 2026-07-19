@@ -1,12 +1,13 @@
 "use client";
 
 /**
- * GARAGE BeCool ヒーローの「設計図で組み上がる」イントロ。
- * 設計図の補助線(アイソメ軸・外周枠)を描いたあと、GBキューブの3面を
- * 外側から定位置へ組み上げて完成ロゴにする(form-design.jp のイントロ質感を踏襲)。
+ * GARAGE BeCool ヒーローの「経路に沿って敷かれて組み上がる」イントロ。
+ * form-design.jp のイントロを踏襲: ロゴの実体(塗り)がマスク内の太い
+ * ストロークの stroke-dash に合わせ、輪郭の経路(屋根→G面→B面→屋根)に
+ * 沿って端から現れる。併走して辺の延長線(見当線)が伸びて消え、
+ * 完成後にワードマークが1文字ずつ揃う。
  *
- * - opacity / transform 中心で GPU に優しく動かす
- * - prefers-reduced-motion: 組み上げを再生せず完成ロゴを短フェード
+ * - prefers-reduced-motion: 演出を再生せず完成ロゴを短フェード
  * - sessionStorage: 同一セッション2回目以降は完成ロゴを即表示
  * - タブ非表示中は timeline を pause、復帰で resume
  * - アンマウント時に context.revert()
@@ -45,33 +46,44 @@ export default function BecoolHeroIntro() {
       const ctx = gsap.context(() => {
         const q = gsap.utils.selector(stage);
 
-        // 各面は外向き(アイソメ)にずらした位置からスタート → 定位置へ組み上がる
-        const OFF = 62; // ずらし量(viewBox単位)
-        const faces: [string, number, number][] = [
-          [".face-top", 0, -OFF],            // 天面: 上から
-          [".face-left", -OFF * 0.87, OFF * 0.5], // G面(左下)
-          [".face-right", OFF * 0.87, OFF * 0.5], // B面(右下)
-        ];
-
-        // --- 初期状態(補助線は未描画、面は外側・透明) ---
+        // --- 初期状態: 塗りは表示(マスクが隠す)、マスク/見当線は未描画、文字は散らして透明 ---
+        gsap.set(q(".logo-fill"), { autoAlpha: 1 });
+        gsap.set(q(".mask-sweep"), { strokeDashoffset: 1 });
         gsap.set(q(".logo-guide"), { autoAlpha: 1 });
         gsap.set(q(".logo-guide path"), { strokeDashoffset: 1 });
-        faces.forEach(([sel, dx, dy]) => gsap.set(q(sel), { autoAlpha: 0, x: dx, y: dy, scale: 0.92 }));
+        gsap.set(q(".hero-letter"), { autoAlpha: 0, y: () => gsap.utils.random(-16, 16) });
         gsap.set(q(".hero-tagline"), { autoAlpha: 0, y: 8 });
 
-        const timeline = gsap.timeline({ defaults: { ease: "power2.inOut" } });
+        const timeline = gsap.timeline({ defaults: { ease: "none" } });
         tl = timeline;
 
-        // 1) 設計図の補助線を描く(0.2〜1.2s、順に)
-        timeline.to(q(".logo-guide path"), { strokeDashoffset: 0, duration: 0.95, ease: "power1.inOut", stagger: 0.1 }, 0.2);
-        // 2) 3面が定位置へ組み上がる(0.75〜2.2s、天面→G→Bの順で)
-        faces.forEach(([sel], i) => {
-          timeline.to(q(sel), { autoAlpha: 1, x: 0, y: 0, scale: 1, duration: 0.72, ease: "power3.out" }, 0.75 + i * 0.28);
-        });
-        // 3) 組み上がりに合わせて補助線をフェードアウト(1.95〜2.6s)
-        timeline.to(q(".logo-guide"), { autoAlpha: 0, duration: 0.65, ease: "power2.inOut" }, 1.95);
-        // 4) タグライン(2.4〜3.1s)
-        timeline.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" }, 2.4);
+        // 1) ロゴの実体が経路に沿って敷かれていく:
+        //    屋根左半分(頂点→左角) → 左面を下る(G) → 右面を上る(B) → 屋根右半分で閉じる
+        timeline.to(q(".sweep-roof-l"), { strokeDashoffset: 0, duration: 0.3, ease: "power1.in" }, 0.3);
+        timeline.to(q(".sweep-left"), { strokeDashoffset: 0, duration: 0.55 }, 0.55);
+        timeline.to(q(".sweep-right"), { strokeDashoffset: 0, duration: 0.55 }, 1.05);
+        timeline.to(q(".sweep-roof-r"), { strokeDashoffset: 0, duration: 0.28, ease: "power1.out" }, 1.55);
+
+        // 2) 併走する辺の延長線(見当線): リボンの通過に合わせて伸びる
+        timeline.to(q(".gl-tl"), { strokeDashoffset: 0, duration: 0.3 }, 0.18);
+        timeline.to(q(".gl-lv"), { strokeDashoffset: 0, duration: 0.35 }, 0.5);
+        timeline.to(q(".gl-lb"), { strokeDashoffset: 0, duration: 0.35 }, 0.95);
+        timeline.to(q(".gl-rb"), { strokeDashoffset: 0, duration: 0.35 }, 1.0);
+        timeline.to(q(".gl-rv"), { strokeDashoffset: 0, duration: 0.35 }, 1.15);
+        timeline.to(q(".gl-tr"), { strokeDashoffset: 0, duration: 0.3 }, 1.5);
+
+        // 3) 見当線は現れた順にすっと消える
+        timeline.to(q(".gl-tl"), { autoAlpha: 0, duration: 0.4 }, 1.1);
+        timeline.to(q(".gl-lv"), { autoAlpha: 0, duration: 0.4 }, 1.5);
+        timeline.to(q(".gl-lb"), { autoAlpha: 0, duration: 0.4 }, 1.7);
+        timeline.to(q(".gl-rb"), { autoAlpha: 0, duration: 0.4 }, 1.9);
+        timeline.to(q(".gl-rv"), { autoAlpha: 0, duration: 0.4 }, 2.05);
+        timeline.to(q(".gl-tr"), { autoAlpha: 0, duration: 0.4 }, 2.15);
+
+        // 4) ワードマークが1文字ずつ(縦にバラついた位置から)揃う
+        timeline.to(q(".hero-letter"), { autoAlpha: 1, y: 0, duration: 0.45, ease: "power2.out", stagger: 0.055 }, 1.95);
+        // 5) タグライン
+        timeline.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.6, ease: "power2.out" }, 2.85);
 
         // 完成状態を確定
         timeline.add(() => stage.setAttribute("data-intro", "complete"), ">-0.05");

@@ -96,9 +96,13 @@ const SHOPS = [
   },
 ];
 
-/* ---- 旧ロゴ(GBキューブ)。設計図の補助線(logo-guide)を描いてから、
-       3面(logo-face)を組み上げて塗り(logo-fill)を完成させる --- */
+/* ---- 旧ロゴ(GBキューブ)。form-design.jp のイントロと同じ仕組み:
+       ロゴの実体(塗り)が輪郭の経路に沿って端から「敷かれて」現れる。
+       マスク内の太いストロークを stroke-dash で走らせ、通過した所だけ塗りが見える。
+       経路: 屋根左半分(頂点→左角) → 左面を下る(G) → 右面を上る(B) → 屋根右半分で閉じる。
+       併走して辺の延長線(logo-guide)が伸びて消える。 --- */
 function HeroCubeLogo() {
+  const sweep = { stroke: "#fff", fill: "none", pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1 } as const;
   return (
     <svg className={styles.heroCarSvg} viewBox={CUBE_VIEWBOX} role="img" aria-label="GARAGE BeCool ロゴ">
       <defs>
@@ -106,19 +110,31 @@ function HeroCubeLogo() {
         <linearGradient id="cubeGrad" gradientUnits="userSpaceOnUse" x1="534" y1="195" x2="915" y2="691">
           {CUBE_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
         </linearGradient>
+        {/* 各面の「敷かれていく」reveal マスク。白ストロークが通った所だけ表示される */}
+        <mask id="mCubeTop" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
+          <path className="mask-sweep sweep-roof-l" d="M725 222 L556 330" strokeWidth={150} strokeLinecap="square" {...sweep} />
+          <path className="mask-sweep sweep-roof-r" d="M894 330 L725 222" strokeWidth={150} strokeLinecap="square" {...sweep} />
+        </mask>
+        <mask id="mCubeLeft" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
+          <path className="mask-sweep sweep-left" d="M629 322 L629 700" strokeWidth={212} strokeLinecap="square" {...sweep} />
+        </mask>
+        <mask id="mCubeRight" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
+          <path className="mask-sweep sweep-right" d="M831 692 L831 322" strokeWidth={202} strokeLinecap="square" {...sweep} />
+        </mask>
       </defs>
-      {/* 設計図の補助線: アイソメ3軸 + 外周ヘキサ枠 + コーナーの見当線 */}
+      {/* 辺の延長線(細い見当線)。リボンの通過に合わせて描かれ、順に消える */}
       <g className="logo-guide" aria-hidden="true">
-        <path className="gl" d="M724 150 L724 726" pathLength={1} />
-        <path className="gl" d="M512 585 L936 297" pathLength={1} />
-        <path className="gl" d="M512 297 L936 585" pathLength={1} />
-        <path className="gl" d="M725 190 L916 305 L916 578 L724 693 L534 578 L534 305 Z" pathLength={1} />
-        <path className="gl" d="M520 214 L520 190 L546 190 M902 190 L928 190 L928 214 M520 668 L520 692 L546 692 M902 692 L928 692 L928 668" pathLength={1} />
+        <path className="gl-tl" d="M802 141 L455 352" pathLength={1} />
+        <path className="gl-lv" d="M534 232 L534 758" pathLength={1} />
+        <path className="gl-lb" d="M462 526 L800 739" pathLength={1} />
+        <path className="gl-rb" d="M988 526 L650 739" pathLength={1} />
+        <path className="gl-rv" d="M916 758 L916 232" pathLength={1} />
+        <path className="gl-tr" d="M648 141 L995 352" pathLength={1} />
       </g>
-      {/* 3面(それぞれ evenodd で G/B の白抜きを保持) */}
-      <path className="logo-fill logo-face face-top" d={CUBE_TOP} fill="url(#cubeGrad)" fillRule="evenodd" />
-      <path className="logo-fill logo-face face-left" d={CUBE_LEFT} fill="url(#cubeGrad)" fillRule="evenodd" />
-      <path className="logo-fill logo-face face-right" d={CUBE_RIGHT} fill="url(#cubeGrad)" fillRule="evenodd" />
+      {/* 3面(それぞれ evenodd で G/B の白抜きを保持)。マスクで経路 reveal */}
+      <path className="logo-fill" d={CUBE_TOP} fill="url(#cubeGrad)" fillRule="evenodd" mask="url(#mCubeTop)" />
+      <path className="logo-fill" d={CUBE_LEFT} fill="url(#cubeGrad)" fillRule="evenodd" mask="url(#mCubeLeft)" />
+      <path className="logo-fill" d={CUBE_RIGHT} fill="url(#cubeGrad)" fillRule="evenodd" mask="url(#mCubeRight)" />
     </svg>
   );
 }
@@ -159,11 +175,20 @@ export default function BecoolPage() {
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
               <HeroCubeLogo />
             </div>
+            {/* ワードマーク: ロゴ完成後に1文字ずつ揃う */}
+            <p className={styles.heroWordmark} aria-label="GARAGE BeCool">
+              <span className={styles.wmWord} aria-hidden="true">
+                {"GARAGE".split("").map((ch, i) => <span key={i} className="hero-letter">{ch}</span>)}
+              </span>
+              <span className={`${styles.wmWord} ${styles.wmAccent}`} aria-hidden="true">
+                {"BeCool".split("").map((ch, i) => <span key={i} className="hero-letter">{ch}</span>)}
+              </span>
+            </p>
             <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
           {/* JS無効時は組み上げ演出をスキップし、完成ロゴ(塗り)を表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}`}</style>
+            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline,[data-hero-stage] .hero-letter{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}[data-hero-stage] .mask-sweep{stroke-dashoffset:0!important}`}</style>
           </noscript>
           <BecoolHeroIntro />
           <span className={styles.scrollCue} aria-hidden="true" />
