@@ -26,7 +26,7 @@ const SERVICES = [
     photo: "/becool/img/service-sales.webp",
     body: "店頭在庫のご案内から、全国のオークション・流通在庫を使ったお車探しまで。ご希望の車種・年式・予算に合わせて、ぴったりの一台をご提案します。買取・査定・ローンのご相談も。",
     icon: (
-      <img className={styles.serviceIconImg} src={asset("/becool/img/icon-car-sales.svg")} alt="" width={512} height={512} />
+      <img className={styles.serviceIconImg} src={asset("/becool/img/icon-car-sales.png")} alt="" width={512} height={512} />
     ),
   },
   {
