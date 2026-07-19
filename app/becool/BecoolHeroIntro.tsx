@@ -1,13 +1,13 @@
 "use client";
 
 /**
- * GARAGE BeCool ヒーローの「ロゴ変形」イントロ。
- * ユーザー提供の5段階(GBキューブ→車シルエット→完成ロゴ)のメタリック画像を
- * GSAP でクロスフェードして繋ぎ、最終ロゴへ変形させる。
+ * GARAGE BeCool ヒーローの「設計図で組み上がる」イントロ。
+ * 設計図の補助線(アイソメ軸・外周枠)を描いたあと、GBキューブの3面を
+ * 外側から定位置へ組み上げて完成ロゴにする(form-design.jp のイントロ質感を踏襲)。
  *
  * - opacity / transform 中心で GPU に優しく動かす
- * - prefers-reduced-motion: 変形を再生せず最終ロゴ(stage 5)を短フェード
- * - sessionStorage: 同一セッション2回目以降は最終ロゴを即表示
+ * - prefers-reduced-motion: 組み上げを再生せず完成ロゴを短フェード
+ * - sessionStorage: 同一セッション2回目以降は完成ロゴを即表示
  * - タブ非表示中は timeline を pause、復帰で resume
  * - アンマウント時に context.revert()
  */
@@ -45,24 +45,36 @@ export default function BecoolHeroIntro() {
       const ctx = gsap.context(() => {
         const q = gsap.utils.selector(stage);
 
-        // --- 初期状態(輪郭は未描画、塗りは非表示) ---
-        gsap.set(q(".logo-edge"), { strokeDashoffset: 1, autoAlpha: 1 });
-        gsap.set(q(".logo-fill"), { autoAlpha: 0 });
+        // 各面は外向き(アイソメ)にずらした位置からスタート → 定位置へ組み上がる
+        const OFF = 62; // ずらし量(viewBox単位)
+        const faces: [string, number, number][] = [
+          [".face-top", 0, -OFF],            // 天面: 上から
+          [".face-left", -OFF * 0.87, OFF * 0.5], // G面(左下)
+          [".face-right", OFF * 0.87, OFF * 0.5], // B面(右下)
+        ];
+
+        // --- 初期状態(補助線は未描画、面は外側・透明) ---
+        gsap.set(q(".logo-guide"), { autoAlpha: 1 });
+        gsap.set(q(".logo-guide path"), { strokeDashoffset: 1 });
+        faces.forEach(([sel, dx, dy]) => gsap.set(q(sel), { autoAlpha: 0, x: dx, y: dy, scale: 0.92 }));
         gsap.set(q(".hero-tagline"), { autoAlpha: 0, y: 8 });
 
-        tl = gsap.timeline({ defaults: { ease: "power2.inOut" } });
+        const timeline = gsap.timeline({ defaults: { ease: "power2.inOut" } });
+        tl = timeline;
 
-        // 1) ロゴの輪郭(辺)を光らせながら描く(0.3〜2.4s)
-        tl.to(q(".logo-edge"), { strokeDashoffset: 0, duration: 2.1, ease: "power1.inOut" }, 0.3);
-        // 2) 描き終わりに合わせて塗り(完成ロゴ)がフェードイン(2.1〜3.0s)
-        tl.to(q(".logo-fill"), { autoAlpha: 1, duration: 0.9, ease: "power2.out" }, 2.05);
-        // 3) 輪郭の光を消す(2.5〜3.2s)
-        tl.to(q(".logo-edge"), { autoAlpha: 0, duration: 0.7, ease: "power2.inOut" }, 2.5);
-        // 4) タグライン(2.9〜3.6s)
-        tl.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" }, 2.9);
+        // 1) 設計図の補助線を描く(0.2〜1.2s、順に)
+        timeline.to(q(".logo-guide path"), { strokeDashoffset: 0, duration: 0.95, ease: "power1.inOut", stagger: 0.1 }, 0.2);
+        // 2) 3面が定位置へ組み上がる(0.75〜2.2s、天面→G→Bの順で)
+        faces.forEach(([sel], i) => {
+          timeline.to(q(sel), { autoAlpha: 1, x: 0, y: 0, scale: 1, duration: 0.72, ease: "power3.out" }, 0.75 + i * 0.28);
+        });
+        // 3) 組み上がりに合わせて補助線をフェードアウト(1.95〜2.6s)
+        timeline.to(q(".logo-guide"), { autoAlpha: 0, duration: 0.65, ease: "power2.inOut" }, 1.95);
+        // 4) タグライン(2.4〜3.1s)
+        timeline.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" }, 2.4);
 
         // 完成状態を確定
-        tl.add(() => stage.setAttribute("data-intro", "complete"), ">-0.05");
+        timeline.add(() => stage.setAttribute("data-intro", "complete"), ">-0.05");
       }, stage);
 
       revert = () => ctx.revert();

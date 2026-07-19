@@ -1,7 +1,7 @@
 import styles from "./becool.module.css";
 import { MobileMenu, RevealController, ToTopButton } from "./BecoolClient";
 import BecoolHeroIntro from "./BecoolHeroIntro";
-import { CUBE_VIEWBOX, CUBE_STOPS, CUBE_D } from "./cubeLogo";
+import { CUBE_VIEWBOX, CUBE_STOPS, CUBE_TOP, CUBE_LEFT, CUBE_RIGHT } from "./cubeLogo";
 
 /* サブパス配信(GitHub Pages等)でも画像が解決できるようベースパスを前置 */
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -96,17 +96,29 @@ const SHOPS = [
   },
 ];
 
-/* ---- 旧ロゴ(GBキューブ)。輪郭(logo-edge)を光らせて描き→塗り(logo-fill)を出す --- */
+/* ---- 旧ロゴ(GBキューブ)。設計図の補助線(logo-guide)を描いてから、
+       3面(logo-face)を組み上げて塗り(logo-fill)を完成させる --- */
 function HeroCubeLogo() {
   return (
     <svg className={styles.heroCarSvg} viewBox={CUBE_VIEWBOX} role="img" aria-label="GARAGE BeCool ロゴ">
       <defs>
-        <linearGradient id="cubeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        {/* ロゴ全体で1つのグラデ(面ごとに分割しても統一される) */}
+        <linearGradient id="cubeGrad" gradientUnits="userSpaceOnUse" x1="534" y1="195" x2="915" y2="691">
           {CUBE_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
         </linearGradient>
       </defs>
-      <path className="logo-fill" d={CUBE_D} fill="url(#cubeGrad)" fillRule="evenodd" />
-      <path className="logo-edge" d={CUBE_D} fill="none" pathLength={1} aria-hidden="true" />
+      {/* 設計図の補助線: アイソメ3軸 + 外周ヘキサ枠 + コーナーの見当線 */}
+      <g className="logo-guide" aria-hidden="true">
+        <path className="gl" d="M724 150 L724 726" pathLength={1} />
+        <path className="gl" d="M512 585 L936 297" pathLength={1} />
+        <path className="gl" d="M512 297 L936 585" pathLength={1} />
+        <path className="gl" d="M725 190 L916 305 L916 578 L724 693 L534 578 L534 305 Z" pathLength={1} />
+        <path className="gl" d="M520 214 L520 190 L546 190 M902 190 L928 190 L928 214 M520 668 L520 692 L546 692 M902 692 L928 692 L928 668" pathLength={1} />
+      </g>
+      {/* 3面(それぞれ evenodd で G/B の白抜きを保持) */}
+      <path className="logo-fill logo-face face-top" d={CUBE_TOP} fill="url(#cubeGrad)" fillRule="evenodd" />
+      <path className="logo-fill logo-face face-left" d={CUBE_LEFT} fill="url(#cubeGrad)" fillRule="evenodd" />
+      <path className="logo-fill logo-face face-right" d={CUBE_RIGHT} fill="url(#cubeGrad)" fillRule="evenodd" />
     </svg>
   );
 }
@@ -149,9 +161,9 @@ export default function BecoolPage() {
             </div>
             <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
-          {/* JS無効時は線画演出をスキップし、完成ロゴ(塗り)を表示する */}
+          {/* JS無効時は組み上げ演出をスキップし、完成ロゴ(塗り)を表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline{opacity:1!important}[data-hero-stage] .logo-edge{display:none!important}`}</style>
+            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}`}</style>
           </noscript>
           <BecoolHeroIntro />
           <span className={styles.scrollCue} aria-hidden="true" />
