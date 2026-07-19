@@ -220,6 +220,8 @@ export default function BecoolPage() {
           <span className={styles.scrollCue} aria-hidden="true" />
         </section>
 
+        {/* ヒーローは sticky で固定し、以下のコンテンツが上に被さってせり上がる */}
+        <div className={styles.belowHero}>
         {/* ---------- CONCEPT ---------- */}
         <section data-reveal className={`${styles.concept} ${styles.reveal}`} aria-label="コンセプト">
           <div className={`${styles.conceptPhoto} ${styles.halftone}`}>
@@ -337,6 +339,7 @@ export default function BecoolPage() {
             ))}
           </div>
         </section>
+        </div>{/* /belowHero */}
       </main>
 
       {/* ---------- FOOTER ---------- */}
