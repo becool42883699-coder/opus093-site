@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-label="Business card mockup placeholder">
+  <rect width="1600" height="1000" fill="#cfd0cc"/>
+  <rect width="1600" height="1000" fill="#c6c7c2" opacity="0.5"/>
+  <g transform="rotate(-9 800 500)">
+    <rect x="470" y="300" width="380" height="620" rx="6" fill="#f6f5f1" stroke="#e3e2dd"/>
+    <rect x="760" y="360" width="380" height="620" rx="6" fill="#efeee9" stroke="#e0dfd9"/>
+    <polygon points="560,430 620,395 680,430 680,500 620,535 560,500" fill="none" stroke="#1a1a1a" stroke-width="9"/>
+    <rect x="545" y="600" width="230" height="12" rx="6" fill="#1a1a1a"/>
+    <rect x="545" y="640" width="150" height="8" rx="4" fill="#8f8f8f"/>
+  </g>
+</svg>
