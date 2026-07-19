@@ -182,10 +182,10 @@
 .servicePhoto img { width: 100%; height: 100%; object-fit: cover; opacity: 0.38; }
 .servicePhoto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18, 21, 25, 0.55), rgba(18, 21, 25, 0.28) 45%, rgba(18, 21, 25, 0.62)); }
 .serviceInner { position: relative; z-index: 1; max-width: var(--bc-maxw-text); margin: 0 auto; display: grid; justify-items: center; gap: 1.2rem; }
-.serviceIcon { width: 64px; height: 64px; display: grid; place-items: center; }
+.serviceIcon { width: 88px; height: 88px; display: grid; place-items: center; }
 .serviceIcon svg { width: 100%; height: 100%; fill: none; stroke: var(--bc-on-dark); stroke-width: 4; }
-/* 差し替えた車アイコン(白ライン+青アクセント)。自前の色を保つため img のまま、少し大きめに */
-.serviceIconImg { width: 88px; height: 88px; }
+/* 差し替えたPNGアイコン(自前の白線を保つため img のまま)。大きめに見せる */
+.serviceIconImg { width: 124px; height: 124px; }
 .servicePanel h3 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h3); letter-spacing: 0.14em; }
 .serviceJp { color: var(--bc-blue-light) !important; font-size: 0.82rem !important; font-weight: var(--bc-fw-medium); letter-spacing: 0.16em; margin-top: -0.4rem; }
 .servicePanel p { color: var(--bc-on-dark-mut); font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); }
