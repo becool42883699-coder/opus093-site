@@ -85,12 +85,12 @@
 .heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
 
 /* --- 新ロゴ(車シルエット): 輪郭を光らせて描き→塗りを出す --- */
-.logoZone { position: relative; width: min(92vw, 560px); }
+.logoZone { position: relative; width: min(58vw, 300px); }
 .heroCarSvg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 5px 18px rgba(0, 0, 0, 0.5)); }
 /* 写真の上でも埋もれないよう柔らかな明るい下地 */
 .logoBacking { position: absolute; inset: -10% -6%; border-radius: 50%; background: radial-gradient(ellipse, rgba(240, 244, 250, 0.20), rgba(240, 244, 250, 0) 66%); filter: blur(26px); pointer-events: none; z-index: -1; }
 /* 輪郭(光る線)。pathLength=1 を stroke-dash で描画 */
-.heroCarSvg :global(.logo-edge) { stroke: #8fc2ff; stroke-width: 7; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 5px rgba(120, 180, 255, 0.95)) drop-shadow(0 0 12px rgba(60, 130, 230, 0.7)); }
+.heroCarSvg :global(.logo-edge) { stroke: #8fc2ff; stroke-width: 5; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 4px rgba(120, 180, 255, 0.95)) drop-shadow(0 0 10px rgba(60, 130, 230, 0.7)); }
 
 .tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); padding-left: var(--bc-ls-tagline); }
 

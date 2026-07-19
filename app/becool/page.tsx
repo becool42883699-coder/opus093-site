@@ -1,7 +1,7 @@
 import styles from "./becool.module.css";
 import { MobileMenu, RevealController, ToTopButton } from "./BecoolClient";
 import BecoolHeroIntro from "./BecoolHeroIntro";
-import { CAR_VIEWBOX, CAR_STOPS, CAR_D } from "./carLogo";
+import { CUBE_VIEWBOX, CUBE_STOPS, CUBE_D } from "./cubeLogo";
 
 /* サブパス配信(GitHub Pages等)でも画像が解決できるようベースパスを前置 */
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -96,17 +96,17 @@ const SHOPS = [
   },
 ];
 
-/* ---- 新ロゴ(車シルエット)。輪郭(logo-edge)を光らせて描き→塗り(logo-fill)を出す --- */
-function HeroCarLogo() {
+/* ---- 旧ロゴ(GBキューブ)。輪郭(logo-edge)を光らせて描き→塗り(logo-fill)を出す --- */
+function HeroCubeLogo() {
   return (
-    <svg className={styles.heroCarSvg} viewBox={CAR_VIEWBOX} role="img" aria-label="GARAGE BeCool ロゴ">
+    <svg className={styles.heroCarSvg} viewBox={CUBE_VIEWBOX} role="img" aria-label="GARAGE BeCool ロゴ">
       <defs>
-        <linearGradient id="carGrad" x1="0%" y1="20%" x2="100%" y2="80%">
-          {CAR_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
+        <linearGradient id="cubeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          {CUBE_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
         </linearGradient>
       </defs>
-      <path className="logo-fill" d={CAR_D} fill="url(#carGrad)" />
-      <path className="logo-edge" d={CAR_D} fill="none" pathLength={1} aria-hidden="true" />
+      <path className="logo-fill" d={CUBE_D} fill="url(#cubeGrad)" fillRule="evenodd" />
+      <path className="logo-edge" d={CUBE_D} fill="none" pathLength={1} aria-hidden="true" />
     </svg>
   );
 }
@@ -145,7 +145,7 @@ export default function BecoolPage() {
           <div className={styles.heroInner} data-hero-stage data-intro="play">
             <div className={`logo-zone ${styles.logoZone}`}>
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
-              <HeroCarLogo />
+              <HeroCubeLogo />
             </div>
             <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
