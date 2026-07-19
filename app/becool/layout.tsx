@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   description:
     "GARAGE BeCool（有限会社ビークール）は福岡県北九州市小倉南区の地域密着型カーショップ。中古車販売・買取・車検・整備・メンテナンスまで、カーライフをトータルでサポートします。沼店・中吉田店の2店舗。",
   alternates: { canonical: "/becool" },
+  icons: { icon: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/becool/img/symbol.svg` },
   openGraph: {
     type: "website",
     locale: "ja_JP",
