@@ -98,8 +98,10 @@
   --bc-dur-draw:   1.6s;   /* logo stroke draw            */
   --bc-dur-fill:   0.5s;   /* outline -> solid fill       */
   --bc-dur-fade:   0.9s;   /* wordmark / text reveal      */
-  --bc-dur-scroll: 0.9s;   /* on-scroll section reveal    */
-  --bc-reveal-shift: 64px; /* upward slide distance       */
+  --bc-dur-scroll: 1s;      /* on-scroll section reveal    */
+  --bc-reveal-shift: 120px; /* upward slide distance       */
+  /* 競り上がり: 序盤で一気に動き、終盤だけ減速して着地する */
+  --bc-ease-surge: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* ---- Layout helpers ----------------------------------------------- */
   --bc-header-h: clamp(64px, 8vw, 84px);

@@ -36,7 +36,8 @@
 .halftone > img { width: 100%; height: 100%; object-fit: cover; }
 
 /* on-scroll reveal (fade + slight upward slide) */
-.reveal { opacity: 0; transform: translateY(var(--bc-reveal-shift)); transition: opacity var(--bc-dur-scroll) var(--bc-ease), transform var(--bc-dur-scroll) var(--bc-ease); }
+/* 競り上がり: transform は expo系で一気に上がって着地、opacity は先に立ち上げる */
+.reveal { opacity: 0; transform: translateY(var(--bc-reveal-shift)); transition: opacity 0.45s ease-out, transform var(--bc-dur-scroll) var(--bc-ease-surge); will-change: transform; }
 .reveal.isIn { opacity: 1; transform: none; }
 
 /* =====================  HEADER  ===================== */
