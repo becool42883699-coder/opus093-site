@@ -90,17 +90,12 @@
 .heroLogo { width: clamp(150px, 26vw, 250px); height: auto; overflow: visible; }
 
 /* --- blueprint guide lines (製図ガイド・GSAPで描画→フェード) --- */
-.logoGuide { fill: none; stroke: var(--bc-blue); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.logoGuide :global(.logo-frame) { stroke-width: 3; }
-.logoGuide :global(.logo-hex2),
-.logoGuide :global(.logo-ring) { stroke-width: 1.6; opacity: 0.55; }
-.logoGuide :global(.logo-iso),
-.logoGuide :global(.logo-axis),
-.logoGuide :global(.logo-reg),
-.logoGuide :global(.logo-dim),
-.logoGuide :global(.logo-arc),
-.logoGuide :global(.logo-cross) { stroke-width: 1.6; opacity: 0.8; }
-.logoGuide :global(.logo-draw) { stroke-dasharray: 1; } /* pathLength=1 で長さ正規化 */
+.logoGuide { fill: none; stroke: var(--bc-blue); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.7; }
+.logoGuide :global(.logo-frame) { stroke-width: 2.6; opacity: 0.85; }
+/* ロゴ自身の輪郭(文字の辺)をなぞる線 — こちらが主役 */
+.logoOutline { fill: none; stroke: var(--bc-blue-light); stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+/* pathLength=1 正規化: ガイド線・輪郭線とも stroke-dash で描画する */
+.heroInner :global(.logo-draw) { stroke-dasharray: 1; }
 
 /* --- assembled GB cube parts --- */
 .logoParts :global(.logo-part) { transform-box: fill-box; transform-origin: 50% 50%; filter: blur(var(--pblur, 0px)); }
@@ -109,8 +104,9 @@
 .wordmark .wmBlue { color: var(--bc-blue-light); }
 .tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.5); padding-left: var(--bc-ls-tagline); }
 
-/* 既定(SSR / JS無効 / done): 完成状態を表示。ガイド線は隠す */
-.heroInner :global(.logo-guide) { opacity: 0; }
+/* 既定(SSR / JS無効 / done): 完成状態を表示。ガイド線・輪郭線は隠す */
+.heroInner :global(.logo-guide),
+.heroInner :global(.logo-outline) { opacity: 0; }
 /* JSが data-intro=play にした瞬間、GSAP実行前のちらつきを防ぐ初期非表示 */
 .heroInner[data-intro="play"] :global(.logo-part) { opacity: 0; }
 .heroInner[data-intro="play"] .wordmark,

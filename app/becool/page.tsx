@@ -93,30 +93,31 @@ const SHOPS = [
   },
 ];
 
-/* ---- brand mark: GBキューブを組み立て可能なパーツに分解 -------------------
-   symbol.svg の複合パスを 5 パーツに分割(屋根面 / 左G面 / 右B面 / 前面小片 /
-   小ノッチ)。各パーツと製図ガイド線に意味のある class を付け、GSAP で個別制御。 */
-const PART_NOTCH =
+/* ---- brand mark: GBキューブを3パーツに分解(屋根 / 左G面 / 右B面) ----------
+   元 symbol.svg は evenodd の複合パスで、Bの中抜き(カウンター)を「重なり」で
+   作っている。塗りを分けると穴が潰れるため、各面は「外形＋抜き穴」を1パーツ
+   (fillRule=evenodd)にまとめる。輪郭(logo-edge)は各面の文字の辺をなぞる。 */
+const SP_NOTCH =
   "M 864 421 L 865 425 L 851 467 L 816 490 L 816 535 L 818 535 L 865 505 L 867 505 L 868 506 L 868 539 L 832 563 L 799 583 L 797 581 L 797 462 L 800 459 Z";
-const PART_RIGHT =
+const SP_RIGHT =
   "M 915 334 L 903 340 L 898 344 L 893 346 L 888 350 L 883 352 L 873 359 L 846 374 L 841 378 L 748 433 L 748 680 L 915 571 L 915 472 L 896 456 L 903 437 L 915 411 Z";
-const PART_LEFT =
+const SP_LEFT =
   "M 534 334 L 534 571 L 631 632 L 637 637 L 647 642 L 664 654 L 724 691 L 724 411 L 619 477 L 619 534 L 620 535 L 669 504 L 672 505 L 672 589 L 669 590 L 598 546 L 587 538 L 587 515 L 588 514 L 587 513 L 587 483 L 588 482 L 587 479 L 588 477 L 588 467 L 587 466 L 587 457 L 588 456 L 587 452 L 587 423 L 588 422 L 587 366 L 552 345 L 536 334 Z";
-const PART_FRONT = "M 724 313 L 716 319 L 616 381 L 616 438 L 724 369 Z";
-const PART_TOP =
+const SP_FRONT = "M 724 313 L 716 319 L 616 381 L 616 438 L 724 369 Z";
+const SP_TOP =
   "M 537 311 L 540 314 L 586 341 L 588 341 L 725 255 L 864 341 L 913 312 L 912 310 L 904 306 L 901 303 L 896 301 L 859 277 L 725 195 Z";
 
-/* 製図ガイド(外枠六角×2・構成円・座標軸・アイソメ稜線・十字・
-   レジストレーションマーク・寸法線・角度弧) — 中心 (725,443) */
+/* 面ごとに「外形＋抜き穴」をまとめた3パーツ(evenoddでカウンターを維持) */
+const D_TOP = `${SP_TOP} ${SP_FRONT}`;
+const D_LEFT = SP_LEFT;
+const D_RIGHT = `${SP_RIGHT} ${SP_NOTCH}`;
+
+/* 製図ガイド(外枠六角・座標軸・レジストレーションマーク・中心十字) */
 const GUIDE_FRAME = "M725 195 L915 334 L915 571 L724 691 L534 571 L534 334 Z";
-const GUIDE_HEX2 = "M725 165 L938 321 L938 586 L724 721 L511 586 L511 321 Z";
 const GUIDE_AXIS = "M725 150 V736 M480 443 H970";
-const GUIDE_ISO = "M725 443 L534 334 M725 443 L916 334 M725 443 L725 691";
 const GUIDE_CROSS = "M690 443 H760 M725 408 V478";
 const GUIDE_REG =
   "M717 195 H733 M725 187 V203 M907 334 H923 M915 326 V342 M907 571 H923 M915 563 V579 M716 691 H732 M724 683 V699 M526 571 H542 M534 563 V579 M526 334 H542 M534 326 V342";
-const GUIDE_DIM = "M534 730 H915 M534 723 V737 M915 723 V737";
-const GUIDE_ARC = "M769 443 A44 44 0 0 1 749 481";
 
 function HeroMark() {
   return (
@@ -130,23 +131,22 @@ function HeroMark() {
       </defs>
       {/* 製図ガイド線(装飾・SRからは除外) */}
       <g className={`logo-guide ${styles.logoGuide}`} aria-hidden="true">
-        <circle className="logo-ring logo-draw" pathLength={1} cx={725} cy={443} r={214} />
-        <path className="logo-hex2 logo-draw" pathLength={1} d={GUIDE_HEX2} />
         <path className="logo-frame logo-draw" pathLength={1} d={GUIDE_FRAME} />
-        <path className="logo-iso logo-sketch logo-draw" pathLength={1} d={GUIDE_ISO} />
         <path className="logo-axis logo-draw" pathLength={1} d={GUIDE_AXIS} />
         <path className="logo-reg logo-draw" pathLength={1} d={GUIDE_REG} />
-        <path className="logo-dim logo-draw" pathLength={1} d={GUIDE_DIM} />
-        <path className="logo-arc logo-draw" pathLength={1} d={GUIDE_ARC} />
         <path className="logo-cross logo-draw" pathLength={1} d={GUIDE_CROSS} />
       </g>
-      {/* GBキューブ各パーツ */}
+      {/* ロゴ自身の輪郭(文字の辺)をなぞる線 */}
+      <g className={`logo-outline ${styles.logoOutline}`} aria-hidden="true">
+        <path className="logo-edge logo-draw" pathLength={1} d={D_TOP} fillRule="evenodd" />
+        <path className="logo-edge logo-draw" pathLength={1} d={D_LEFT} fillRule="evenodd" />
+        <path className="logo-edge logo-draw" pathLength={1} d={D_RIGHT} fillRule="evenodd" />
+      </g>
+      {/* GBキューブ各パーツ(evenoddで抜き穴=カウンターを維持) */}
       <g className={styles.logoParts} fill="url(#gbHero)">
-        <path className="logo-part part-top" d={PART_TOP} />
-        <path className="logo-part part-left" d={PART_LEFT} fillRule="evenodd" />
-        <path className="logo-part part-right" d={PART_RIGHT} />
-        <path className="logo-part part-front" d={PART_FRONT} />
-        <path className="logo-part part-notch" d={PART_NOTCH} />
+        <path className="logo-part part-top" d={D_TOP} fillRule="evenodd" />
+        <path className="logo-part part-left" d={D_LEFT} fillRule="evenodd" />
+        <path className="logo-part part-right" d={D_RIGHT} fillRule="evenodd" />
       </g>
     </svg>
   );
@@ -191,7 +191,7 @@ export default function BecoolPage() {
           </div>
           {/* JS無効時は組み立て前提の初期非表示を解除し、完成ロゴを表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .logo-part,[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}`}</style>
+            <style>{`[data-hero-stage] .logo-part,[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important}[data-hero-stage] .logo-guide,[data-hero-stage] .logo-outline{display:none!important}`}</style>
           </noscript>
           <BecoolHeroIntro />
           <span className={styles.scrollCue} aria-hidden="true" />

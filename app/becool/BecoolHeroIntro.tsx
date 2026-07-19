@@ -48,14 +48,12 @@ export default function BecoolHeroIntro() {
 
         // --- 初期状態(組み上がる前) ---
         gsap.set(q(".logo-draw"), { strokeDashoffset: 1 });
-        gsap.set(q(".logo-guide"), { autoAlpha: 1 });
+        gsap.set(q(".logo-guide, .logo-outline"), { autoAlpha: 1 });
         gsap.set(q(".hero-glow"), { autoAlpha: 0, scale: 0.6 });
         gsap.set(q(".logo-part"), { opacity: 0, "--pblur": "6px" });
-        gsap.set(q(".part-top"), { yPercent: -62, rotate: -3 });
-        gsap.set(q(".part-left"), { xPercent: -68, yPercent: 12, rotate: -5 });
-        gsap.set(q(".part-right"), { xPercent: 68, yPercent: 12, rotate: 5 });
-        gsap.set(q(".part-front"), { yPercent: -42, scale: 0.92 });
-        gsap.set(q(".part-notch"), { scale: 0.78, rotate: 5 });
+        gsap.set(q(".part-top"), { yPercent: -60, rotate: -3 });
+        gsap.set(q(".part-left"), { xPercent: -66, yPercent: 12, rotate: -5 });
+        gsap.set(q(".part-right"), { xPercent: 66, yPercent: 12, rotate: 5 });
         gsap.set(q(".hero-wordmark"), { autoAlpha: 0, yPercent: 24, clipPath: "inset(0 100% 0 0)" });
         gsap.set(q(".hero-tagline"), { autoAlpha: 0, y: 8 });
 
@@ -64,34 +62,31 @@ export default function BecoolHeroIntro() {
 
         tl = gsap.timeline({ defaults: { ease: soft } });
 
-        // 1) まず「全ての製図線」を描き切る(0.2〜2.25s・順番にstagger)
-        tl.to(q(".logo-draw"), { strokeDashoffset: 0, duration: 0.95, stagger: 0.085, ease: "power2.inOut" }, 0.2);
-        // 線が引き終わったら一瞬だけ間を置く(設計図の完成を見せる)
+        // 1) まず「全ての線(製図ガイド＋ロゴの輪郭=文字の辺)」を描き切る(0.2〜2.3s)
+        tl.to(q(".logo-draw"), { strokeDashoffset: 0, duration: 0.95, stagger: 0.08, ease: "power2.inOut" }, 0.2);
 
-        // 2) パーツが上下左右から組み上がる(2.55〜4.2s)
+        // 2) 描いた輪郭に沿って各面(屋根/左G/右B)が組み上がる(2.55〜4.2s)
         const assemble = (sel: string, at: number) => {
           tl!.to(q(sel), { xPercent: 0, yPercent: 0, rotate: 0, scale: 1, duration: 1.1, ease: "cubic-bezier(0.22,1,0.36,1)" }, at);
           tl!.to(q(sel), { keyframes: keyframesOpacity, duration: 1.1, ease: "none" }, at);
           tl!.to(q(sel), { "--pblur": "0px", duration: 0.9, ease: "power2.out" }, at + 0.15);
         };
         assemble(".part-top", 2.55);
-        assemble(".part-left", 2.72);
-        assemble(".part-right", 2.89);
-        assemble(".part-front", 3.08);
-        assemble(".part-notch", 3.27);
+        assemble(".part-left", 2.75);
+        assemble(".part-right", 2.95);
 
         // 3) 完成の瞬間に発光(派手なアクセント)
-        tl.to(q(".hero-glow"), { autoAlpha: 0.9, scale: 1.06, duration: 0.5, ease: "power2.out" }, 3.7);
-        tl.to(q(".hero-glow"), { autoAlpha: 0.28, scale: 1, duration: 1.0, ease: "power2.inOut" }, 4.2);
+        tl.to(q(".hero-glow"), { autoAlpha: 0.9, scale: 1.06, duration: 0.5, ease: "power2.out" }, 3.6);
+        tl.to(q(".hero-glow"), { autoAlpha: 0.28, scale: 1, duration: 1.0, ease: "power2.inOut" }, 4.1);
 
-        // 4) ガイド線を消す(3.85〜4.5s)
-        tl.to(q(".logo-guide"), { autoAlpha: 0, filter: "blur(1.5px)", duration: 0.6, ease: "power2.inOut" }, 3.85);
+        // 4) ガイド線と輪郭線を消す(3.8〜4.45s)
+        tl.to(q(".logo-guide, .logo-outline"), { autoAlpha: 0, filter: "blur(1.5px)", duration: 0.6, ease: "power2.inOut" }, 3.8);
 
-        // 5) ワードマークをマスクで表示(4.15〜5.0s)
-        tl.to(q(".hero-wordmark"), { autoAlpha: 1, yPercent: 0, clipPath: "inset(0 0% 0 0)", duration: 0.85, ease: "power3.out" }, 4.15);
+        // 5) ワードマークをマスクで表示(4.1〜4.95s)
+        tl.to(q(".hero-wordmark"), { autoAlpha: 1, yPercent: 0, clipPath: "inset(0 0% 0 0)", duration: 0.85, ease: "power3.out" }, 4.1);
 
-        // 6) タグラインをフェード(4.75〜5.45s)
-        tl.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" }, 4.75);
+        // 6) タグラインをフェード(4.7〜5.4s)
+        tl.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" }, 4.7);
 
         // 7) 完成状態を確定(scrollCue表示・playの初期非表示CSSを解除)
         tl.add(() => stage.setAttribute("data-intro", "complete"), ">-0.1");
