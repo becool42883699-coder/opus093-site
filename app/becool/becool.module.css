@@ -30,7 +30,7 @@
   background-image: var(--bc-halftone);
   background-size: var(--bc-dot-gap) var(--bc-dot-gap);
   mix-blend-mode: multiply;
-  opacity: 0.9;
+  opacity: 0.55;
   pointer-events: none;
 }
 .halftone > img { width: 100%; height: 100%; object-fit: cover; }
@@ -79,17 +79,18 @@
   overflow: hidden;
 }
 .heroBg { position: absolute; inset: 0; z-index: -2; }
-.heroBg::after { opacity: 1; }
 .heroBg img { width: 100%; height: 100%; object-fit: cover; }
+/* cinematic scrim so the logo + wordmark read over any part of the photo */
+.hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse at 50% 52%, rgba(21,24,27,0.30), rgba(21,24,27,0.52) 78%); }
 .heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
 
 .heroLogo { width: clamp(140px, 24vw, 230px); height: auto; overflow: visible; }
 .markPath { fill: none; stroke: var(--bc-blue); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; }
 .symbolReveal { transform-box: fill-box; transform-origin: center; }
 
-.wordmark { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: var(--bc-fs-hero); line-height: 1; letter-spacing: -0.01em; color: var(--bc-ink); }
-.wordmark .wmBlue { color: var(--bc-blue); }
-.tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-ink-soft); padding-left: var(--bc-ls-tagline); }
+.wordmark { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: var(--bc-fs-hero); line-height: 1; letter-spacing: -0.01em; color: var(--bc-on-dark); text-shadow: 0 2px 20px rgba(0, 0, 0, 0.45); }
+.wordmark .wmBlue { color: var(--bc-blue-light); }
+.tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.5); padding-left: var(--bc-ls-tagline); }
 
 /* --- hero intro animation (pure CSS, plays on load):
        blue hexagon line-draw -> real GB symbol reveals -> wordmark/tagline rise --- */
@@ -156,6 +157,32 @@
 .workCap { position: absolute; inset: auto 0 0; padding: 0.7rem 0.9rem; font-size: 0.72rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.14em; color: var(--bc-on-dark); background: linear-gradient(transparent, rgba(17, 17, 17, 0.72)); opacity: 0; transition: opacity 0.35s var(--bc-ease); }
 .workItem:hover .workCap, .workItem:focus-within .workCap { opacity: 1; }
 
+/* =====================  PICK UP (販売車両)  ===================== */
+.pickupGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(0.8rem, 2vw, 1.5rem); max-width: var(--bc-maxw); margin: 0 auto; }
+.pickupItem { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--bc-paper); }
+.pickupItem img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s var(--bc-ease); }
+.pickupItem:hover img { transform: scale(1.05); }
+.pickupCap { position: absolute; inset: auto 0 0; display: flex; align-items: baseline; gap: 0.6rem; padding: 1rem 1.1rem; color: var(--bc-on-dark); background: linear-gradient(transparent, rgba(17, 17, 17, 0.78)); }
+.pickupCap strong { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.05rem; letter-spacing: 0.04em; }
+.pickupCap span { font-size: 0.72rem; letter-spacing: 0.14em; color: var(--bc-blue-light); }
+
+/* =====================  SHOP (店舗)  ===================== */
+.shop { background: var(--bc-paper); }
+.storeGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(1.2rem, 3vw, 2.2rem); max-width: var(--bc-maxw); margin: 0 auto; }
+.storeCard { background: var(--bc-white); border: 1px solid var(--bc-line); display: flex; flex-direction: column; }
+.storePhoto { aspect-ratio: 16 / 10; }
+.storeBody { padding: clamp(1.4rem, 3vw, 2rem); display: grid; gap: 0.7rem; }
+.storeName { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.25rem; color: var(--bc-ink); }
+.storeName span { color: var(--bc-blue); }
+.storeMeta { font-size: 0.9rem; line-height: 1.85; color: var(--bc-muted); }
+.storeMeta b { color: var(--bc-ink); font-weight: var(--bc-fw-medium); }
+.storeActions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.4rem; }
+.lineBtn, .mapBtn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.2rem; font-size: 0.8rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.06em; border-radius: var(--bc-radius-sm); transition: background 0.25s var(--bc-ease), color 0.25s var(--bc-ease); }
+.lineBtn { color: var(--bc-white); background: var(--bc-blue); }
+.lineBtn:hover { background: var(--bc-blue-mid); }
+.mapBtn { color: var(--bc-blue); border: 1px solid var(--bc-blue); }
+.mapBtn:hover { background: var(--bc-blue); color: var(--bc-white); }
+
 /* =====================  NEWS  ===================== */
 .newsList { max-width: var(--bc-maxw-text); margin: 0 auto; display: grid; gap: 1.4rem; }
 .newsItem { display: grid; gap: 0.5rem; padding-bottom: 1.4rem; border-bottom: 1px solid var(--bc-line); }
@@ -194,8 +221,12 @@
   .menuButton { display: block; }
   .worksGrid { grid-template-columns: repeat(2, 1fr); }
 }
+@media (max-width: 780px) {
+  .storeGrid { grid-template-columns: 1fr; }
+}
 @media (max-width: 560px) {
   .worksGrid { grid-template-columns: 1fr; }
+  .pickupGrid { grid-template-columns: 1fr; }
   .footLinks { flex-wrap: wrap; }
   .toTop { position: static; margin: 1.5rem 0 0 auto; }
 }

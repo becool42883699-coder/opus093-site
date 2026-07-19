@@ -7,18 +7,18 @@ const montserrat = Montserrat({ subsets: ["latin"], weight: ["500"], variable: "
 const noto = Noto_Sans_JP({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--font-noto", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "garage becool｜クルマのカスタム・整備・板金塗装｜SINCE 1999",
+  title: "GARAGE BeCool｜北九州の中古車販売・買取・車検・整備｜SINCE 1999",
   description:
-    "garage becool は1999年創業のカーガレージ。カスタム・メンテナンス・板金塗装・車検まで、クルマを楽しむすべてをサポートします。",
+    "GARAGE BeCool（有限会社ビークール）は福岡県北九州市小倉南区の地域密着型カーショップ。中古車販売・買取・車検・整備・メンテナンスまで、カーライフをトータルでサポートします。沼店・中吉田店の2店舗。",
   alternates: { canonical: "/becool" },
   openGraph: {
     type: "website",
     locale: "ja_JP",
-    siteName: "garage becool",
-    title: "garage becool｜クルマのカスタム・整備・板金塗装｜SINCE 1999",
+    siteName: "GARAGE BeCool",
+    title: "GARAGE BeCool｜北九州の中古車販売・買取・車検・整備",
     description:
-      "1999年創業のカーガレージ garage becool。カスタム・整備・板金塗装・車検まで、クルマのある毎日をかっこよく。",
-    images: ["/becool/img/logo.svg"],
+      "福岡県北九州市小倉南区の中古車販売・整備店 GARAGE BeCool。中古車販売・買取・車検・整備・メンテナンスまで、カーライフをトータルでサポート。",
+    images: ["/becool/img/photo-porsche.webp"],
   },
 };
 
