@@ -69,7 +69,7 @@
   --bc-space-7: 6rem;
   --bc-space-8: 8rem;
 
-  --bc-section-y: clamp(4rem, 10vw, 9rem);  /* vertical section padding  */
+  --bc-section-y: clamp(4.5rem, 11vw, 10.5rem);  /* vertical section padding  */
   --bc-gutter:    clamp(1.25rem, 5vw, 4rem);/* horizontal page gutter    */
   --bc-maxw:      1200px;                    /* content max width         */
   --bc-maxw-text: 720px;                     /* readable text column      */
