@@ -82,16 +82,24 @@
 .heroBg img { width: 100%; height: 100%; object-fit: cover; }
 /* cinematic scrim so the logo + wordmark read over any part of the photo */
 .hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse at 50% 52%, rgba(21,24,27,0.30), rgba(21,24,27,0.52) 78%); }
-.heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
+.heroInner { position: relative; display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
+/* 完成の瞬間に発光するグロー(GSAPで制御) */
+.heroGlow { position: absolute; top: 44%; left: 50%; width: min(64vw, 540px); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(31, 99, 182, 0.55), rgba(31, 99, 182, 0) 62%); filter: blur(16px); opacity: 0; pointer-events: none; z-index: 0; }
+.heroInner .heroLogo, .heroInner .wordmark, .heroInner .tagline { position: relative; z-index: 1; }
 
 .heroLogo { width: clamp(150px, 26vw, 250px); height: auto; overflow: visible; }
 
 /* --- blueprint guide lines (製図ガイド・GSAPで描画→フェード) --- */
-.logoGuide { fill: none; stroke: var(--bc-blue); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.logoGuide { fill: none; stroke: var(--bc-blue); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .logoGuide :global(.logo-frame) { stroke-width: 3; }
-.logoGuide :global(.logo-sketch),
+.logoGuide :global(.logo-hex2),
+.logoGuide :global(.logo-ring) { stroke-width: 1.6; opacity: 0.55; }
+.logoGuide :global(.logo-iso),
 .logoGuide :global(.logo-axis),
-.logoGuide :global(.logo-cross) { stroke-width: 1.8; opacity: 0.85; }
+.logoGuide :global(.logo-reg),
+.logoGuide :global(.logo-dim),
+.logoGuide :global(.logo-arc),
+.logoGuide :global(.logo-cross) { stroke-width: 1.6; opacity: 0.8; }
 .logoGuide :global(.logo-draw) { stroke-dasharray: 1; } /* pathLength=1 で長さ正規化 */
 
 /* --- assembled GB cube parts --- */

@@ -106,11 +106,17 @@ const PART_FRONT = "M 724 313 L 716 319 L 616 381 L 616 438 L 724 369 Z";
 const PART_TOP =
   "M 537 311 L 540 314 L 586 341 L 588 341 L 725 255 L 864 341 L 913 312 L 912 310 L 904 306 L 901 303 L 896 301 L 859 277 L 725 195 Z";
 
-/* 製図ガイド(外枠六角・中心軸・アイソメ稜線・十字) */
+/* 製図ガイド(外枠六角×2・構成円・座標軸・アイソメ稜線・十字・
+   レジストレーションマーク・寸法線・角度弧) — 中心 (725,443) */
 const GUIDE_FRAME = "M725 195 L915 334 L915 571 L724 691 L534 571 L534 334 Z";
-const GUIDE_AXIS = "M725 150 L725 725";
-const GUIDE_ISO = "M725 455 L534 344 M725 455 L916 344 M725 455 L725 691";
-const GUIDE_CROSS = "M686 455 L764 455 M725 416 L725 494";
+const GUIDE_HEX2 = "M725 165 L938 321 L938 586 L724 721 L511 586 L511 321 Z";
+const GUIDE_AXIS = "M725 150 V736 M480 443 H970";
+const GUIDE_ISO = "M725 443 L534 334 M725 443 L916 334 M725 443 L725 691";
+const GUIDE_CROSS = "M690 443 H760 M725 408 V478";
+const GUIDE_REG =
+  "M717 195 H733 M725 187 V203 M907 334 H923 M915 326 V342 M907 571 H923 M915 563 V579 M716 691 H732 M724 683 V699 M526 571 H542 M534 563 V579 M526 334 H542 M534 326 V342";
+const GUIDE_DIM = "M534 730 H915 M534 723 V737 M915 723 V737";
+const GUIDE_ARC = "M769 443 A44 44 0 0 1 749 481";
 
 function HeroMark() {
   return (
@@ -124,9 +130,14 @@ function HeroMark() {
       </defs>
       {/* 製図ガイド線(装飾・SRからは除外) */}
       <g className={`logo-guide ${styles.logoGuide}`} aria-hidden="true">
+        <circle className="logo-ring logo-draw" pathLength={1} cx={725} cy={443} r={214} />
+        <path className="logo-hex2 logo-draw" pathLength={1} d={GUIDE_HEX2} />
         <path className="logo-frame logo-draw" pathLength={1} d={GUIDE_FRAME} />
-        <path className="logo-sketch logo-draw" pathLength={1} d={GUIDE_ISO} />
+        <path className="logo-iso logo-sketch logo-draw" pathLength={1} d={GUIDE_ISO} />
         <path className="logo-axis logo-draw" pathLength={1} d={GUIDE_AXIS} />
+        <path className="logo-reg logo-draw" pathLength={1} d={GUIDE_REG} />
+        <path className="logo-dim logo-draw" pathLength={1} d={GUIDE_DIM} />
+        <path className="logo-arc logo-draw" pathLength={1} d={GUIDE_ARC} />
         <path className="logo-cross logo-draw" pathLength={1} d={GUIDE_CROSS} />
       </g>
       {/* GBキューブ各パーツ */}
@@ -173,6 +184,7 @@ export default function BecoolPage() {
             <img src={asset("/becool/img/photo-porsche.webp")} alt="GARAGE BeCool 店頭に並ぶ白いポルシェ 718 ケイマン" />
           </div>
           <div className={styles.heroInner} data-hero-stage data-intro="play">
+            <span className={`hero-glow ${styles.heroGlow}`} aria-hidden="true" />
             <HeroMark />
             <p className={`${styles.wordmark} hero-wordmark`}>GARAGE <span className={styles.wmBlue}>BeCool</span></p>
             <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
