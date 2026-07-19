@@ -10,6 +10,6 @@
 :HL["/opus093-site/becool/img/photo-porsche.webp","image"]
 :HL["/opus093-site/becool/img/store-exterior.webp","image"]
 :HL["/opus093-site/becool/img/photo-alphard.webp","image"]
-:HL["/opus093-site/becool/img/icon-car-sales.svg","image"]
+:HL["/opus093-site/becool/img/icon-car-sales.png","image"]
 :HL["/opus093-site/becool/img/icon-inspection.svg","image"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"NX8hiuDO0TySN7lZE7CW3"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"IxEzrBBcX4sm2yITXfqYU"}
