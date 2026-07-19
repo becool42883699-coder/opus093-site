@@ -1,15 +1,15 @@
 "use client";
 
 /**
- * GARAGE BeCool ヒーローの「設計図のように組み上がる」ロゴ・イントロ。
- * GSAP Timeline で、ガイド線の製図 → GBキューブ各パーツの組み立て →
- * ワードマーク/タグラインの表示、を静かで精密なイージングで再生する。
+ * GARAGE BeCool ヒーローの「ロゴ変形」イントロ。
+ * ユーザー提供の5段階(GBキューブ→車シルエット→完成ロゴ)のメタリック画像を
+ * GSAP でクロスフェードして繋ぎ、最終ロゴへ変形させる。
  *
- * - transform / opacity / CSS変数(--pblur) 中心で GPU に優しく動かす
- * - prefers-reduced-motion: 組み立てを再生せず完成ロゴを短フェード
- * - sessionStorage: 同一セッション2回目以降は完成状態を即表示
+ * - opacity / transform 中心で GPU に優しく動かす
+ * - prefers-reduced-motion: 変形を再生せず最終ロゴ(stage 5)を短フェード
+ * - sessionStorage: 同一セッション2回目以降は最終ロゴを即表示
  * - タブ非表示中は timeline を pause、復帰で resume
- * - アンマウント時に context.revert() で確実に kill
+ * - アンマウント時に context.revert()
  */
 
 import { useEffect } from "react";
@@ -26,11 +26,11 @@ export default function BecoolHeroIntro() {
     try { played = !!sessionStorage.getItem(PLAYED_KEY); } catch { /* private mode */ }
 
     if (reduce || played) {
-      stage.setAttribute("data-intro", "done"); // 完成状態を(短フェードで)表示
+      stage.setAttribute("data-intro", "done"); // 最終ロゴを(短フェードで)表示
       return;
     }
 
-    stage.setAttribute("data-intro", "play"); // CSSが各パーツを初期状態(非表示)にする
+    stage.setAttribute("data-intro", "play");
     try { sessionStorage.setItem(PLAYED_KEY, "1"); } catch { /* ignore */ }
 
     let killed = false;
@@ -44,48 +44,33 @@ export default function BecoolHeroIntro() {
 
       const ctx = gsap.context(() => {
         const q = gsap.utils.selector(stage);
-        const soft = "power3.out";
 
-        // --- 初期状態(組み上がる前) ---
-        gsap.set(q(".logo-draw"), { strokeDashoffset: 1 });
-        gsap.set(q(".logo-guide"), { autoAlpha: 0 });
-        gsap.set(q(".logo-part"), { opacity: 0, "--pblur": "5px" });
-        gsap.set(q(".part-top"), { yPercent: -55, rotate: -3 });
-        gsap.set(q(".part-left"), { xPercent: -60, yPercent: 10, rotate: -5 });
-        gsap.set(q(".part-right"), { xPercent: 60, yPercent: 10, rotate: 5 });
-        gsap.set(q(".hero-wordmark"), { autoAlpha: 0, yPercent: 22, clipPath: "inset(0 100% 0 0)" });
+        // --- 初期状態(1枚目=GBキューブを表示、以降は非表示) ---
+        gsap.set(q(".stage-img"), { opacity: 0 });
+        gsap.set(q(".stage-1"), { opacity: 1 });
         gsap.set(q(".hero-tagline"), { autoAlpha: 0, y: 8 });
+        gsap.set(q(".stage-stack"), { scale: 0.96 });
 
-        // 半透明状態を経る crossfade(急な0/1切替にしない)
-        const keyframesOpacity = [{ opacity: 0.25 }, { opacity: 0.7 }, { opacity: 0.35 }, { opacity: 1 }];
+        tl = gsap.timeline({ defaults: { ease: "power1.inOut" } });
 
-        tl = gsap.timeline({ defaults: { ease: soft } });
+        // 全体をゆっくり詰めて(scale)、生きた変形感を出す
+        tl.to(q(".stage-stack"), { scale: 1, duration: 4.6, ease: "power1.out" }, 0);
 
-        // 1) 製図ガイド線を描く(0.3〜1.5s)
-        tl.to(q(".logo-guide"), { autoAlpha: 1, duration: 0.3 }, 0.3);
-        tl.to(q(".logo-draw"), { strokeDashoffset: 0, duration: 1.15, stagger: 0.12, ease: "power2.inOut" }, 0.35);
+        // 1→2→3→4→5 を順にクロスフェード(重なる瞬間だけ両方が半透明)
+        const dwell = 0.8;   // 各ステージの滞在
+        const xfade = 0.6;   // クロスフェード時間
+        let t = 1.05;
+        for (let i = 1; i < 5; i++) {
+          tl.to(q(`.stage-${i}`), { opacity: 0, duration: xfade }, t);
+          tl.to(q(`.stage-${i + 1}`), { opacity: 1, duration: xfade }, t);
+          t += dwell;
+        }
 
-        // 2) 各パーツが移動・回転・半透明を経て中央で組み上がる(0.9〜2.9s)
-        const assemble = (sel: string, at: number) => {
-          tl!.to(q(sel), { xPercent: 0, yPercent: 0, rotate: 0, scale: 1, duration: 1.05, ease: "cubic-bezier(0.22,1,0.36,1)" }, at);
-          tl!.to(q(sel), { keyframes: keyframesOpacity, duration: 1.05, ease: "none" }, at);
-          tl!.to(q(sel), { "--pblur": "0px", duration: 0.9, ease: "power2.out" }, at + 0.15);
-        };
-        assemble(".part-top", 0.9);
-        assemble(".part-left", 1.08);
-        assemble(".part-right", 1.26);
+        // 完成後にタグライン
+        tl.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" }, t + 0.15);
 
-        // 3) ガイド線を完成直前に消す(2.9〜3.5s)
-        tl.to(q(".logo-guide"), { autoAlpha: 0, filter: "blur(1px)", duration: 0.6, ease: "power2.inOut" }, 2.9);
-
-        // 4) ワードマークをマスクで表示(3.1〜4.0s)
-        tl.to(q(".hero-wordmark"), { autoAlpha: 1, yPercent: 0, clipPath: "inset(0 0% 0 0)", duration: 0.85, ease: "power3.out" }, 3.1);
-
-        // 5) タグラインをフェード(3.7〜4.4s)
-        tl.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.7, ease: "power2.out" }, 3.7);
-
-        // 6) 完成状態を確定(scrollCue表示・playの初期非表示CSSを解除)
-        tl.add(() => stage.setAttribute("data-intro", "complete"), ">-0.1");
+        // 完成状態を確定
+        tl.add(() => stage.setAttribute("data-intro", "complete"), ">-0.05");
       }, stage);
 
       revert = () => ctx.revert();

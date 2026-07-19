@@ -84,28 +84,20 @@
 .hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse at 50% 52%, rgba(21,24,27,0.30), rgba(21,24,27,0.52) 78%); }
 .heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
 
-.heroLogo { width: clamp(150px, 26vw, 250px); height: auto; overflow: visible; }
+/* --- ロゴ変形ステージ(5枚のメタリック画像を重ねてクロスフェード) --- */
+.stageStack { position: relative; width: min(92vw, 600px); aspect-ratio: 1094 / 640; }
+.stageImg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.45)); }
+/* メタリック(シルバー)ロゴが白い車体でも埋もれないよう、柔らかな暗い下地を敷く */
+.logoBacking { position: absolute; inset: -6% -8%; border-radius: 50%; background: radial-gradient(ellipse, rgba(8, 12, 20, 0.58), rgba(8, 12, 20, 0) 66%); filter: blur(28px); pointer-events: none; }
 
-/* --- blueprint guide lines (製図ガイド・GSAPで描画→フェード) --- */
-.logoGuide { fill: none; stroke: var(--bc-blue); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.logoGuide :global(.logo-frame) { stroke-width: 3; }
-.logoGuide :global(.logo-sketch),
-.logoGuide :global(.logo-axis),
-.logoGuide :global(.logo-cross) { stroke-width: 1.8; opacity: 0.85; }
-.logoGuide :global(.logo-draw) { stroke-dasharray: 1; } /* pathLength=1 で長さ正規化 */
+.tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); padding-left: var(--bc-ls-tagline); }
 
-/* --- assembled GB cube parts --- */
-.logoParts :global(.logo-part) { transform-box: fill-box; transform-origin: 50% 50%; filter: blur(var(--pblur, 0px)); }
-
-.wordmark { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: var(--bc-fs-hero); line-height: 1; letter-spacing: -0.01em; color: var(--bc-on-dark); text-shadow: 0 2px 20px rgba(0, 0, 0, 0.45); }
-.wordmark .wmBlue { color: var(--bc-blue-light); }
-.tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.5); padding-left: var(--bc-ls-tagline); }
-
-/* 既定(SSR / JS無効 / done): 完成状態を表示。ガイド線は隠す */
-.heroInner :global(.logo-guide) { opacity: 0; }
-/* JSが data-intro=play にした瞬間、GSAP実行前のちらつきを防ぐ初期非表示 */
-.heroInner[data-intro="play"] :global(.logo-part) { opacity: 0; }
-.heroInner[data-intro="play"] .wordmark,
+/* 既定(SSR/JS無効/done): 最終ロゴ(stage 5)を表示。途中フレームは隠す */
+.heroInner :global(.stage-img) { opacity: 0; }
+.heroInner[data-intro="done"] :global(.stage-5) { opacity: 1; }
+.heroInner[data-intro="complete"] :global(.stage-5) { opacity: 1; }
+/* 再生中: GSAP実行前のちらつき防止に1枚目を表示 */
+.heroInner[data-intro="play"] :global(.stage-1) { opacity: 1; }
 .heroInner[data-intro="play"] .tagline { opacity: 0; }
 /* reduced-motion / 2回目以降: 完成状態を短フェードで表示 */
 .heroInner[data-intro="done"] { animation: bcHeroFade 0.5s var(--bc-ease) both; }
