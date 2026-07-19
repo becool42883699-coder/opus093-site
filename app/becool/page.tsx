@@ -146,15 +146,17 @@ function HeroCubeLogo() {
         <path className="gl-rv" d="M916 758 L916 232" pathLength={1} />
         <path className="gl-tr" d="M648 141 L995 352" pathLength={1} />
       </g>
-      {/* 線画: 走査線が通過して透明化した部分にだけ現れる輪郭 */}
-      <g mask="url(#mScanWire)" aria-hidden="true">
+      {/* 線画: 走査線が通過して透明化した部分にだけ現れる輪郭。
+          マスクは走査フェーズ中だけ GSAP が付与する(毎フレームのラスタライズ削減) */}
+      <g className="scan-wire-wrap" aria-hidden="true">
         <path className="logo-wire" d={CUBE_D} fillRule="evenodd" />
       </g>
-      {/* 塗り3面(evenodd で G/B の白抜きを保持)。組立マスク×走査マスクの二重がけ */}
-      <g mask="url(#mScanFill)">
-        <g mask="url(#mCubeTop)"><path className="logo-fill face-top" d={CUBE_TOP} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
-        <g mask="url(#mCubeLeft)"><path className="logo-fill face-left" d={CUBE_LEFT} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
-        <g mask="url(#mCubeRight)"><path className="logo-fill face-right" d={CUBE_RIGHT} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
+      {/* 塗り3面(evenodd で G/B の白抜きを保持)。
+          組立マスクは組立中だけ・走査マスクは走査中だけ GSAP が付け外しする */}
+      <g className="scan-fill-wrap">
+        <g className="mwrap-top"><path className="logo-fill face-top" d={CUBE_TOP} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
+        <g className="mwrap-left"><path className="logo-fill face-left" d={CUBE_LEFT} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
+        <g className="mwrap-right"><path className="logo-fill face-right" d={CUBE_RIGHT} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
       </g>
       {/* 走査線ビーム(帯の先端を走る細い光) */}
       <g clipPath="url(#cScanBeam)" aria-hidden="true">
@@ -208,7 +210,7 @@ export default function BecoolPage() {
           </div>
           {/* JS無効時は組み上げ演出をスキップし、完成ロゴ(塗り)を表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline,[data-hero-stage] .hero-wordmark{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}[data-hero-stage] .mask-sweep{stroke-dashoffset:0!important}`}</style>
+            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline,[data-hero-stage] .hero-wordmark{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}`}</style>
           </noscript>
           <BecoolHeroIntro />
           <span className={styles.scrollCue} aria-hidden="true" />

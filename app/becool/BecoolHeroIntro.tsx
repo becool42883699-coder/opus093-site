@@ -50,6 +50,11 @@ export default function BecoolHeroIntro() {
         const q = gsap.utils.selector(stage);
 
         // --- 初期状態 ---
+        // マスクは必要なフェーズだけ付与する(常時多重マスクだと毎フレームの
+        // ラスタライズが重く、カクつきの原因になる)
+        gsap.set(q(".mwrap-top"), { attr: { mask: "url(#mCubeTop)" } });
+        gsap.set(q(".mwrap-left"), { attr: { mask: "url(#mCubeLeft)" } });
+        gsap.set(q(".mwrap-right"), { attr: { mask: "url(#mCubeRight)" } });
         gsap.set(q(".logo-fill"), { autoAlpha: 1 });          // 塗りは表示(マスクが隠す)
         gsap.set(q(".mask-sweep"), { strokeDashoffset: 1 });  // 組立帯: 未走行
         gsap.set(q(".logo-guide"), { autoAlpha: 1 });
@@ -88,27 +93,37 @@ export default function BecoolHeroIntro() {
         timeline.to(q(".gl-rv"), { autoAlpha: 0, duration: 0.4 }, 2.05);
         timeline.to(q(".gl-tr"), { autoAlpha: 0, duration: 0.4 }, 2.15);
 
+        // 組立が終わったら面マスクを外す(以降のフレームコストをゼロに)
+        timeline.set(q(".mwrap-top, .mwrap-left, .mwrap-right"), { attr: { mask: "none" } }, 1.95);
+
         /* ===== フェーズ2: 文字(1.95〜3.2s) =====
            ワードマークは横方向のマスクが左から右へ開く。タグラインは控えめにフェード */
-        timeline.to(q(".hero-wordmark"), { clipPath: "inset(-10% -2% -10% -2%)", duration: 0.65, ease: "power1.inOut" }, 1.95);
+        timeline.to(q(".hero-wordmark"), { clipPath: "inset(-10% -2% -10% -2%)", duration: 0.65, ease: "power2.inOut" }, 1.95);
         timeline.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.6, ease: "power2.out" }, 2.7);
 
-        /* ===== フェーズ3: 走査→透明化(3.75〜4.6s) =====
-           斜めの走査線が通過した部分から塗りが透明になり、輪郭線だけ残って背景が透ける */
-        timeline.to(q(".scan-beam"), { autoAlpha: 0.9, duration: 0.12 }, 3.75);
-        timeline.to(q(".scan-hide, .scan-show"), { strokeDashoffset: 0, duration: 0.85, ease: "power1.inOut" }, 3.8);
-        timeline.to(q(".scan-beam"), { x: 450, y: 520, duration: 0.85, ease: "power1.inOut" }, 3.8);
-        timeline.to(q(".scan-beam"), { autoAlpha: 0, duration: 0.15 }, 4.62);
+        /* ===== フェーズ3: 走査→透明化(3.55〜4.45s) =====
+           斜めの走査線が通過した部分から塗りが透明になり、輪郭線だけ残って背景が透ける。
+           走査マスクはこのフェーズだけ付与する */
+        timeline.set(q(".scan-fill-wrap"), { attr: { mask: "url(#mScanFill)" } }, 3.55);
+        timeline.set(q(".scan-wire-wrap"), { attr: { mask: "url(#mScanWire)" } }, 3.55);
+        timeline.set(q(".logo-wire"), { autoAlpha: 1 }, 3.55);
+        timeline.to(q(".scan-beam"), { autoAlpha: 0.9, duration: 0.15 }, 3.55);
+        timeline.to(q(".scan-hide, .scan-show"), { strokeDashoffset: 0, duration: 0.85, ease: "power2.inOut" }, 3.6);
+        timeline.to(q(".scan-beam"), { x: 450, y: 520, duration: 0.85, ease: "power2.inOut" }, 3.6);
+        timeline.to(q(".scan-beam"), { autoAlpha: 0, duration: 0.18 }, 4.4);
 
-        /* ===== フェーズ4: 線画状態を一瞬見せてから復元(5.05〜5.95s) =====
+        /* ===== フェーズ4: 線画状態を一瞬見せてから復元(4.9〜5.8s) =====
            同じ帯が逆方向に戻り、光の帯を伴って塗りが再構築される */
-        timeline.to(q(".scan-beam"), { autoAlpha: 0.9, duration: 0.12 }, 5.05);
-        timeline.to(q(".scan-hide, .scan-show"), { strokeDashoffset: 1, duration: 0.85, ease: "power1.inOut" }, 5.1);
-        timeline.to(q(".scan-beam"), { x: 0, y: 0, duration: 0.85, ease: "power1.inOut" }, 5.1);
-        timeline.to(q(".scan-beam"), { autoAlpha: 0, duration: 0.18 }, 5.92);
+        timeline.to(q(".scan-beam"), { autoAlpha: 0.9, duration: 0.15 }, 4.9);
+        timeline.to(q(".scan-hide, .scan-show"), { strokeDashoffset: 1, duration: 0.85, ease: "power2.inOut" }, 4.95);
+        timeline.to(q(".scan-beam"), { x: 0, y: 0, duration: 0.85, ease: "power2.inOut" }, 4.95);
+        timeline.to(q(".scan-beam"), { autoAlpha: 0, duration: 0.2 }, 5.72);
+        // 復元完了後は走査マスクも外して素の描画に戻す
+        timeline.set(q(".scan-fill-wrap, .scan-wire-wrap"), { attr: { mask: "none" } }, 5.85);
+        timeline.set(q(".logo-wire"), { autoAlpha: 0 }, 5.85);
 
         /* ===== 完成: 静止してロゴを読ませる ===== */
-        timeline.add(() => stage.setAttribute("data-intro", "complete"), 6.15);
+        timeline.add(() => stage.setAttribute("data-intro", "complete"), 6.0);
       }, stage);
 
       revert = () => ctx.revert();
