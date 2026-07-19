@@ -1,7 +1,7 @@
 import styles from "./becool.module.css";
 import { MobileMenu, RevealController, ToTopButton } from "./BecoolClient";
 import BecoolHeroIntro from "./BecoolHeroIntro";
-import { CUBE_VIEWBOX, CUBE_STOPS, CUBE_TOP, CUBE_LEFT, CUBE_RIGHT } from "./cubeLogo";
+import { CUBE_VIEWBOX, CUBE_STOPS, CUBE_D, CUBE_TOP, CUBE_LEFT, CUBE_RIGHT } from "./cubeLogo";
 
 /* サブパス配信(GitHub Pages等)でも画像が解決できるようベースパスを前置 */
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -96,13 +96,17 @@ const SHOPS = [
   },
 ];
 
-/* ---- 旧ロゴ(GBキューブ)。form-design.jp のイントロと同じ仕組み:
-       ロゴの実体(塗り)が輪郭の経路に沿って端から「敷かれて」現れる。
-       マスク内の太いストロークを stroke-dash で走らせ、通過した所だけ塗りが見える。
-       経路: 屋根左半分(頂点→左角) → 左面を下る(G) → 右面を上る(B) → 屋根右半分で閉じる。
-       併走して辺の延長線(logo-guide)が伸びて消える。 --- */
+/* ---- 旧ロゴ(GBキューブ)。form-design.jp のイントロを同じ構造で再現:
+       [組立] 各面が「移動+マスク」の複合で経路に沿って敷かれて現れる
+              (屋根左→左面Gを下る→右面Bを上る→屋根右で閉じる)。
+              併走して辺の延長線(logo-guide)が伸びて消える。
+       [走査] 完成後、斜めの走査線(scan-beam)が通り、通過した部分の塗りが
+              透明化して輪郭線(logo-wire)だけ残り、背景が透けて見える。
+       [復元] 同じ帯が逆方向に戻り、光の帯を伴って塗りが再構築される。
+       すべて SVG マスク(stroke-dash の帯) + GSAP。発光ではなく透過で光を表現。 --- */
 function HeroCubeLogo() {
   const sweep = { stroke: "#fff", fill: "none", pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1 } as const;
+  const scan = { d: "M500 180 L950 700", strokeWidth: 560, fill: "none", pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1 } as const;
   return (
     <svg className={styles.heroCarSvg} viewBox={CUBE_VIEWBOX} role="img" aria-label="GARAGE BeCool ロゴ">
       <defs>
@@ -121,6 +125,17 @@ function HeroCubeLogo() {
         <mask id="mCubeRight" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
           <path className="mask-sweep sweep-right" d="M831 692 L831 322" strokeWidth={202} strokeLinecap="square" {...sweep} />
         </mask>
+        {/* 走査帯: 同じ斜め帯で「塗りを隠す(黒)」「線画を見せる(白)」を同期させる */}
+        <mask id="mScanFill" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
+          <rect x="420" y="120" width="620" height="660" fill="#fff" />
+          <path className="scan-hide" stroke="#000" {...scan} />
+        </mask>
+        <mask id="mScanWire" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
+          <rect x="420" y="120" width="620" height="660" fill="#000" />
+          <path className="scan-show" stroke="#fff" {...scan} />
+        </mask>
+        {/* 走査線ビームをロゴ周辺だけに収めるクリップ */}
+        <clipPath id="cScanBeam"><rect x="470" y="150" width="510" height="580" /></clipPath>
       </defs>
       {/* 辺の延長線(細い見当線)。リボンの通過に合わせて描かれ、順に消える */}
       <g className="logo-guide" aria-hidden="true">
@@ -131,10 +146,20 @@ function HeroCubeLogo() {
         <path className="gl-rv" d="M916 758 L916 232" pathLength={1} />
         <path className="gl-tr" d="M648 141 L995 352" pathLength={1} />
       </g>
-      {/* 3面(それぞれ evenodd で G/B の白抜きを保持)。マスクで経路 reveal */}
-      <path className="logo-fill" d={CUBE_TOP} fill="url(#cubeGrad)" fillRule="evenodd" mask="url(#mCubeTop)" />
-      <path className="logo-fill" d={CUBE_LEFT} fill="url(#cubeGrad)" fillRule="evenodd" mask="url(#mCubeLeft)" />
-      <path className="logo-fill" d={CUBE_RIGHT} fill="url(#cubeGrad)" fillRule="evenodd" mask="url(#mCubeRight)" />
+      {/* 線画: 走査線が通過して透明化した部分にだけ現れる輪郭 */}
+      <g mask="url(#mScanWire)" aria-hidden="true">
+        <path className="logo-wire" d={CUBE_D} fillRule="evenodd" />
+      </g>
+      {/* 塗り3面(evenodd で G/B の白抜きを保持)。組立マスク×走査マスクの二重がけ */}
+      <g mask="url(#mScanFill)">
+        <g mask="url(#mCubeTop)"><path className="logo-fill face-top" d={CUBE_TOP} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
+        <g mask="url(#mCubeLeft)"><path className="logo-fill face-left" d={CUBE_LEFT} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
+        <g mask="url(#mCubeRight)"><path className="logo-fill face-right" d={CUBE_RIGHT} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
+      </g>
+      {/* 走査線ビーム(帯の先端を走る細い光) */}
+      <g clipPath="url(#cScanBeam)" aria-hidden="true">
+        <line className="scan-beam" x1="303" y1="350" x2="697" y2="10" />
+      </g>
     </svg>
   );
 }
@@ -175,20 +200,15 @@ export default function BecoolPage() {
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
               <HeroCubeLogo />
             </div>
-            {/* ワードマーク: ロゴ完成後に1文字ずつ揃う */}
-            <p className={styles.heroWordmark} aria-label="GARAGE BeCool">
-              <span className={styles.wmWord} aria-hidden="true">
-                {"GARAGE".split("").map((ch, i) => <span key={i} className="hero-letter">{ch}</span>)}
-              </span>
-              <span className={`${styles.wmWord} ${styles.wmAccent}`} aria-hidden="true">
-                {"BeCool".split("").map((ch, i) => <span key={i} className="hero-letter">{ch}</span>)}
-              </span>
+            {/* ワードマーク: ロゴ完成後、横方向のマスクが左から右へ開いて現れる */}
+            <p className={`${styles.heroWordmark} hero-wordmark`}>
+              <span>GARAGE</span> <span className={styles.wmAccent}>BeCool</span>
             </p>
             <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
           {/* JS無効時は組み上げ演出をスキップし、完成ロゴ(塗り)を表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline,[data-hero-stage] .hero-letter{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}[data-hero-stage] .mask-sweep{stroke-dashoffset:0!important}`}</style>
+            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline,[data-hero-stage] .hero-wordmark{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}[data-hero-stage] .mask-sweep{stroke-dashoffset:0!important}`}</style>
           </noscript>
           <BecoolHeroIntro />
           <span className={styles.scrollCue} aria-hidden="true" />
