@@ -1,32 +1,22 @@
+import Link from "next/link";
 import styles from "./becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
-import { MobileMenu, RevealController, ToTopButton } from "./BecoolClient";
+import { RevealController } from "./BecoolClient";
 import BecoolWaterIntro from "./BecoolWaterIntro";
 import { CUBE_MARK_D, CUBE_GARAGE_D, CUBE_BECOOL_D, CUBE_SINCE_D, CUBE_GRADS, SCRIPT_D, SCRIPT_GRAD } from "./brandLogo";
-
-/* サブパス配信(GitHub Pages等)でも画像が解決できるようベースパスを前置 */
-const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
-const asset = (p: string) => `${BASE}${p}`;
-const LINE_URL = "https://line.me/R/ti/p/@123jicrs";
-const SITE_URL = "https://garage-becool.co.jp/";
-
-/* ---- nav ------------------------------------------------------------ */
-const NAV = [
-  { href: "#about", label: "ABOUT" },
-  { href: "#showroom", label: "SHOWROOM" },
-  { href: "#service", label: "SERVICE" },
-  { href: "#car", label: "CAR" },
-  { href: "#shop", label: "SHOP" },
-  { href: "#contact", label: "CONTACT" },
-];
+import { asset, LINE_URL, SITE_URL, BecoolHeader, BecoolFooter } from "./Chrome";
 
 /* ---- services (from the official business info) --------------------- */
-const SERVICES = [
+const SERVICES: {
+  title: string; jp: string; photo: string; body: string;
+  icon: React.ReactNode; link?: { href: string; label: string };
+}[] = [
   {
     title: "CAR SALES",
     jp: "車両販売・乗り換え",
     photo: "/becool/img/service-sales.webp",
     body: "店頭在庫のご案内から、全国のオークション・流通在庫を使ったお車探しまで。ご希望の車種・年式・予算に合わせて、ぴったりの一台をご提案します。買取・査定・ローンのご相談も。",
+    link: { href: "/becool/stock/", label: "在庫車両を見る" },
     icon: (
       <img className={styles.serviceIconImg} src={asset("/becool/img/icon-car-sales.png")} alt="" width={512} height={512} />
     ),
@@ -36,6 +26,7 @@ const SERVICES = [
     jp: "車検・整備・点検",
     photo: "/becool/img/service-inspection.webp",
     body: "車検・法定点検から、オイル・タイヤ・バッテリー交換、警告灯や異音の診断まで。国家資格を持つ整備士が対応します。代車のご用意、LINEでの整備予約にも対応。",
+    link: { href: "/becool/maintenance/", label: "整備・車検の詳細を見る" },
     icon: (
       <img className={styles.serviceIconImg} src={asset("/becool/img/icon-inspection.png")} alt="" width={512} height={512} />
     ),
@@ -297,31 +288,11 @@ function HeroWaterStage() {
   );
 }
 
-function GbSymbol({ size = 34 }: { size?: number }) {
-  return (
-    <img src={asset("/becool/img/symbol.svg")} alt="" width={size} height={size} style={{ width: size, height: "auto" }} />
-  );
-}
-
-function Wordmark({ className }: { className?: string }) {
-  return <span className={className}>GARAGE <b>BeCool</b></span>;
-}
-
 export default function BecoolPage() {
   return (
     <div className={`becool ${styles.root}`}>
       <JsonLd data={becoolLd} />
-      {/* ---------- HEADER ---------- */}
-      <header className={styles.header}>
-        <a className={styles.brand} href="#top" aria-label="GARAGE BeCool トップへ">
-          <GbSymbol size={36} />
-          <Wordmark className={styles.brandName} />
-        </a>
-        <nav className={styles.navDesktop} aria-label="メインナビゲーション">
-          {NAV.map((n) => <a key={n.href} href={n.href}>{n.label}</a>)}
-        </nav>
-        <MobileMenu links={NAV} />
-      </header>
+      <BecoolHeader />
 
       <main id="top">
         {/* ---------- HERO ---------- */}
@@ -423,6 +394,7 @@ export default function BecoolPage() {
                 <h3>{s.title}</h3>
                 <p className={styles.serviceJp}>{s.jp}</p>
                 <p>{s.body}</p>
+                {s.link ? <Link className={styles.serviceLink} href={s.link.href}>{s.link.label}</Link> : null}
               </div>
             </div>
           ))}
@@ -463,7 +435,7 @@ export default function BecoolPage() {
               </li>
             ))}
           </ul>
-          <a className={styles.readMore} href={SITE_URL} target="_blank" rel="noopener noreferrer">+ 在庫一覧を見る</a>
+          <Link className={styles.readMore} href="/becool/stock/">+ 在庫一覧を見る</Link>
         </section>
 
         {/* ---------- SHOP ---------- */}
@@ -526,38 +498,7 @@ export default function BecoolPage() {
         </div>{/* /belowHero */}
       </main>
 
-      {/* ---------- FOOTER ---------- */}
-      <footer id="contact" className={styles.footer}>
-        <div data-reveal className={`${styles.footInner} ${styles.reveal}`}>
-          <span className={styles.footBrand}>
-            <GbSymbol size={38} />
-            <Wordmark className={styles.footWordmark} />
-          </span>
-          <p className={styles.footDesc}>
-            福岡県北九州市小倉南区で、中古車販売・買取・車検・整備・メンテナンスを行う地域密着型のカーショップ。
-            沼店・中吉田店の2店舗で、車選びから購入後のカーライフまでトータルにサポートします。
-          </p>
-          <p className={styles.footMeta}>
-            有限会社ビークール<br />
-            共通お問い合わせ TEL: <a href="tel:0939672345">093-967-2345</a><br />
-            営業時間 10:00〜20:00／年中無休
-          </p>
-          <div className={styles.footSocial}>
-            <a href={LINE_URL} target="_blank" rel="noopener noreferrer" aria-label="公式LINE">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.06.7.2.8.5.07.25 0 .64 0 .9l-.13.8c-.04.24-.2.94.82.5s5.5-3.2 7.5-5.5C20.8 15 22 13.1 22 11c0-4.4-4.5-8-10-8Zm-3.6 9.8H6.9a.4.4 0 0 1-.4-.4V9.6a.4.4 0 0 1 .8 0v2.4h1.1a.4.4 0 0 1 0 .8Zm1.7-.4a.4.4 0 0 1-.8 0V9.6a.4.4 0 0 1 .8 0v2.8Zm3.7 0a.4.4 0 0 1-.3.4h-.1a.4.4 0 0 1-.3-.16L12 10.8v1.6a.4.4 0 0 1-.8 0V9.6a.4.4 0 0 1 .7-.24L13 11V9.6a.4.4 0 0 1 .8 0v2.8Zm2.8-1.8a.4.4 0 0 1 0 .8h-1.1v.6h1.1a.4.4 0 0 1 0 .8h-1.5a.4.4 0 0 1-.4-.4V9.6a.4.4 0 0 1 .4-.4h1.5a.4.4 0 0 1 0 .8h-1.1v.6h1.1Z" /></svg>
-            </a>
-            <a href={SITE_URL} target="_blank" rel="noopener noreferrer" aria-label="公式サイト">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.9 6h-3a15 15 0 0 0-1-3.3A8 8 0 0 1 18.9 8ZM12 4c.9 1.2 1.5 2.6 1.9 4h-3.8c.4-1.4 1-2.8 1.9-4ZM4.3 14a8 8 0 0 1 0-4h3.3a17 17 0 0 0 0 4Zm.8 2h3a15 15 0 0 0 1 3.3A8 8 0 0 1 5.1 16ZM8.1 8h-3a8 8 0 0 1 4-3.3A15 15 0 0 0 8.1 8ZM12 20c-.9-1.2-1.5-2.6-1.9-4h3.8c-.4 1.4-1 2.8-1.9 4Zm2.3-6H9.7a15 15 0 0 1 0-4h4.6a15 15 0 0 1 0 4Zm.6 5.3c.5-1 .8-2.1 1-3.3h3a8 8 0 0 1-4 3.3ZM16.4 14a17 17 0 0 0 0-4h3.3a8 8 0 0 1 0 4Z" /></svg>
-            </a>
-          </div>
-          <div className={styles.footLinks}>
-            <a href={SITE_URL} target="_blank" rel="noopener noreferrer">公式サイト</a><span>｜</span>
-            <a href="#shop">店舗案内</a><span>｜</span><a href={LINE_URL} target="_blank" rel="noopener noreferrer">LINE予約</a>
-          </div>
-          <p className={styles.copyright}>© 1999 GARAGE BeCool / 有限会社ビークール</p>
-        </div>
-        <ToTopButton />
-      </footer>
+      <BecoolFooter />
 
       <RevealController />
     </div>

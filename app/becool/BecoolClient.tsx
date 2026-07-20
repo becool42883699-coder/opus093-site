@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import styles from "./becool.module.css";
 
 export function MobileMenu({ links }: { links: { href: string; label: string }[] }) {
@@ -27,7 +28,7 @@ export function MobileMenu({ links }: { links: { href: string; label: string }[]
     <div className="becool">
       <nav className={`${styles.drawer} ${open ? styles.drawerOpen : ""}`} aria-hidden={!open}>
         {links.map((l) => (
-          <a key={l.href} href={l.href} onClick={() => setOpen(false)}>{l.label}</a>
+          <Link key={l.href} href={l.href} onClick={() => setOpen(false)}>{l.label}</Link>
         ))}
       </nav>
     </div>
