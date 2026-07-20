@@ -16,3 +16,4 @@
 - [会社概要](https://becool42883699-coder.github.io/opus093-site/company/): 理念(現場を止めない)・仕事の基準・会社情報・代表あいさつ
 - [採用情報](https://becool42883699-coder.github.io/opus093-site/recruit/): 管理/作業・鈑金塗装・出張サービス・事務サポート職を募集
 - [お問い合わせ](https://becool42883699-coder.github.io/opus093-site/contact/): 電話・メールフォーム・よくある質問
+- [GARAGE BeCool](https://becool42883699-coder.github.io/opus093-site/becool/): 福岡県北九州市小倉南区の中古車販売・買取・車検・整備店(有限会社ビークール/沼店・中吉田店)
