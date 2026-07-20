@@ -100,44 +100,50 @@ export default function BecoolWaterIntro() {
         timeline.to(q(".wl-shadow"), { autoAlpha: 0.28, duration: 0.4, ease: "power1.out" }, 1.7);
         timeline.to(q(".wl-mouth"), { opacity: 0.3, duration: 0.4 }, 1.7);
 
-        /* ===== 04 線へ分解 (2.1-3.0) — 水面を消しつつ塗りをフェード、
-                 エッジ線(ストローク片)が右方向へ流れる ===== */
-        timeline.to(q(".wl-water"), { autoAlpha: 0, duration: 0.55, ease: "power1.inOut" }, 2.1);
-        timeline.to(q(".wl-shadow"), { autoAlpha: 0, duration: 0.4 }, 2.1);
-        timeline.to(q(".wl-frag"), { autoAlpha: 0.9, duration: 0.25 }, 2.1);
+        /* ===== 04 線へ分解 (2.1-) — 水面を消しつつ塗りをフェード。
+                 エッジ線(ストローク片)は消さずに流し続け、次のロゴ露出まで運ぶ ===== */
+        timeline.to(q(".wl-water"), { autoAlpha: 0, duration: 0.6, ease: "power1.inOut" }, 2.1);
+        timeline.to(q(".wl-shadow"), { autoAlpha: 0, duration: 0.45 }, 2.1);
+        timeline.to(q(".wl-frag"), { autoAlpha: 0.9, duration: 0.3 }, 2.1);
         timeline.to(q(".wl-mark, .wl-word-g, .wl-word-b, .wl-since"),
-          { autoAlpha: 0, duration: 0.5, ease: "power1.in", stagger: 0.06 }, 2.2);
-        timeline.to(q(".wl-frag-p"), { strokeDashoffset: -0.4, duration: 0.9, ease: "power1.in" }, 2.1);
-        timeline.to(q(".wl-frag"), { x: 150, duration: 0.9, ease: "power2.in" }, 2.15);
-        timeline.to(q(".wl-frag"), { autoAlpha: 0, duration: 0.3 }, 2.72);
+          { autoAlpha: 0, duration: 0.6, ease: "power1.in", stagger: 0.08 }, 2.25);
+        /* 線の流れは分解〜筆記体露出まで一続き(同じ左→右方向) */
+        timeline.to(q(".wl-frag-p"), { strokeDashoffset: -0.55, duration: 2.5, ease: "power1.inOut" }, 2.1);
+        timeline.to(q(".wl-frag"), { x: 90, duration: 2.4, ease: "sine.inOut" }, 2.2);
 
-        /* ===== 05 再構築A (3.0-3.7) — 車体シルエットとGARAGEボックスを線描画 ===== */
-        timeline.to(q(".wl-guides"), { autoAlpha: 1, duration: 0.2 }, 2.95);
-        timeline.to(q(".wl-guide-arc"), { strokeDashoffset: 0, duration: 0.55, ease: "power1.inOut" }, 3.0);
-        timeline.to(q(".wl-guide-box"), { strokeDashoffset: 0, duration: 0.45, ease: "power1.inOut" }, 3.15);
-        timeline.to(q(".wl-guide-base"), { strokeDashoffset: 0, duration: 0.4 }, 3.25);
-        timeline.to(q(".wl-cobalt"), { strokeDashoffset: 0, duration: 0.65, ease: "power2.inOut" }, 3.05);
+        /* ===== 05 再構築A (2.95-3.9) — 流れる線の中に車体シルエットと
+                 GARAGEボックスが線描画で立ち上がる ===== */
+        timeline.to(q(".wl-guides"), { autoAlpha: 1, duration: 0.25 }, 2.95);
+        timeline.to(q(".wl-guide-arc"), { strokeDashoffset: 0, duration: 0.7, ease: "power1.inOut" }, 3.0);
+        timeline.to(q(".wl-guide-box"), { strokeDashoffset: 0, duration: 0.55, ease: "power1.inOut" }, 3.25);
+        timeline.to(q(".wl-guide-base"), { strokeDashoffset: 0, duration: 0.5 }, 3.4);
+        timeline.to(q(".wl-cobalt"), { strokeDashoffset: 0, duration: 0.85, ease: "power2.inOut" }, 3.1);
 
-        /* ===== 06 再構築B (3.7-4.5) — 筆記体を左からマスク露出(パスは提供SVGのまま)。
-                 マスクはこのフェーズ中だけ適用(毎フレームのラスタライズ削減) ===== */
-        timeline.set(q(".wl-final-wrap"), { attr: { mask: "url(#wlReveal)" } }, 3.7);
-        timeline.set(q(".wl-reveal"), { scaleX: 0, svgOrigin: "330 430" }, 3.7);
-        timeline.set(q(".wl-final"), { autoAlpha: 1 }, 3.7);
-        timeline.to(q(".wl-reveal"), { scaleX: 1, duration: 0.8, ease: "power2.inOut" }, 3.72);
+        /* ===== 06 再構築B (3.9-5.0) — 線の流れと同じ左→右で筆記体をマスク露出。
+                 露出が進むほど分解線が筆記体に「置き換わって」いき、
+                 露出完了と同時に残った線が吸い込まれて消える ===== */
+        timeline.set(q(".wl-final-wrap"), { attr: { mask: "url(#wlReveal)" } }, 3.9);
+        timeline.set(q(".wl-reveal"), { scaleX: 0, svgOrigin: "330 430" }, 3.9);
+        timeline.set(q(".wl-final"), { autoAlpha: 1 }, 3.9);
+        timeline.to(q(".wl-reveal"), { scaleX: 1, duration: 1.05, ease: "power2.inOut" }, 3.92);
+        timeline.to(q(".wl-frag"), { autoAlpha: 0, x: 130, duration: 0.55, ease: "power1.in" }, 4.5);
 
-        /* ===== 07 完成・停止 (4.5-5.0) — 補助線を消しマスクを外して静的描画へ ===== */
-        timeline.set(q(".wl-final-wrap"), { attr: { mask: "none" } }, 4.55);
-        timeline.to(q(".wl-cobalt"), { autoAlpha: 0, duration: 0.3 }, 4.5);
-        timeline.to(q(".wl-guide"), { autoAlpha: 0, duration: 0.35, stagger: 0.05 }, 4.5);
-        timeline.to(q(".wl-shine"), { autoAlpha: 0.2, duration: 0.15 }, 4.6);
-        timeline.to(q(".wl-shine"), { x: 900, duration: 0.7, ease: "power2.inOut" }, 4.6);
-        timeline.to(q(".wl-shine"), { autoAlpha: 0, duration: 0.2 }, 5.15);
+        /* ===== 07 完成・停止 (5.0-5.6) — 補助線を消しマスクを外して静的描画へ ===== */
+        timeline.set(q(".wl-final-wrap"), { attr: { mask: "none" } }, 5.05);
+        timeline.to(q(".wl-cobalt"), { autoAlpha: 0, duration: 0.35 }, 5.0);
+        timeline.to(q(".wl-guide"), { autoAlpha: 0, duration: 0.4, stagger: 0.05 }, 5.0);
+        timeline.to(q(".wl-shine"), { autoAlpha: 0.2, duration: 0.18 }, 5.1);
+        timeline.to(q(".wl-shine"), { x: 900, duration: 0.8, ease: "power2.inOut" }, 5.1);
+        timeline.to(q(".wl-shine"), { autoAlpha: 0, duration: 0.22 }, 5.72);
 
         /* 完成後: ワードマーク(左→右マスク)→タグライン */
-        timeline.to(q(".hero-wordmark"), { clipPath: "inset(-10% -2% -10% -2%)", duration: 0.6, ease: "power2.inOut" }, 4.7);
-        timeline.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.55, ease: "power2.out" }, 5.2);
+        timeline.to(q(".hero-wordmark"), { clipPath: "inset(-10% -2% -10% -2%)", duration: 0.65, ease: "power2.inOut" }, 5.25);
+        timeline.to(q(".hero-tagline"), { autoAlpha: 1, y: 0, duration: 0.6, ease: "power2.out" }, 5.8);
 
-        timeline.add(() => stage.setAttribute("data-intro", "complete"), 5.8);
+        timeline.add(() => stage.setAttribute("data-intro", "complete"), 6.5);
+
+        /* 全体のテンポ: 仕様書の5秒構成をベースに、ゆったり見せる(約1.35倍尺) */
+        timeline.timeScale(0.74);
       }, stage);
 
       revert = () => ctx.revert();
