@@ -275,12 +275,10 @@ export default function BecoolPage() {
             <h2 id="showroom-h">SHOWROOM</h2>
             <span>店内のご案内</span>
           </div>
-          <div className={styles.galleryGrid}>
+          {/* スクロールで上の写真は固定・下の写真がせり上がって重なる(スティッキー・スタック) */}
+          <div className={styles.galleryStack}>
             {GALLERY.map((g) => (
-              <figure
-                key={g.src}
-                className={`${styles.galItem} ${styles.halftone} ${g.shape === "tall" ? styles.galTall : styles.galWide}`}
-              >
+              <figure key={g.src} className={`${styles.stackItem} ${styles.halftone}`}>
                 <img src={asset(g.src)} alt={g.alt} loading="lazy" />
               </figure>
             ))}
