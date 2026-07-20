@@ -1,8 +1,8 @@
 import styles from "./becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
 import { MobileMenu, RevealController, ToTopButton } from "./BecoolClient";
-import BecoolHeroIntro from "./BecoolHeroIntro";
-import { CUBE_VIEWBOX, CUBE_STOPS, CUBE_D, CUBE_TOP, CUBE_LEFT, CUBE_RIGHT } from "./cubeLogo";
+import BecoolWaterIntro from "./BecoolWaterIntro";
+import { CUBE_MARK_D, CUBE_GARAGE_D, CUBE_BECOOL_D, CUBE_SINCE_D, CUBE_GRADS, SCRIPT_D, SCRIPT_GRAD } from "./brandLogo";
 
 /* サブパス配信(GitHub Pages等)でも画像が解決できるようベースパスを前置 */
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -204,71 +204,98 @@ const becoolLd = {
   ],
 };
 
-/* ---- 旧ロゴ(GBキューブ)。form-design.jp のイントロを同じ構造で再現:
-       [組立] 各面が「移動+マスク」の複合で経路に沿って敷かれて現れる
-              (屋根左→左面Gを下る→右面Bを上る→屋根右で閉じる)。
-              併走して辺の延長線(logo-guide)が伸びて消える。
-       [走査] 完成後、斜めの走査線(scan-beam)が通り、通過した部分の塗りが
-              透明化して輪郭線(logo-wire)だけ残り、背景が透けて見える。
-       [復元] 同じ帯が逆方向に戻り、光の帯を伴って塗りが再構築される。
-       すべて SVG マスク(stroke-dash の帯) + GSAP。発光ではなく透過で光を表現。 --- */
-function HeroCubeLogo() {
-  const sweep = { stroke: "#fff", fill: "none", pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1 } as const;
-  const scan = { d: "M500 180 L950 700", strokeWidth: 560, fill: "none", pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1 } as const;
+/* ---- ヒーロー水面イントロ(納品仕様書v1.1「俯瞰水面版」) ----------------
+   俯瞰の透明な水面に同心円の波紋が広がり、中心からキューブロゴが浮上して
+   組み上がる。構造が青い線へほどけ、筆記体 Be Cool ロゴへ再構築される。
+   レイヤー構成(仕様書04): water-surface / subsurface-shadow / cube-parts /
+   transition-lines / construction-guides / script-logo / shine
+   ロゴパスは提供SVGのまま変形しない。時間制御は BecoolWaterIntro (GSAP)。 --- */
+const CUBE_T = "translate(800 420) scale(0.75) translate(-725.5 -550)";
+const SCRIPT_T = "translate(800 430) scale(1.05) translate(-523 -456.5)";
+
+function HeroWaterStage() {
+  const ringAttrs = { cx: 800, cy: 650, rx: 300, ry: 76, fill: "none" } as const;
+  const fragAttrs = { fill: "none", pathLength: 1 } as const;
+  const carline = "M 96 452 C 240 372 430 310 545 327 C 662 345 748 394 950 447";
   return (
-    <svg className={styles.heroCarSvg} viewBox={CUBE_VIEWBOX} role="img" aria-label="GARAGE BeCool ロゴ">
+    <svg className={styles.waterSvg} viewBox="0 0 1600 900" role="img" aria-label="GARAGE BeCool ロゴ">
       <defs>
-        {/* ロゴ全体で1つのグラデ(面ごとに分割しても統一される) */}
-        <linearGradient id="cubeGrad" gradientUnits="userSpaceOnUse" x1="534" y1="195" x2="915" y2="691">
-          {CUBE_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
+        {(["mark", "garage", "blue", "since"] as const).map((k) => (
+          <linearGradient key={k} id={"wlG-" + k} gradientUnits="userSpaceOnUse"
+            x1={CUBE_GRADS[k].x1} y1={CUBE_GRADS[k].y1} x2={CUBE_GRADS[k].x2} y2={CUBE_GRADS[k].y2}>
+            {CUBE_GRADS[k].stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c} />)}
+          </linearGradient>
+        ))}
+        <linearGradient id="wlG-script" gradientUnits="userSpaceOnUse"
+          x1={SCRIPT_GRAD.x1} y1={SCRIPT_GRAD.y1} x2={SCRIPT_GRAD.x2} y2={SCRIPT_GRAD.y2}>
+          {SCRIPT_GRAD.stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c} />)}
         </linearGradient>
-        {/* 各面の「敷かれていく」reveal マスク。白ストロークが通った所だけ表示される */}
-        <mask id="mCubeTop" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
-          <path className="mask-sweep sweep-roof-l" d="M725 222 L556 330" strokeWidth={150} strokeLinecap="square" {...sweep} />
-          <path className="mask-sweep sweep-roof-r" d="M894 330 L725 222" strokeWidth={150} strokeLinecap="square" {...sweep} />
+        <radialGradient id="wlG-water" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="rgba(67,160,220,0.30)" />
+          <stop offset="55%" stopColor="rgba(67,160,220,0.12)" />
+          <stop offset="100%" stopColor="rgba(67,160,220,0)" />
+        </radialGradient>
+        <radialGradient id="wlG-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="rgba(4,32,58,0.5)" />
+          <stop offset="100%" stopColor="rgba(4,32,58,0)" />
+        </radialGradient>
+        <linearGradient id="wlG-shine" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="rgba(255,255,255,0)" />
+          <stop offset="50%" stopColor="rgba(255,255,255,0.9)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        </linearGradient>
+        {/* 再構築B: 筆記体を左から露出する帯マスク(露出フェーズ中のみGSAPが適用) */}
+        <mask id="wlReveal" maskUnits="userSpaceOnUse" x="300" y="220" width="1000" height="420">
+          <rect className="wl-reveal" x="330" y="240" width="960" height="380" fill="#fff" />
         </mask>
-        <mask id="mCubeLeft" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
-          <path className="mask-sweep sweep-left" d="M629 322 L629 700" strokeWidth={212} strokeLinecap="square" {...sweep} />
-        </mask>
-        <mask id="mCubeRight" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
-          <path className="mask-sweep sweep-right" d="M831 692 L831 322" strokeWidth={202} strokeLinecap="square" {...sweep} />
-        </mask>
-        {/* 走査帯: 同じ斜め帯で「塗りを隠す(黒)」「線画を見せる(白)」を同期させる */}
-        <mask id="mScanFill" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
-          <rect x="420" y="120" width="620" height="660" fill="#fff" />
-          <path className="scan-hide" stroke="#000" {...scan} />
-        </mask>
-        <mask id="mScanWire" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
-          <rect x="420" y="120" width="620" height="660" fill="#000" />
-          <path className="scan-show" stroke="#fff" {...scan} />
-        </mask>
-        {/* 走査線ビームをロゴ周辺だけに収めるクリップ */}
-        <clipPath id="cScanBeam"><rect x="470" y="150" width="510" height="580" /></clipPath>
       </defs>
-      {/* 辺の延長線(細い見当線)。リボンの通過に合わせて描かれ、順に消える */}
-      <g className="logo-guide" aria-hidden="true">
-        <path className="gl-tl" d="M802 141 L455 352" pathLength={1} />
-        <path className="gl-lv" d="M534 232 L534 758" pathLength={1} />
-        <path className="gl-lb" d="M462 526 L800 739" pathLength={1} />
-        <path className="gl-rb" d="M988 526 L650 739" pathLength={1} />
-        <path className="gl-rv" d="M916 758 L916 232" pathLength={1} />
-        <path className="gl-tr" d="M648 141 L995 352" pathLength={1} />
+
+      {/* water-surface: 俯瞰の水面パッチ + 同心円波紋 + 中央開口 */}
+      <g className="wl-water" aria-hidden="true">
+        <ellipse cx={800} cy={650} rx={430} ry={112} fill="url(#wlG-water)" />
+        <ellipse className="wl-ring wl-ring1" {...ringAttrs} />
+        <ellipse className="wl-ring wl-ring2" {...ringAttrs} />
+        <ellipse className="wl-ring wl-ring3" {...ringAttrs} />
+        <ellipse className="wl-ring wl-ring4" {...ringAttrs} />
+        <ellipse className="wl-mouth" cx={800} cy={650} rx={56} ry={14} />
       </g>
-      {/* 線画: 走査線が通過して透明化した部分にだけ現れる輪郭。
-          マスクは走査フェーズ中だけ GSAP が付与する(毎フレームのラスタライズ削減) */}
-      <g className="scan-wire-wrap" aria-hidden="true">
-        <path className="logo-wire" d={CUBE_D} fillRule="evenodd" />
+
+      {/* subsurface-shadow: 水面下の屈折・楕円影 */}
+      <ellipse className="wl-shadow" cx={800} cy={655} rx={280} ry={58} fill="url(#wlG-shadow)" aria-hidden="true" />
+
+      {/* cube-parts: キューブロゴ4パス(マーク/garage/becool/SINCE 1999) */}
+      <g className="wl-cube" transform={CUBE_T}>
+        <path className="wl-mark" d={CUBE_MARK_D} fill="url(#wlG-mark)" fillRule="evenodd" />
+        <path className="wl-word-g" d={CUBE_GARAGE_D} fill="url(#wlG-garage)" fillRule="evenodd" />
+        <path className="wl-word-b" d={CUBE_BECOOL_D} fill="url(#wlG-blue)" fillRule="evenodd" />
+        <path className="wl-since" d={CUBE_SINCE_D} fill="url(#wlG-since)" fillRule="evenodd" />
       </g>
-      {/* 塗り3面(evenodd で G/B の白抜きを保持)。
-          組立マスクは組立中だけ・走査マスクは走査中だけ GSAP が付け外しする */}
-      <g className="scan-fill-wrap">
-        <g className="mwrap-top"><path className="logo-fill face-top" d={CUBE_TOP} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
-        <g className="mwrap-left"><path className="logo-fill face-left" d={CUBE_LEFT} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
-        <g className="mwrap-right"><path className="logo-fill face-right" d={CUBE_RIGHT} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
+
+      {/* transition-lines: 分解時のエッジ線(輪郭ストローク片が右へ流れる) */}
+      <g className="wl-frag" transform={CUBE_T} aria-hidden="true">
+        <path className="wl-frag-p" d={CUBE_MARK_D} {...fragAttrs} />
+        <path className="wl-frag-p" d={CUBE_GARAGE_D} {...fragAttrs} />
+        <path className="wl-frag-p" d={CUBE_BECOOL_D} {...fragAttrs} />
       </g>
-      {/* 走査線ビーム(帯の先端を走る細い光) */}
-      <g clipPath="url(#cScanBeam)" aria-hidden="true">
-        <line className="scan-beam" x1="303" y1="350" x2="697" y2="10" />
+
+      {/* construction-guides + 再構築Aの線描画(筆記体ロゴ座標系) */}
+      <g className="wl-guides" transform={SCRIPT_T} aria-hidden="true">
+        <path className="wl-guide wl-guide-arc" d={carline} pathLength={1} />
+        <rect className="wl-guide wl-guide-box" x={453} y={406} width={267} height={63} pathLength={1} />
+        <path className="wl-guide wl-guide-base" d="M 250 600 L 1120 600" pathLength={1} />
+        <path className="wl-cobalt" d={carline} pathLength={1} />
+      </g>
+
+      {/* script-logo: 最終ロゴ(提供SVGのパスを100%表示) */}
+      <g className="wl-final-wrap">
+        <g className="wl-final" transform={SCRIPT_T}>
+          <path d={SCRIPT_D} fill="url(#wlG-script)" fillRule="evenodd" />
+        </g>
+      </g>
+
+      {/* shine: 最後の細い光沢帯 */}
+      <g className="wl-shine" aria-hidden="true">
+        <rect x={320} y={230} width={110} height={400} fill="url(#wlG-shine)" transform="skewX(-16)" />
       </g>
     </svg>
   );
@@ -309,7 +336,7 @@ export default function BecoolPage() {
           <div className={styles.heroInner} data-hero-stage data-intro="play">
             <div className={`logo-zone ${styles.logoZone}`}>
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
-              <HeroCubeLogo />
+              <HeroWaterStage />
             </div>
             {/* ワードマーク: ロゴ完成後、横方向のマスクが左から右へ開いて現れる */}
             <p className={`${styles.heroWordmark} hero-wordmark`}>
@@ -317,11 +344,11 @@ export default function BecoolPage() {
             </p>
             <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
-          {/* JS無効時は組み上げ演出をスキップし、完成ロゴ(塗り)を表示する */}
+          {/* JS無効時は演出をスキップし、最終ロゴ(筆記体)を表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline,[data-hero-stage] .hero-wordmark{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}`}</style>
+            <style>{`[data-hero-stage] .wl-final,[data-hero-stage] .hero-tagline,[data-hero-stage] .hero-wordmark{opacity:1!important}[data-hero-stage] .wl-water,[data-hero-stage] .wl-frag,[data-hero-stage] .wl-guides,[data-hero-stage] .wl-cube{display:none!important}`}</style>
           </noscript>
-          <BecoolHeroIntro />
+          <BecoolWaterIntro />
           <span className={styles.scrollCue} aria-hidden="true" />
         </section>
 

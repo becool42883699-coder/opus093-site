@@ -102,33 +102,43 @@
 .hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse at 50% 52%, rgba(21,24,27,0.30), rgba(21,24,27,0.52) 78%); }
 .heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
 
-/* --- 旧ロゴ(GBキューブ): 実体が経路に沿って敷かれて現れる(form-design.jp方式) --- */
-.logoZone { position: relative; width: min(58vw, 300px); }
-/* 再生中は filter を外す(毎フレームのブラー再計算がカクつきの主因)。完成後のみ影を付与 */
-.heroCarSvg { display: block; width: 100%; height: auto; overflow: visible; }
-.heroInner[data-intro="done"] .heroCarSvg,
-.heroInner[data-intro="complete"] .heroCarSvg { filter: drop-shadow(0 5px 18px rgba(0, 0, 0, 0.5)); }
+/* --- 水面イントロ(仕様書v1.1): 16:9ステージにロゴ・波紋・補助線を内包 --- */
+.logoZone { position: relative; width: min(92vw, 640px); }
+.waterSvg { display: block; width: 100%; height: auto; overflow: visible; }
+/* 再生中はfilterを付けない(毎フレームの再計算を避ける)。完成後のみ影で写真から分離 */
+.heroInner[data-intro="done"] .waterSvg,
+.heroInner[data-intro="complete"] .waterSvg { filter: drop-shadow(0 5px 18px rgba(0, 0, 0, 0.5)); }
 /* 写真の上でも埋もれないよう柔らかな明るい下地 */
-.logoBacking { position: absolute; inset: -14% -10%; border-radius: 50%; background: radial-gradient(ellipse, rgba(240, 244, 250, 0.34), rgba(240, 244, 250, 0) 68%); filter: blur(28px); pointer-events: none; z-index: -1; }
-/* 辺の延長線(細い見当線)。pathLength=1 を stroke-dash で描く */
-.heroCarSvg :global(.logo-guide) { stroke: #a9c7ec; stroke-width: 1.3; fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.heroCarSvg :global(.logo-guide path) { stroke-dasharray: 1; stroke-dashoffset: 1; }
-/* 線画: 走査線通過で透明化した部分に残る輪郭(発光でなく透過で光を見せる)。走査フェーズ以外は非表示 */
-.heroCarSvg :global(.logo-wire) { stroke: rgba(216, 233, 255, 0.85); stroke-width: 2; fill: none; stroke-linejoin: round; opacity: 0; }
-/* 走査線ビーム(帯の先端の細い光)。filter なしの細線で軽く */
-.heroCarSvg :global(.scan-beam) { stroke: #cfe4ff; stroke-width: 2.6; opacity: 0; }
+.logoBacking { position: absolute; inset: 4% 10%; border-radius: 50%; background: radial-gradient(ellipse, rgba(240, 244, 250, 0.38), rgba(240, 244, 250, 0) 70%); filter: blur(28px); pointer-events: none; z-index: -1; }
 
-/* ワードマーク(横方向のマスクが開いて現れる) */
-.heroWordmark { display: flex; gap: 0.42em; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: clamp(1.7rem, 4.6vw, 2.5rem); letter-spacing: 0.05em; color: var(--bc-on-dark); text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55); }
+/* 背景別調整用の変数(仕様書03: 暗い店舗写真の上なので明るめに設定) */
+.root {
+  --bcw-ripple: rgba(158, 212, 242, 0.9);
+  --bcw-guide: rgba(126, 196, 234, 0.6);
+  --bcw-cobalt: #55a3e4;
+}
+
+/* レイヤー既定値: 演出パーツは隠し最終ロゴのみ表示(JS/GSAP不達でもロゴが残る)。
+   再生中はGSAPのインラインstyleがこの既定値を上書きする */
+.heroInner :global(.wl-water),
+.heroInner :global(.wl-shadow),
+.heroInner :global(.wl-cube),
+.heroInner :global(.wl-frag),
+.heroInner :global(.wl-guides),
+.heroInner :global(.wl-shine) { opacity: 0; }
+.heroInner[data-intro="play"] :global(.wl-final) { opacity: 0; }
+.heroInner :global(.wl-ring) { stroke: var(--bcw-ripple); stroke-width: 2; }
+.heroInner :global(.wl-mouth) { fill: rgba(205, 232, 250, 0.4); }
+.heroInner :global(.wl-frag-p) { stroke: var(--bcw-cobalt); stroke-width: 2.4; }
+.heroInner :global(.wl-guide) { stroke: var(--bcw-guide); stroke-width: 2; fill: none; }
+.heroInner :global(.wl-cobalt) { stroke: var(--bcw-cobalt); stroke-width: 3.4; fill: none; stroke-linecap: round; }
+
+/* ワードマーク(ロゴ完成後に横方向のマスクが開いて現れる)。
+   16:9ステージの下余白ぶんを負マージンで詰めてロゴに寄せる */
+.heroWordmark { display: flex; gap: 0.42em; margin-top: clamp(-5.4rem, -7vw, -1.6rem); font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: clamp(1.7rem, 4.6vw, 2.5rem); letter-spacing: 0.05em; color: var(--bc-on-dark); text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55); }
 .wmAccent { color: var(--bc-blue-light); }
-
 .tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); padding-left: var(--bc-ls-tagline); }
 
-/* 既定(SSR/JS無効/done): 完成ロゴを表示、見当線は隠す */
-.heroInner :global(.logo-fill) { opacity: 0; }
-.heroInner :global(.logo-guide) { opacity: 0; }
-.heroInner[data-intro="done"] :global(.logo-fill),
-.heroInner[data-intro="complete"] :global(.logo-fill) { opacity: 1; }
 .heroInner[data-intro="play"] .tagline { opacity: 0; }
 .heroInner[data-intro="play"] .heroWordmark { opacity: 0; }
 /* reduced-motion / 2回目以降: 完成状態を短フェードで表示 */
