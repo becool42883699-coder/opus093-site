@@ -238,6 +238,34 @@
 .pickupPrice { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.3rem; letter-spacing: 0.01em; white-space: nowrap; color: var(--bc-on-dark); }
 .pickupPrice small { font-size: 0.62rem; font-weight: var(--bc-fw-medium); color: var(--bc-on-dark-mut); }
 
+/* =====================  FLOW (ご利用の流れ)  ===================== */
+.flowGrid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(0.8rem, 2vw, 1.4rem); }
+.flowStep { position: relative; display: grid; align-content: start; gap: 0.55rem; padding: clamp(1.4rem, 2.6vw, 2rem) clamp(1.1rem, 2vw, 1.5rem); background: var(--bc-white); border: 1px solid var(--bc-line); border-top: 2px solid var(--bc-blue); }
+.flowNo { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: 2rem; line-height: 1; color: var(--bc-blue); }
+.flowEn { font-size: 0.68rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.2em; color: var(--bc-muted); }
+.flowStep h3 { font-size: 1.05rem; font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
+.flowStep p { font-size: 0.92rem; line-height: 1.9; color: var(--bc-muted); }
+/* ステップ間をつなぐ矢羽(デスクトップのみ) */
+@media (min-width: 901px) {
+  .flowStep:not(:last-child)::after { content: ""; position: absolute; top: 50%; right: calc(-0.5 * clamp(0.8rem, 2vw, 1.4rem) - 5px); width: 9px; height: 9px; border-top: 2px solid var(--bc-blue); border-right: 2px solid var(--bc-blue); transform: translateY(-50%) rotate(45deg); z-index: 1; }
+}
+@media (max-width: 900px) { .flowGrid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .flowGrid { grid-template-columns: 1fr; } }
+
+/* =====================  FAQ  ===================== */
+.faqList { max-width: var(--bc-maxw-text); margin: 0 auto; border-top: 1px solid var(--bc-line); }
+.faqItem { border-bottom: 1px solid var(--bc-line); }
+.faqItem summary { position: relative; display: flex; align-items: baseline; gap: 0.9rem; padding: 1.15rem 2.4rem 1.15rem 0.2rem; font-weight: var(--bc-fw-bold); font-size: 1rem; line-height: 1.7; color: var(--bc-ink); cursor: pointer; list-style: none; }
+.faqItem summary::-webkit-details-marker { display: none; }
+.faqQ { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); color: var(--bc-blue); }
+/* +/− トグル(openで縦棒が倒れて−になる) */
+.faqToggle { position: absolute; right: 0.2rem; top: 50%; width: 14px; height: 14px; transform: translateY(-50%); }
+.faqToggle::before, .faqToggle::after { content: ""; position: absolute; inset: 0; margin: auto; background: var(--bc-blue); transition: transform 0.3s var(--bc-ease); }
+.faqToggle::before { width: 14px; height: 2px; }
+.faqToggle::after { width: 2px; height: 14px; }
+.faqItem[open] .faqToggle::after { transform: rotate(90deg); }
+.faqA { padding: 0 2.4rem 1.35rem 2rem; font-size: 0.95rem; line-height: 1.95; color: var(--bc-muted); }
+
 /* =====================  SHOP (店舗)  ===================== */
 .shop { background: var(--bc-paper); }
 .storeGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(1.2rem, 3vw, 2.2rem); max-width: var(--bc-maxw); margin: 0 auto; }
@@ -252,8 +280,12 @@
 .storeName span { color: var(--bc-blue); }
 .storeMeta { font-size: 1rem; line-height: 1.9; color: var(--bc-muted); }
 .storeMeta b { color: var(--bc-ink); font-weight: var(--bc-fw-medium); }
+.storeMeta a { color: var(--bc-ink); font-weight: var(--bc-fw-medium); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--bc-line); }
+.storeMeta a:hover { color: var(--bc-blue); text-decoration-color: var(--bc-blue); }
 .storeActions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.4rem; }
-.lineBtn, .mapBtn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.2rem; font-size: 0.8rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.06em; border-radius: var(--bc-radius-sm); transition: background 0.25s var(--bc-ease), color 0.25s var(--bc-ease); }
+.telBtn, .lineBtn, .mapBtn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.2rem; font-size: 0.8rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.06em; border-radius: var(--bc-radius-sm); transition: background 0.25s var(--bc-ease), color 0.25s var(--bc-ease); }
+.telBtn { color: var(--bc-white); background: var(--bc-ink); }
+.telBtn:hover { background: var(--bc-blue); }
 .lineBtn { color: var(--bc-white); background: var(--bc-blue); }
 .lineBtn:hover { background: var(--bc-blue-mid); }
 .mapBtn { color: var(--bc-blue); border: 1px solid var(--bc-blue); }
@@ -299,6 +331,8 @@
 .footWordmark b { font-weight: var(--bc-fw-bold); color: var(--bc-blue-light); }
 .footDesc { max-width: 44ch; color: var(--bc-on-dark-mut); line-height: 1.95; font-size: 1rem; }
 .footMeta { color: var(--bc-on-dark-mut); font-size: 1rem; line-height: 1.95; letter-spacing: 0.03em; }
+.footMeta a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.footMeta a:hover { color: var(--bc-on-dark); }
 .footSocial { display: flex; gap: 1rem; }
 .footSocial a { display: grid; place-items: center; }
 .footSocial svg { width: 26px; height: 26px; fill: var(--bc-on-dark); }

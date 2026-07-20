@@ -108,10 +108,67 @@ const SHOPS = [
   },
 ];
 
+/* ---- flow (ご利用の流れ) -------------------------------------------- */
+const FLOW = [
+  {
+    no: "01",
+    en: "CONTACT",
+    title: "ご相談",
+    body: "ご来店・お電話・LINEで、ご希望やお悩みをお聞かせください。「なんとなく乗り換えたい」の段階でも大歓迎です。",
+  },
+  {
+    no: "02",
+    en: "PROPOSAL",
+    title: "お車探し・お見積り",
+    body: "店頭在庫と全国のオークション・流通在庫から、ご希望に合う一台をご提案。お見積りは無料です。",
+  },
+  {
+    no: "03",
+    en: "PREPARATION",
+    title: "ご契約・納車準備",
+    body: "ご契約後は各種手続きをサポート。国家資格を持つ整備士が点検・整備し、お引き渡しに備えます。",
+  },
+  {
+    no: "04",
+    en: "AFTER SUPPORT",
+    title: "ご納車・アフターサポート",
+    body: "全国納車にも対応。納車後も車検・整備・乗り換えのご相談まで、末永くサポートします。",
+  },
+];
+
+/* ---- FAQ (JSON-LDのFAQPageと共用) ----------------------------------- */
+const FAQS = [
+  {
+    q: "車検や整備だけの利用もできますか？",
+    a: "はい、車検・法定点検・オイル交換などの整備のみのご利用も歓迎です。他店でご購入されたお車もお任せください。LINEからの整備予約にも対応しています。",
+  },
+  {
+    q: "在庫にない車も探してもらえますか？",
+    a: "全国のオークション・流通在庫からお探しできます。車種・年式・色・ご予算などのご希望をお気軽にお伝えください。",
+  },
+  {
+    q: "ローンでの購入はできますか？",
+    a: "各種オートローンのご相談に対応しています。頭金の有無やお支払い回数など、ご予算に合わせてご提案しますのでお気軽にご相談ください。",
+  },
+  {
+    q: "遠方に住んでいますが購入できますか？",
+    a: "全国納車に対応しています。遠方の方には、車両の状態を写真などで丁寧にご案内しますのでご安心ください。",
+  },
+  {
+    q: "買取・査定だけでも大丈夫ですか？",
+    a: "もちろん大丈夫です。査定は無料ですので、売却だけのご相談や、乗り換え前の価格確認にもご利用ください。",
+  },
+  {
+    q: "営業時間と定休日を教えてください。",
+    a: "沼店・中吉田店ともに10:00〜20:00、年中無休で営業しています。お電話（093-967-2345）またはLINEからお問い合わせください。",
+  },
+];
+
 /* ---- ローカルSEO: 2店舗ぶんの UsedCarDealer 構造化データ ---------------- */
 const becoolLd = {
   "@context": "https://schema.org",
-  "@graph": SHOPS.map((s, i) => ({
+  "@graph": [
+    ...SHOPS.map((s, i) => ({
     "@type": ["AutoDealer", "AutoRepair"],
     "@id": `${ROOT_URL}/becool/#store-${i + 1}`,
     name: `GARAGE BeCool ${s.name}`,
@@ -134,7 +191,17 @@ const becoolLd = {
     sameAs: [SITE_URL, LINE_URL],
     description:
       "福岡県北九州市小倉南区の地域密着型カーショップ。中古車販売・買取・車検・整備・メンテナンス・ドレスアップに対応。",
-  })),
+    })),
+    {
+      "@type": "FAQPage",
+      "@id": `${ROOT_URL}/becool/#faq`,
+      mainEntity: FAQS.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+  ],
 };
 
 /* ---- 旧ロゴ(GBキューブ)。form-design.jp のイントロを同じ構造で再現:
@@ -338,6 +405,24 @@ export default function BecoolPage() {
           ))}
         </section>
 
+        {/* ---------- FLOW (ご利用の流れ) ---------- */}
+        <section id="flow" data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="flow-h">
+          <div className={styles.sectionHead}>
+            <h2 id="flow-h">FLOW</h2>
+            <span>ご利用の流れ</span>
+          </div>
+          <ol className={styles.flowGrid}>
+            {FLOW.map((f) => (
+              <li key={f.no} className={styles.flowStep}>
+                <span className={styles.flowNo} aria-hidden="true">{f.no}</span>
+                <span className={styles.flowEn}>{f.en}</span>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
         {/* ---------- PICK UP CAR ---------- */}
         <section id="car" data-reveal className={`${styles.section} ${styles.works} ${styles.reveal}`} aria-labelledby="car-h">
           <div className={styles.sectionHead}>
@@ -382,15 +467,36 @@ export default function BecoolPage() {
                   <p className={styles.storeMeta}>
                     {s.zip}<br />
                     {s.addr}<br />
-                    <b>TEL</b> {s.tel}<br />
+                    <b>TEL</b> <a href={`tel:${s.tel.replaceAll("-", "")}`}>{s.tel}</a><br />
                     <b>営業時間</b> {s.hours}
                   </p>
                   <div className={styles.storeActions}>
+                    <a className={styles.telBtn} href={`tel:${s.tel.replaceAll("-", "")}`}>電話する</a>
                     <a className={styles.lineBtn} href={LINE_URL} target="_blank" rel="noopener noreferrer">LINEで予約</a>
                     <a className={styles.mapBtn} href={s.map} target="_blank" rel="noopener noreferrer">MAPで見る</a>
                   </div>
                 </div>
               </article>
+            ))}
+          </div>
+        </section>
+
+        {/* ---------- FAQ ---------- */}
+        <section id="faq" data-reveal className={`${styles.section} ${styles.faq} ${styles.reveal}`} aria-labelledby="faq-h">
+          <div className={styles.sectionHead}>
+            <h2 id="faq-h">FAQ</h2>
+            <span>よくあるご質問</span>
+          </div>
+          <div className={styles.faqList}>
+            {FAQS.map((f) => (
+              <details key={f.q} className={styles.faqItem}>
+                <summary>
+                  <span className={styles.faqQ} aria-hidden="true">Q</span>
+                  {f.q}
+                  <span className={styles.faqToggle} aria-hidden="true" />
+                </summary>
+                <p className={styles.faqA}>{f.a}</p>
+              </details>
             ))}
           </div>
         </section>
@@ -410,7 +516,7 @@ export default function BecoolPage() {
           </p>
           <p className={styles.footMeta}>
             有限会社ビークール<br />
-            共通お問い合わせ TEL: 093-967-2345<br />
+            共通お問い合わせ TEL: <a href="tel:0939672345">093-967-2345</a><br />
             営業時間 10:00〜20:00／年中無休
           </p>
           <div className={styles.footSocial}>
