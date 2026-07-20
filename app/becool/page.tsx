@@ -2,7 +2,7 @@ import Link from "next/link";
 import styles from "./becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
 import { RevealController } from "./BecoolClient";
-import BecoolWaterIntro from "./BecoolWaterIntro";
+import BecoolLogoIntro from "./BecoolLogoIntro";
 import { CUBE_MARK_D, CUBE_GARAGE_D, CUBE_BECOOL_D, CUBE_SINCE_D, CUBE_GRADS, SCRIPT_D, SCRIPT_GRAD } from "./brandLogo";
 import { asset, LINE_URL, SITE_URL, BecoolHeader, BecoolFooter } from "./Chrome";
 
@@ -191,99 +191,98 @@ const becoolLd = {
   ],
 };
 
-/* ---- ヒーロー水面イントロ(納品仕様書v1.1「俯瞰水面版」) ----------------
-   俯瞰の透明な水面に同心円の波紋が広がり、中心からキューブロゴが浮上して
-   組み上がる。構造が青い線へほどけ、筆記体 Be Cool ロゴへ再構築される。
-   レイヤー構成(仕様書04): water-surface / subsurface-shadow / cube-parts /
-   transition-lines / construction-guides / script-logo / shine
-   ロゴパスは提供SVGのまま変形しない。時間制御は BecoolWaterIntro (GSAP)。 --- */
-const CUBE_T = "translate(800 420) scale(0.75) translate(-725.5 -550)";
-const SCRIPT_T = "translate(800 430) scale(1.05) translate(-523 -456.5)";
+/* ---- ヒーロー ロゴビルド・イントロ(プロトタイプv2「精密組立版」) ----------
+   ガイド線→六角フレーム線描画→キューブ面パネルロック→ワードマーク組立→
+   光沢スイープ→線へ分解→車体ライン+GARAGEボックス線描画→
+   筆記体 Be Cool を左からマスク露出→完成停止。総尺 約5.6s / 初回1回再生。
+   ロゴパスは提供SVG(brandLogo)のまま変形しない。時間制御は純CSS
+   (becool.module.css)。BecoolLogoIntro は「初回のみ再生」ゲートのみ担う。
+   キューブは translate(345,120) scale(0.352)、筆記体は translate(240,155)
+   scale(0.70) でステージ(1200x900)に配置(プロトタイプ座標系そのまま)。 --- */
+const HEXFRAME_D = "M 724 157 L 928 300 L 928 584 L 724 727 L 520 584 L 520 300 Z";
+const CARLINE_D = "M 200 470 C 320 330, 520 268, 700 276 C 850 282, 960 340, 1010 420";
 
-function HeroWaterStage() {
-  const ringAttrs = { cx: 800, cy: 650, rx: 300, ry: 76, fill: "none" } as const;
-  const fragAttrs = { fill: "none", pathLength: 1 } as const;
-  const carline = "M 96 452 C 240 372 430 310 545 327 C 662 345 748 394 950 447";
+function HeroBuildStage() {
   return (
-    <svg className={styles.waterSvg} viewBox="0 0 1600 900" role="img" aria-label="GARAGE BeCool ロゴ">
+    <svg className={styles.buildSvg} viewBox="0 0 1200 900" role="img" aria-label="GARAGE BeCool ロゴ">
       <defs>
         {(["mark", "garage", "blue", "since"] as const).map((k) => (
-          <linearGradient key={k} id={"wlG-" + k} gradientUnits="userSpaceOnUse"
+          <linearGradient key={k} id={"bcG-" + k} gradientUnits="userSpaceOnUse"
             x1={CUBE_GRADS[k].x1} y1={CUBE_GRADS[k].y1} x2={CUBE_GRADS[k].x2} y2={CUBE_GRADS[k].y2}>
             {CUBE_GRADS[k].stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c} />)}
           </linearGradient>
         ))}
-        <linearGradient id="wlG-script" gradientUnits="userSpaceOnUse"
+        <linearGradient id="bcG-script" gradientUnits="userSpaceOnUse"
           x1={SCRIPT_GRAD.x1} y1={SCRIPT_GRAD.y1} x2={SCRIPT_GRAD.x2} y2={SCRIPT_GRAD.y2}>
           {SCRIPT_GRAD.stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c} />)}
         </linearGradient>
-        <radialGradient id="wlG-water" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgba(67,160,220,0.30)" />
-          <stop offset="55%" stopColor="rgba(67,160,220,0.12)" />
-          <stop offset="100%" stopColor="rgba(67,160,220,0)" />
-        </radialGradient>
-        <radialGradient id="wlG-shadow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="rgba(4,32,58,0.5)" />
-          <stop offset="100%" stopColor="rgba(4,32,58,0)" />
-        </radialGradient>
-        <linearGradient id="wlG-shine" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="rgba(255,255,255,0)" />
-          <stop offset="50%" stopColor="rgba(255,255,255,0.9)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        <linearGradient id="bcGloss" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0" />
+          <stop offset="50%" stopColor="#fff" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
-        {/* 再構築B: 筆記体を左から露出する帯マスク(露出フェーズ中のみGSAPが適用) */}
-        <mask id="wlReveal" maskUnits="userSpaceOnUse" x="300" y="220" width="1000" height="420">
-          <rect className="wl-reveal" x="330" y="240" width="960" height="380" fill="#fff" />
+        {/* キューブ面パネル露出用クリップ(3枚スラット・キューブ座標系) */}
+        <clipPath id="bcSlats">
+          <rect className="bc-slat" x="510" y="170" width="132" height="545" />
+          <rect className="bc-slat" x="642" y="170" width="132" height="545" />
+          <rect className="bc-slat" x="774" y="170" width="165" height="545" />
+        </clipPath>
+        {/* 筆記体を左から露出する帯マスク(再生中のみCSSが reveal を動かす) */}
+        <mask id="bcScriptMask">
+          <rect className="bc-script-reveal" x="-20" y="-20" width="1240" height="940" fill="#fff" />
         </mask>
       </defs>
 
-      {/* water-surface: 俯瞰の水面パッチ + 同心円波紋 + 中央開口 */}
-      <g className="wl-water" aria-hidden="true">
-        <ellipse cx={800} cy={650} rx={430} ry={112} fill="url(#wlG-water)" />
-        <ellipse className="wl-ring wl-ring1" {...ringAttrs} />
-        <ellipse className="wl-ring wl-ring2" {...ringAttrs} />
-        <ellipse className="wl-ring wl-ring3" {...ringAttrs} />
-        <ellipse className="wl-ring wl-ring4" {...ringAttrs} />
-        <ellipse className="wl-mouth" cx={800} cy={650} rx={56} ry={14} />
+      {/* ガイド線・構築マーク(ステージ座標系) */}
+      <g className="bc-guides" aria-hidden="true">
+        <line className="bc-guideline" x1="600" y1="60" x2="600" y2="840" />
+        <line className="bc-guideline" x1="120" y1="330" x2="1080" y2="330" />
+        <circle className="bc-guidemark" cx="600" cy="275" r="188" />
+        <circle className="bc-guidemark" cx="600" cy="275" r="122" />
+        <line className="bc-guidetick" x1="404" y1="275" x2="424" y2="275" />
+        <line className="bc-guidetick" x1="776" y1="275" x2="796" y2="275" />
+        <line className="bc-guidetick" x1="600" y1="79" x2="600" y2="99" />
+        <line className="bc-guidetick" x1="600" y1="451" x2="600" y2="471" />
       </g>
 
-      {/* subsurface-shadow: 水面下の屈折・楕円影 */}
-      <ellipse className="wl-shadow" cx={800} cy={655} rx={280} ry={58} fill="url(#wlG-shadow)" aria-hidden="true" />
-
-      {/* cube-parts: キューブロゴ4パス(マーク/garage/becool/SINCE 1999) */}
-      <g className="wl-cube" transform={CUBE_T}>
-        <path className="wl-mark" d={CUBE_MARK_D} fill="url(#wlG-mark)" fillRule="evenodd" />
-        <path className="wl-word-g" d={CUBE_GARAGE_D} fill="url(#wlG-garage)" fillRule="evenodd" />
-        <path className="wl-word-b" d={CUBE_BECOOL_D} fill="url(#wlG-blue)" fillRule="evenodd" />
-        <path className="wl-since" d={CUBE_SINCE_D} fill="url(#wlG-since)" fillRule="evenodd" />
+      {/* キューブロゴ(六角フレーム線描画→面パネルロック→ワードマーク→分解) */}
+      <g className="bc-cube" transform="translate(345,120) scale(0.352)">
+        <path className="bc-hexframe" pathLength={1} d={HEXFRAME_D} />
+        <g clipPath="url(#bcSlats)">
+          <path className="bc-p-mark" d={CUBE_MARK_D} fill="url(#bcG-mark)" fillRule="evenodd" />
+        </g>
+        <path className="bc-p-garage" d={CUBE_GARAGE_D} fill="url(#bcG-garage)" fillRule="evenodd" />
+        <path className="bc-p-becool" d={CUBE_BECOOL_D} fill="url(#bcG-blue)" fillRule="evenodd" />
+        <path className="bc-p-since" d={CUBE_SINCE_D} fill="url(#bcG-since)" fillRule="evenodd" />
+        <rect className="bc-cube-gloss" x="480" y="150" width="150" height="800" fill="url(#bcGloss)" />
       </g>
 
-      {/* transition-lines: 分解時のエッジ線(輪郭ストローク片が右へ流れる) */}
-      <g className="wl-frag" transform={CUBE_T} aria-hidden="true">
-        <path className="wl-frag-p" d={CUBE_MARK_D} {...fragAttrs} />
-        <path className="wl-frag-p" d={CUBE_GARAGE_D} {...fragAttrs} />
-        <path className="wl-frag-p" d={CUBE_BECOOL_D} {...fragAttrs} />
+      {/* 分解断片(右へ飛散) */}
+      <g aria-hidden="true">
+        <path className="bc-frag" d="M 470 300 h 60" />
+        <path className="bc-frag" d="M 520 360 h 90" />
+        <path className="bc-frag" d="M 450 420 h 45" />
+        <path className="bc-frag" d="M 560 260 h 70" />
+        <path className="bc-frag" d="M 610 400 h 55" />
       </g>
 
-      {/* construction-guides + 再構築Aの線描画(筆記体ロゴ座標系) */}
-      <g className="wl-guides" transform={SCRIPT_T} aria-hidden="true">
-        <path className="wl-guide wl-guide-arc" d={carline} pathLength={1} />
-        <rect className="wl-guide wl-guide-box" x={453} y={406} width={267} height={63} pathLength={1} />
-        <path className="wl-guide wl-guide-base" d="M 250 600 L 1120 600" pathLength={1} />
-        <path className="wl-cobalt" d={carline} pathLength={1} />
+      {/* 再構築A: 車体ライン + GARAGEボックス(線描画) */}
+      <g className="bc-rebuild-strokes" aria-hidden="true">
+        <line className="bc-rebuild-guide" x1="120" y1="300" x2="1080" y2="300" />
+        <line className="bc-rebuild-guide" x1="120" y1="560" x2="1080" y2="560" />
+        <path className="bc-carline" pathLength={1} d={CARLINE_D} />
+        <path className="bc-garagebox" pathLength={1} d="M 620 320 h 250 v 74 h -250 z" />
       </g>
 
-      {/* script-logo: 最終ロゴ(提供SVGのパスを100%表示) */}
-      <g className="wl-final-wrap">
-        <g className="wl-final" transform={SCRIPT_T}>
-          <path d={SCRIPT_D} fill="url(#wlG-script)" fillRule="evenodd" />
+      {/* 再構築B: 筆記体 Be Cool(提供SVGのパスを100%表示・マスク露出) */}
+      <g mask="url(#bcScriptMask)">
+        <g transform="translate(240,155) scale(0.70)">
+          <path d={SCRIPT_D} fill="url(#bcG-script)" fillRule="evenodd" clipRule="evenodd" />
         </g>
       </g>
 
-      {/* shine: 最後の細い光沢帯 */}
-      <g className="wl-shine" aria-hidden="true">
-        <rect x={320} y={230} width={110} height={400} fill="url(#wlG-shine)" transform="skewX(-16)" />
-      </g>
+      {/* 完成後の最終光沢 */}
+      <rect className="bc-final-gloss" x="380" y="180" width="120" height="560" fill="url(#bcGloss)" />
     </svg>
   );
 }
@@ -303,7 +302,7 @@ export default function BecoolPage() {
           <div className={styles.heroInner} data-hero-stage data-intro="play">
             <div className={`logo-zone ${styles.logoZone}`}>
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
-              <HeroWaterStage />
+              <HeroBuildStage />
             </div>
             {/* ワードマーク: ロゴ完成後、横方向のマスクが左から右へ開いて現れる */}
             <p className={`${styles.heroWordmark} hero-wordmark`}>
@@ -313,9 +312,9 @@ export default function BecoolPage() {
           </div>
           {/* JS無効時は演出をスキップし、最終ロゴ(筆記体)を表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .wl-final,[data-hero-stage] .hero-tagline,[data-hero-stage] .hero-wordmark{opacity:1!important}[data-hero-stage] .wl-water,[data-hero-stage] .wl-frag,[data-hero-stage] .wl-guides,[data-hero-stage] .wl-cube{display:none!important}`}</style>
+            <style>{`[data-hero-stage] .bc-guides,[data-hero-stage] .bc-hexframe,[data-hero-stage] .bc-cube,[data-hero-stage] .bc-frag,[data-hero-stage] .bc-rebuild-strokes,[data-hero-stage] .bc-cube-gloss,[data-hero-stage] .bc-final-gloss{display:none!important}[data-hero-stage] .bc-script-reveal{transform:none!important;animation:none!important}[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important;animation:none!important}`}</style>
           </noscript>
-          <BecoolWaterIntro />
+          <BecoolLogoIntro />
           <span className={styles.scrollCue} aria-hidden="true" />
         </section>
 
