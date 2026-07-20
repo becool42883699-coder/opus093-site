@@ -25,13 +25,13 @@
   --bc-ink-soft:     #2b2f33;   /* statement bands / footer            */
   --bc-panel-black:  #15181b;   /* full-bleed service panel (dark)     */
   --bc-panel-gray:   #4a4f55;   /* full-bleed service panel (charcoal) */
-  --bc-muted:        #6b7178;   /* sub text / captions                 */
+  --bc-muted:        #59616a;   /* sub text / captions                 */
   --bc-line:         #e3e6e9;   /* hairline borders                    */
   --bc-works-bg:     #dce2e8;   /* works/portfolio backdrop            */
   --bc-mark-idle:    #8f9298;   /* logo mark settled (dimmed) state    */
   --bc-accent:       #1f63b6;   /* COOL BLUE — links / CTA / active     */
   --bc-on-dark:      #f4f5f6;   /* text on dark panels                 */
-  --bc-on-dark-mut:  #b6bbc0;   /* muted text on dark panels           */
+  --bc-on-dark-mut:  #c6ccd3;   /* muted text on dark panels           */
 
   /* ---- Typography --------------------------------------------------- */
   /* Japanese body: Noto Sans JP. Wordmark/headings: Exo 2 SemiBold.
@@ -48,10 +48,10 @@
   /* fluid type scale */
   --bc-fs-hero:   clamp(2.4rem, 6vw,   4.5rem);   /* hero wordmark        */
   --bc-fs-h2:     clamp(1.9rem, 4vw,   3rem);     /* ABOUT US / section   */
-  --bc-fs-h3:     clamp(1.3rem, 2.4vw, 1.75rem);  /* BRANDING panel title */
-  --bc-fs-lead:   clamp(1.15rem,2.2vw, 1.5rem);   /* statement band copy  */
-  --bc-fs-body:   clamp(0.95rem,1.3vw, 1.05rem);  /* body                 */
-  --bc-fs-small:  0.8rem;                          /* meta / tagline       */
+  --bc-fs-h3:     clamp(1.45rem, 2.6vw, 2.05rem);  /* BRANDING panel title */
+  --bc-fs-lead:   clamp(1.35rem,2.6vw, 2.1rem);   /* statement band copy  */
+  --bc-fs-body:   clamp(1rem,   1.2vw, 1.17rem);  /* body                 */
+  --bc-fs-small:  0.85rem;                          /* meta / tagline       */
 
   --bc-lh-body:    1.95;   /* generous JP line-height */
   --bc-lh-heading: 1.14;

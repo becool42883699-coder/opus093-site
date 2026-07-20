@@ -50,9 +50,17 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--bc-gutter);
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--bc-line);
+}
+/* T-REXのグローバル規則 header[class*="header"]{background:transparent!important}
+   に負けない様、becool 配下ではより高い詳細度+!important で白下地を強制する */
+:global(.becool) .header {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-bottom-color: var(--bc-line) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
 }
 .brand { display: inline-flex; align-items: center; gap: 12px; }
 .brand svg { width: 34px; height: 34px; }
@@ -173,13 +181,13 @@
 .sectionHead h2 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h2); letter-spacing: 0.08em; line-height: var(--bc-lh-heading); color: var(--bc-ink); }
 .sectionHead span { display: block; margin-top: 0.7rem; font-size: var(--bc-fs-small); font-weight: var(--bc-fw-bold); letter-spacing: 0.2em; color: var(--bc-muted); }
 /* ABOUT: テキスト + グレーディング写真の2カラム(モバイルは縦積み) */
-.aboutGrid { max-width: 1060px; margin: 0 auto; display: grid; gap: clamp(2rem, 4vw, 3.5rem); align-items: center; }
+.aboutGrid { max-width: 1100px; margin: 0 auto; display: grid; gap: clamp(2rem, 4vw, 3.5rem); align-items: stretch; }
 @media (min-width: 880px) { .aboutGrid { grid-template-columns: 1.05fr 1fr; } }
 .aboutBody { max-width: var(--bc-maxw-text); margin: 0 auto; }
 .aboutBody p { font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); }
 .aboutBody p + p { margin-top: 1.4rem; }
 .aboutBody em { font-style: normal; font-weight: var(--bc-fw-bold); }
-.aboutMedia { margin: 0; border-radius: var(--bc-radius-sm); overflow: hidden; box-shadow: var(--bc-shadow-card); }
+.aboutMedia { margin: 0; border-radius: var(--bc-radius-sm); overflow: hidden; box-shadow: var(--bc-shadow-card); min-height: 320px; }
 .aboutMedia img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* =====================  SERVICES (full-bleed alternating panels)  ===================== */
@@ -200,13 +208,13 @@
 .servicePhoto { position: absolute; inset: 0; z-index: 0; }
 .servicePhoto img { width: 100%; height: 100%; object-fit: cover; opacity: 0.38; }
 .servicePhoto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18, 21, 25, 0.55), rgba(18, 21, 25, 0.28) 45%, rgba(18, 21, 25, 0.62)); }
-.serviceInner { position: relative; z-index: 1; max-width: var(--bc-maxw-text); margin: 0 auto; display: grid; justify-items: center; gap: 1.2rem; }
+.serviceInner { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; display: grid; justify-items: center; gap: 1.3rem; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45); }
 /* --- アイコンのみ(メダリオン装飾なし) --- */
 .serviceIcon { display: grid; place-items: center; }
-.serviceIcon svg { width: 78px; height: 78px; fill: none; stroke: var(--bc-on-dark); stroke-width: 4; }
-.serviceIconImg { width: 108px; height: 108px; object-fit: contain; }
+.serviceIcon svg { width: 96px; height: 96px; fill: none; stroke: var(--bc-on-dark); stroke-width: 4; }
+.serviceIconImg { width: 136px; height: 136px; object-fit: contain; }
 .servicePanel h3 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h3); letter-spacing: 0.14em; }
-.serviceJp { color: var(--bc-blue-light) !important; font-size: 0.82rem !important; font-weight: var(--bc-fw-medium); letter-spacing: 0.16em; margin-top: -0.4rem; }
+.serviceJp { color: var(--bc-blue-light) !important; font-size: 0.95rem !important; font-weight: var(--bc-fw-medium); letter-spacing: 0.16em; margin-top: -0.4rem; }
 .servicePanel p { color: var(--bc-on-dark-mut); font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); }
 
 /* =====================  WORKS  ===================== */
@@ -225,9 +233,9 @@
 .pickupItem:hover img { transform: scale(1.05); }
 .pickupCap { position: absolute; inset: auto 0 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 0.6rem; padding: 1.1rem 1.2rem; color: var(--bc-on-dark); background: linear-gradient(transparent, rgba(17, 17, 17, 0.82)); }
 .pickupName { display: flex; align-items: baseline; gap: 0.6rem; }
-.pickupName strong { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.05rem; letter-spacing: 0.04em; }
+.pickupName strong { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.2rem; letter-spacing: 0.04em; }
 .pickupName > span { font-size: 0.72rem; letter-spacing: 0.14em; color: var(--bc-blue-light); }
-.pickupPrice { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.15rem; letter-spacing: 0.01em; white-space: nowrap; color: var(--bc-on-dark); }
+.pickupPrice { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.3rem; letter-spacing: 0.01em; white-space: nowrap; color: var(--bc-on-dark); }
 .pickupPrice small { font-size: 0.62rem; font-weight: var(--bc-fw-medium); color: var(--bc-on-dark-mut); }
 
 /* =====================  SHOP (店舗)  ===================== */
@@ -242,7 +250,7 @@
 .storeBody { padding: clamp(1.4rem, 3vw, 2rem); display: grid; gap: 0.7rem; }
 .storeName { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.25rem; color: var(--bc-ink); }
 .storeName span { color: var(--bc-blue); }
-.storeMeta { font-size: 0.9rem; line-height: 1.85; color: var(--bc-muted); }
+.storeMeta { font-size: 1rem; line-height: 1.9; color: var(--bc-muted); }
 .storeMeta b { color: var(--bc-ink); font-weight: var(--bc-fw-medium); }
 .storeActions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.4rem; }
 .lineBtn, .mapBtn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.6rem 1.2rem; font-size: 0.8rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.06em; border-radius: var(--bc-radius-sm); transition: background 0.25s var(--bc-ease), color 0.25s var(--bc-ease); }
@@ -265,19 +273,38 @@
 /* =====================  FOOTER  ===================== */
 .footer { position: relative; background: var(--bc-ink-soft); color: var(--bc-on-dark); padding: clamp(3rem, 7vw, 5rem) var(--bc-gutter) 2rem; }
 .footInner { max-width: var(--bc-maxw); margin: 0 auto; display: grid; gap: 1.6rem; }
+/* デスクトップ: 右側の余白を使い、説明と連絡先を2カラムに */
+@media (min-width: 900px) {
+  .footInner {
+    grid-template-columns: 1.25fr 1fr;
+    column-gap: clamp(3rem, 7vw, 6rem);
+    grid-template-areas:
+      "brand  meta"
+      "desc   meta"
+      "social links"
+      "copy   copy";
+    align-items: start;
+  }
+  .footBrand { grid-area: brand; }
+  .footDesc { grid-area: desc; }
+  .footMeta { grid-area: meta; align-self: center; }
+  .footSocial { grid-area: social; }
+  .footLinks { grid-area: links; }
+  .copyright { grid-area: copy; margin-top: 1.6rem; }
+}
 .footBrand { display: inline-flex; align-items: center; gap: 12px; }
 .footBrand svg { width: 34px; height: 34px; }
 .footBrand svg path, .footBrand svg polygon { stroke: var(--bc-on-dark); }
 .footWordmark { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.2rem; color: var(--bc-on-dark); }
 .footWordmark b { font-weight: var(--bc-fw-bold); color: var(--bc-blue-light); }
-.footDesc { max-width: 40ch; color: var(--bc-on-dark-mut); line-height: 1.9; font-size: 0.92rem; }
-.footMeta { color: var(--bc-on-dark-mut); font-size: 0.9rem; line-height: 1.9; letter-spacing: 0.03em; }
+.footDesc { max-width: 44ch; color: var(--bc-on-dark-mut); line-height: 1.95; font-size: 1rem; }
+.footMeta { color: var(--bc-on-dark-mut); font-size: 1rem; line-height: 1.95; letter-spacing: 0.03em; }
 .footSocial { display: flex; gap: 1rem; }
 .footSocial a { display: grid; place-items: center; }
 .footSocial svg { width: 26px; height: 26px; fill: var(--bc-on-dark); }
-.footLinks { display: flex; gap: 1.2rem; align-items: center; font-size: 0.84rem; color: var(--bc-on-dark-mut); letter-spacing: 0.08em; }
+.footLinks { display: flex; gap: 1.2rem; align-items: center; font-size: 0.92rem; color: var(--bc-on-dark-mut); letter-spacing: 0.08em; }
 .footLinks span { opacity: 0.4; }
-.copyright { font-size: 0.78rem; color: var(--bc-on-dark-mut); letter-spacing: 0.1em; }
+.copyright { font-size: 0.84rem; color: var(--bc-on-dark-mut); letter-spacing: 0.1em; }
 .toTop {
   position: absolute; right: var(--bc-gutter); bottom: clamp(2rem, 6vw, 3.5rem);
   display: grid; place-items: center; gap: 2px;
