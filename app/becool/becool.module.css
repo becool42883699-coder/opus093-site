@@ -268,6 +268,8 @@
 /* ステップ間をつなぐ矢羽(デスクトップのみ) */
 @media (min-width: 901px) {
   .flowStep:not(:last-child)::after { content: ""; position: absolute; top: 50%; right: calc(-0.5 * clamp(0.8rem, 2vw, 1.4rem) - 5px); width: 9px; height: 9px; border-top: 2px solid var(--bc-blue); border-right: 2px solid var(--bc-blue); transform: translateY(-50%) rotate(45deg); z-index: 1; }
+  /* 順序を持たないカード(POINT等)では矢羽を出さない */
+  .noArrows .flowStep::after { content: none; }
 }
 @media (max-width: 900px) { .flowGrid { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 560px) { .flowGrid { grid-template-columns: 1fr; } }
@@ -368,10 +370,85 @@
 }
 .toTop svg { width: 22px; height: 22px; stroke: var(--bc-on-dark); fill: none; stroke-width: 2; }
 
+/* =====================  SUBPAGES (maintenance / stock)  ===================== */
+/* --- ページヘッダー(パンくず + 見出し + 暗幕付き背景写真) --- */
+.subHero { position: relative; display: grid; align-content: end; justify-items: center; text-align: center; min-height: clamp(320px, 46vh, 480px); padding: calc(var(--bc-header-h) + clamp(2rem, 6vw, 4rem)) var(--bc-gutter) clamp(2.4rem, 6vw, 4rem); color: var(--bc-on-dark); background: var(--bc-panel-black); overflow: hidden; }
+.subHeroBg { position: absolute; inset: 0; }
+.subHeroBg img { width: 100%; height: 100%; object-fit: cover; opacity: 0.42; }
+.subHeroBg::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(18, 21, 25, 0.62), rgba(18, 21, 25, 0.3) 45%, rgba(18, 21, 25, 0.72)); }
+.subHeroInner { position: relative; z-index: 2; display: grid; justify-items: center; gap: 0.7rem; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.5); }
+.subHeroInner h1 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: clamp(2.2rem, 5vw, 3.4rem); letter-spacing: 0.1em; line-height: var(--bc-lh-heading); }
+.subHeroJp { font-size: 0.95rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.22em; color: var(--bc-blue-light); }
+.subHeroLead { font-size: var(--bc-fs-body); color: var(--bc-on-dark-mut); }
+.breadcrumb { display: flex; align-items: center; gap: 0.6rem; font-size: 0.72rem; letter-spacing: 0.14em; }
+.breadcrumb a { color: var(--bc-on-dark-mut); }
+.breadcrumb a:hover { color: var(--bc-on-dark); }
+.breadcrumb em { font-style: normal; color: var(--bc-on-dark); }
+.breadcrumb span { opacity: 0.5; }
+
+/* --- トップのSERVICEパネル内からサブページへの導線 --- */
+.serviceLink { display: inline-block; margin-top: 0.5rem; padding: 0.7rem 1.9rem; font-family: var(--bc-font-display); font-size: 0.82rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.1em; color: var(--bc-on-dark); border: 1px solid rgba(244, 245, 246, 0.55); border-radius: var(--bc-radius-sm); transition: background 0.28s var(--bc-ease), color 0.28s var(--bc-ease), border-color 0.28s var(--bc-ease); }
+.serviceLink:hover { background: var(--bc-on-dark); border-color: var(--bc-on-dark); color: var(--bc-ink); }
+
+/* --- 整備メニュー(3カラムカード) --- */
+.menuSection { background: var(--bc-paper); }
+.menuGrid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(0.9rem, 2vw, 1.5rem); }
+.menuCard { display: grid; justify-items: center; align-content: start; text-align: center; gap: 0.55rem; padding: clamp(1.6rem, 3vw, 2.4rem) clamp(1.2rem, 2.4vw, 1.8rem); background: var(--bc-white); border: 1px solid var(--bc-line); border-top: 2px solid var(--bc-blue); }
+.menuIcon svg { width: 56px; height: 56px; fill: none; stroke: var(--bc-blue); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.menuEn { font-size: 0.66rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.2em; color: var(--bc-muted); }
+.menuCard h3 { font-size: 1.12rem; font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
+.menuCard p { font-size: 0.92rem; line-height: 1.9; color: var(--bc-muted); text-align: left; }
+.menuNote { max-width: var(--bc-maxw-text); margin: clamp(1.8rem, 4vw, 2.6rem) auto 0; text-align: center; font-size: 0.95rem; line-height: 1.9; color: var(--bc-muted); }
+.menuNote b { color: var(--bc-ink); font-weight: var(--bc-fw-bold); }
+
+/* --- 在庫カード --- */
+.stockGrid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.2rem, 3vw, 2.2rem); }
+.stockCard { background: var(--bc-white); border: 1px solid var(--bc-line); display: flex; flex-direction: column; }
+.stockPhoto { position: relative; aspect-ratio: 16 / 10; }
+.stockPhoto img { width: 100%; height: 100%; object-fit: cover; }
+.stockTag { position: absolute; z-index: 1; top: 0.9rem; left: 0.9rem; padding: 0.28rem 0.9rem; font-family: var(--bc-font-display); font-size: 0.68rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.16em; color: var(--bc-white); background: var(--bc-blue); }
+.stockBody { padding: clamp(1.4rem, 3vw, 2rem); display: grid; gap: 0.8rem; align-content: start; }
+.stockName { display: grid; gap: 0.25rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.35rem; letter-spacing: 0.03em; color: var(--bc-ink); }
+.stockName span { font-family: var(--bc-font-sans); font-size: 0.82rem; font-weight: var(--bc-fw-medium); letter-spacing: 0.1em; color: var(--bc-muted); }
+.stockPrice { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: 1.7rem; color: var(--bc-blue); }
+.stockPrice small { margin-left: 0.2rem; font-size: 0.7rem; font-weight: var(--bc-fw-medium); color: var(--bc-muted); }
+.stockDesc { font-size: 0.95rem; line-height: 1.9; color: var(--bc-muted); }
+.stockNote { max-width: var(--bc-maxw-text); margin: clamp(1.8rem, 4vw, 2.6rem) auto 0; text-align: center; font-size: 0.9rem; line-height: 1.9; color: var(--bc-muted); }
+
+/* --- オーダー検索の案内バンド --- */
+.orderBand { background: var(--bc-ink-soft); color: var(--bc-on-dark); padding: var(--bc-section-y) var(--bc-gutter); text-align: center; }
+.orderInner { max-width: var(--bc-maxw-text); margin: 0 auto; display: grid; justify-items: center; gap: 1.2rem; }
+.orderInner h2 { display: grid; gap: 0.6rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h2); letter-spacing: 0.1em; line-height: var(--bc-lh-heading); }
+.orderInner h2 span { font-family: var(--bc-font-sans); font-size: var(--bc-fs-small); font-weight: var(--bc-fw-bold); letter-spacing: 0.2em; color: var(--bc-on-dark-mut); }
+.orderInner p { font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); color: var(--bc-on-dark-mut); }
+.orderInner em { font-style: normal; font-weight: var(--bc-fw-bold); color: var(--bc-on-dark); }
+.orderSub { font-size: 0.95rem; }
+.readMoreDark { display: block; width: fit-content; margin-top: 0.6rem; padding: 0.9rem 2.4rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); letter-spacing: 0.1em; color: var(--bc-on-dark); border: 1px solid var(--bc-on-dark-mut); border-radius: var(--bc-radius-sm); transition: background 0.28s var(--bc-ease), color 0.28s var(--bc-ease); }
+.readMoreDark:hover { background: var(--bc-on-dark); color: var(--bc-ink); }
+
+/* --- 電話・LINE誘導バンド --- */
+.ctaBand { background: var(--bc-gradient); color: var(--bc-white); padding: clamp(3rem, 7vw, 4.5rem) var(--bc-gutter); text-align: center; }
+.ctaBandInner { max-width: var(--bc-maxw-text); margin: 0 auto; display: grid; justify-items: center; gap: 1.1rem; }
+.ctaLead { font-size: clamp(1.05rem, 2vw, 1.3rem); font-weight: var(--bc-fw-bold); letter-spacing: 0.04em; }
+.ctaTel { display: grid; gap: 0.3rem; }
+.ctaTel a { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: clamp(1.9rem, 4.5vw, 2.6rem); letter-spacing: 0.04em; color: var(--bc-white); }
+.ctaTel small { font-size: 0.78rem; letter-spacing: 0.08em; color: rgba(255, 255, 255, 0.85); }
+.ctaActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.8rem; }
+/* グラデ地の上なので、青ボタンは白地に反転して沈まないようにする */
+.ctaActions .lineBtn { background: var(--bc-white); color: var(--bc-blue); }
+.ctaActions .lineBtn:hover { background: var(--bc-paper); }
+
+@media (max-width: 900px) { .menuGrid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 780px) { .stockGrid { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .menuGrid { grid-template-columns: 1fr; } }
+
 /* =====================  RESPONSIVE  ===================== */
-@media (max-width: 860px) {
+/* ナビ項目が増えたため、折り返す前(1020px)でドロワーメニューに切り替える */
+@media (max-width: 1020px) {
   .navDesktop { display: none; }
   .menuButton { display: block; }
+}
+@media (max-width: 860px) {
   .worksGrid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 780px) {
