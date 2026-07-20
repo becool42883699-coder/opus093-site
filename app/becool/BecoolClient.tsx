@@ -63,7 +63,8 @@ export function RevealController() {
           if (e.isIntersecting) { e.target.classList.add(styles.isIn); io.unobserve(e.target); }
         });
       },
-      { threshold: 0.16, rootMargin: "0px 0px -8% 0px" }
+      // セクションが顔を出したらすぐ競り上がりを始める(遅発火だと「ぬるっ」と見える)
+      { threshold: 0.04, rootMargin: "0px 0px -4% 0px" }
     );
     nodes.forEach((n) => io.observe(n));
     return () => io.disconnect();

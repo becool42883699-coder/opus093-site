@@ -1,5 +1,8 @@
 import styles from "./becool.module.css";
+import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
 import { MobileMenu, RevealController, ToTopButton } from "./BecoolClient";
+import BecoolHeroIntro from "./BecoolHeroIntro";
+import { CUBE_VIEWBOX, CUBE_STOPS, CUBE_D, CUBE_TOP, CUBE_LEFT, CUBE_RIGHT } from "./cubeLogo";
 
 /* サブパス配信(GitHub Pages等)でも画像が解決できるようベースパスを前置 */
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -10,6 +13,7 @@ const SITE_URL = "https://garage-becool.co.jp/";
 /* ---- nav ------------------------------------------------------------ */
 const NAV = [
   { href: "#about", label: "ABOUT" },
+  { href: "#showroom", label: "SHOWROOM" },
   { href: "#service", label: "SERVICE" },
   { href: "#car", label: "CAR" },
   { href: "#shop", label: "SHOP" },
@@ -21,27 +25,25 @@ const SERVICES = [
   {
     title: "CAR SALES",
     jp: "車両販売・乗り換え",
+    photo: "/becool/img/service-sales.webp",
     body: "店頭在庫のご案内から、全国のオークション・流通在庫を使ったお車探しまで。ご希望の車種・年式・予算に合わせて、ぴったりの一台をご提案します。買取・査定・ローンのご相談も。",
     icon: (
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M12 40l4-14a6 6 0 0 1 6-4h20a6 6 0 0 1 6 4l4 14" />
-        <path d="M8 40h48v8H8zM16 48v5M48 48v5" /><circle cx="20" cy="40" r="3" /><circle cx="44" cy="40" r="3" />
-      </svg>
+      <img className={styles.serviceIconImg} src={asset("/becool/img/icon-car-sales.png")} alt="" width={512} height={512} />
     ),
   },
   {
     title: "INSPECTION",
     jp: "車検・整備・点検",
+    photo: "/becool/img/service-inspection.webp",
     body: "車検・法定点検から、オイル・タイヤ・バッテリー交換、警告灯や異音の診断まで。国家資格を持つ整備士が対応します。代車のご用意、LINEでの整備予約にも対応。",
     icon: (
-      <svg viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M44 20a10 10 0 0 1-13 13L18 46a5 5 0 0 1-7-7l13-13a10 10 0 0 1 13-13l-7 7 4 8 8 4z" />
-      </svg>
+      <img className={styles.serviceIconImg} src={asset("/becool/img/icon-inspection.png")} alt="" width={512} height={512} />
     ),
   },
   {
     title: "CUSTOM",
     jp: "ドレスアップ・取付",
+    photo: "/becool/img/service-custom.webp",
     body: "エアロ・アルミホイール・オーディオなどのドレスアップ、カーナビや各種パーツの取り付けに対応。あなたのイメージを一台に落とし込み、思いどおりの仕上がりへ。",
     icon: (
       <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -53,6 +55,7 @@ const SERVICES = [
   {
     title: "CAR LIFE",
     jp: "カーライフサポート",
+    photo: "/becool/img/service-carlife.webp",
     body: "購入後のアフターサポートや乗り換えのご相談まで、末永くお付き合いします。全国納車にも対応。クルマのことなら、はじめての方もお気軽にご相談ください。",
     icon: (
       <svg viewBox="0 0 64 64" aria-hidden="true">
@@ -60,6 +63,17 @@ const SERVICES = [
       </svg>
     ),
   },
+];
+
+/* ---- showroom gallery (real interior photos) ----------------------- */
+const GALLERY = [
+  { src: "/becool/img/interior-01.webp", shape: "tall", alt: "GARAGE BeCool 店内エントランス。観葉植物とスズキ各車カタログ" },
+  { src: "/becool/img/interior-02.webp", shape: "wide", alt: "GARAGE BeCool 店内の商談スペース。大理石調テーブルと大きな窓" },
+  { src: "/becool/img/interior-03.webp", shape: "tall", alt: "GARAGE BeCool のくつろげる待合ラウンジ" },
+  { src: "/becool/img/interior-04.webp", shape: "wide", alt: "GARAGE BeCool 店内ラウンジの全景。ソファと受付カウンター" },
+  { src: "/becool/img/interior-05.webp", shape: "wide", alt: "GARAGE BeCool 窓際の商談テーブル。夕方の光が差し込む店内" },
+  { src: "/becool/img/interior-06.webp", shape: "tall", alt: "GARAGE BeCool 受付まわりのラウンジ。木目の天井と間接照明" },
+  { src: "/becool/img/interior-07.webp", shape: "tall", alt: "GARAGE BeCool のテーブルにちょこんと座るオレンジのマスコット" },
 ];
 
 /* ---- pick-up cars (real photos) ------------------------------------- */
@@ -72,8 +86,9 @@ const CARS = [
 const SHOPS = [
   {
     name: "中吉田店",
-    photo: asset("/becool/img/photo-showroom.webp"),
-    alt: "GARAGE BeCool 中吉田店のショールーム内観",
+    photo: asset("/becool/img/store-nakayoshida.webp"),
+    alt: "GARAGE BeCool 中吉田店の外観",
+    comingSoon: false,
     zip: "〒800-0204",
     addr: "福岡県北九州市小倉南区中吉田6丁目18-5",
     tel: "093-967-2345",
@@ -82,8 +97,9 @@ const SHOPS = [
   },
   {
     name: "沼店",
-    photo: asset("/becool/img/photo-reception.webp"),
-    alt: "GARAGE BeCool 沼店のレセプション・ラウンジ内観",
+    photo: "",
+    alt: "GARAGE BeCool 沼店（写真準備中）",
+    comingSoon: true,
     zip: "〒800-0205",
     addr: "福岡県北九州市小倉南区沼本町2丁目778-2",
     tel: "093-967-2345",
@@ -92,23 +108,168 @@ const SHOPS = [
   },
 ];
 
-/* ---- brand marks ---------------------------------------------------- */
-const HEX = "M725 195 L917 306 L917 571 L725 683 L533 571 L533 306 Z";
-const SYMBOL =
-  "M 864 421 L 865 425 L 851 467 L 816 490 L 816 535 L 818 535 L 865 505 L 867 505 L 868 506 L 868 539 L 832 563 L 799 583 L 797 581 L 797 462 L 800 459 Z M 915 334 L 903 340 L 898 344 L 893 346 L 888 350 L 883 352 L 873 359 L 846 374 L 841 378 L 748 433 L 748 680 L 915 571 L 915 472 L 896 456 L 903 437 L 915 411 Z M 534 334 L 534 571 L 631 632 L 637 637 L 647 642 L 664 654 L 724 691 L 724 411 L 619 477 L 619 534 L 620 535 L 669 504 L 672 505 L 672 589 L 669 590 L 598 546 L 587 538 L 587 515 L 588 514 L 587 513 L 587 483 L 588 482 L 587 479 L 588 477 L 588 467 L 587 466 L 587 457 L 588 456 L 587 452 L 587 423 L 588 422 L 587 366 L 552 345 L 536 334 Z M 724 313 L 716 319 L 616 381 L 616 438 L 724 369 Z M 537 311 L 540 314 L 586 341 L 588 341 L 725 255 L 864 341 L 913 312 L 912 310 L 904 306 L 901 303 L 896 301 L 859 277 L 725 195 Z";
+/* ---- flow (ご利用の流れ) -------------------------------------------- */
+const FLOW = [
+  {
+    no: "01",
+    en: "CONTACT",
+    title: "ご相談",
+    body: "ご来店・お電話・LINEで、ご希望やお悩みをお聞かせください。「なんとなく乗り換えたい」の段階でも大歓迎です。",
+  },
+  {
+    no: "02",
+    en: "PROPOSAL",
+    title: "お車探し・お見積り",
+    body: "店頭在庫と全国のオークション・流通在庫から、ご希望に合う一台をご提案。お見積りは無料です。",
+  },
+  {
+    no: "03",
+    en: "PREPARATION",
+    title: "ご契約・納車準備",
+    body: "ご契約後は各種手続きをサポート。国家資格を持つ整備士が点検・整備し、お引き渡しに備えます。",
+  },
+  {
+    no: "04",
+    en: "AFTER SUPPORT",
+    title: "ご納車・アフターサポート",
+    body: "全国納車にも対応。納車後も車検・整備・乗り換えのご相談まで、末永くサポートします。",
+  },
+];
 
-function HeroMark() {
+/* ---- FAQ (JSON-LDのFAQPageと共用) ----------------------------------- */
+const FAQS = [
+  {
+    q: "車検や整備だけの利用もできますか？",
+    a: "はい、車検・法定点検・オイル交換などの整備のみのご利用も歓迎です。他店でご購入されたお車もお任せください。LINEからの整備予約にも対応しています。",
+  },
+  {
+    q: "在庫にない車も探してもらえますか？",
+    a: "全国のオークション・流通在庫からお探しできます。車種・年式・色・ご予算などのご希望をお気軽にお伝えください。",
+  },
+  {
+    q: "ローンでの購入はできますか？",
+    a: "各種オートローンのご相談に対応しています。頭金の有無やお支払い回数など、ご予算に合わせてご提案しますのでお気軽にご相談ください。",
+  },
+  {
+    q: "遠方に住んでいますが購入できますか？",
+    a: "全国納車に対応しています。遠方の方には、車両の状態を写真などで丁寧にご案内しますのでご安心ください。",
+  },
+  {
+    q: "買取・査定だけでも大丈夫ですか？",
+    a: "もちろん大丈夫です。査定は無料ですので、売却だけのご相談や、乗り換え前の価格確認にもご利用ください。",
+  },
+  {
+    q: "営業時間と定休日を教えてください。",
+    a: "沼店・中吉田店ともに10:00〜20:00、年中無休で営業しています。お電話（093-967-2345）またはLINEからお問い合わせください。",
+  },
+];
+
+/* ---- ローカルSEO: 2店舗ぶんの UsedCarDealer 構造化データ ---------------- */
+const becoolLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    ...SHOPS.map((s, i) => ({
+    "@type": ["AutoDealer", "AutoRepair"],
+    "@id": `${ROOT_URL}/becool/#store-${i + 1}`,
+    name: `GARAGE BeCool ${s.name}`,
+    url: `${ROOT_URL}/becool/`,
+    telephone: "+81-93-967-2345",
+    image: `${ROOT_URL}/becool/img/store-exterior.webp`,
+    logo: `${ROOT_URL}/becool/img/symbol.svg`,
+    foundingDate: "1999",
+    parentOrganization: { "@type": "Organization", name: "有限会社ビークール" },
+    address: {
+      "@type": "PostalAddress",
+      postalCode: s.zip.replace("〒", ""),
+      addressRegion: "福岡県",
+      addressLocality: "北九州市小倉南区",
+      streetAddress: s.addr.replace("福岡県北九州市小倉南区", ""),
+      addressCountry: "JP",
+    },
+    openingHours: "Mo,Tu,We,Th,Fr,Sa,Su 10:00-20:00",
+    priceRange: "¥¥",
+    sameAs: [SITE_URL, LINE_URL],
+    description:
+      "福岡県北九州市小倉南区の地域密着型カーショップ。中古車販売・買取・車検・整備・メンテナンス・ドレスアップに対応。",
+    })),
+    {
+      "@type": "FAQPage",
+      "@id": `${ROOT_URL}/becool/#faq`,
+      mainEntity: FAQS.map((f) => ({
+        "@type": "Question",
+        name: f.q,
+        acceptedAnswer: { "@type": "Answer", text: f.a },
+      })),
+    },
+  ],
+};
+
+/* ---- 旧ロゴ(GBキューブ)。form-design.jp のイントロを同じ構造で再現:
+       [組立] 各面が「移動+マスク」の複合で経路に沿って敷かれて現れる
+              (屋根左→左面Gを下る→右面Bを上る→屋根右で閉じる)。
+              併走して辺の延長線(logo-guide)が伸びて消える。
+       [走査] 完成後、斜めの走査線(scan-beam)が通り、通過した部分の塗りが
+              透明化して輪郭線(logo-wire)だけ残り、背景が透けて見える。
+       [復元] 同じ帯が逆方向に戻り、光の帯を伴って塗りが再構築される。
+       すべて SVG マスク(stroke-dash の帯) + GSAP。発光ではなく透過で光を表現。 --- */
+function HeroCubeLogo() {
+  const sweep = { stroke: "#fff", fill: "none", pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1 } as const;
+  const scan = { d: "M500 180 L950 700", strokeWidth: 560, fill: "none", pathLength: 1, strokeDasharray: 1, strokeDashoffset: 1 } as const;
   return (
-    <svg className={styles.heroLogo} viewBox="510 171 429 544" role="img" aria-label="GARAGE BeCool GBキューブロゴ">
+    <svg className={styles.heroCarSvg} viewBox={CUBE_VIEWBOX} role="img" aria-label="GARAGE BeCool ロゴ">
       <defs>
-        <linearGradient id="gbHero" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#4A4F55" />
-          <stop offset="55%" stopColor="#31557C" />
-          <stop offset="100%" stopColor="#1F63B6" />
+        {/* ロゴ全体で1つのグラデ(面ごとに分割しても統一される) */}
+        <linearGradient id="cubeGrad" gradientUnits="userSpaceOnUse" x1="534" y1="195" x2="915" y2="691">
+          {CUBE_STOPS.map(([off, col]) => <stop key={off} offset={off} stopColor={col} />)}
         </linearGradient>
+        {/* 各面の「敷かれていく」reveal マスク。白ストロークが通った所だけ表示される */}
+        <mask id="mCubeTop" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
+          <path className="mask-sweep sweep-roof-l" d="M725 222 L556 330" strokeWidth={150} strokeLinecap="square" {...sweep} />
+          <path className="mask-sweep sweep-roof-r" d="M894 330 L725 222" strokeWidth={150} strokeLinecap="square" {...sweep} />
+        </mask>
+        <mask id="mCubeLeft" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
+          <path className="mask-sweep sweep-left" d="M629 322 L629 700" strokeWidth={212} strokeLinecap="square" {...sweep} />
+        </mask>
+        <mask id="mCubeRight" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
+          <path className="mask-sweep sweep-right" d="M831 692 L831 322" strokeWidth={202} strokeLinecap="square" {...sweep} />
+        </mask>
+        {/* 走査帯: 同じ斜め帯で「塗りを隠す(黒)」「線画を見せる(白)」を同期させる */}
+        <mask id="mScanFill" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
+          <rect x="420" y="120" width="620" height="660" fill="#fff" />
+          <path className="scan-hide" stroke="#000" {...scan} />
+        </mask>
+        <mask id="mScanWire" maskUnits="userSpaceOnUse" x="420" y="120" width="620" height="660">
+          <rect x="420" y="120" width="620" height="660" fill="#000" />
+          <path className="scan-show" stroke="#fff" {...scan} />
+        </mask>
+        {/* 走査線ビームをロゴ周辺だけに収めるクリップ */}
+        <clipPath id="cScanBeam"><rect x="470" y="150" width="510" height="580" /></clipPath>
       </defs>
-      <path className={styles.markPath} pathLength={1} d={HEX} />
-      <path className={styles.symbolReveal} d={SYMBOL} fill="url(#gbHero)" fillRule="evenodd" />
+      {/* 辺の延長線(細い見当線)。リボンの通過に合わせて描かれ、順に消える */}
+      <g className="logo-guide" aria-hidden="true">
+        <path className="gl-tl" d="M802 141 L455 352" pathLength={1} />
+        <path className="gl-lv" d="M534 232 L534 758" pathLength={1} />
+        <path className="gl-lb" d="M462 526 L800 739" pathLength={1} />
+        <path className="gl-rb" d="M988 526 L650 739" pathLength={1} />
+        <path className="gl-rv" d="M916 758 L916 232" pathLength={1} />
+        <path className="gl-tr" d="M648 141 L995 352" pathLength={1} />
+      </g>
+      {/* 線画: 走査線が通過して透明化した部分にだけ現れる輪郭。
+          マスクは走査フェーズ中だけ GSAP が付与する(毎フレームのラスタライズ削減) */}
+      <g className="scan-wire-wrap" aria-hidden="true">
+        <path className="logo-wire" d={CUBE_D} fillRule="evenodd" />
+      </g>
+      {/* 塗り3面(evenodd で G/B の白抜きを保持)。
+          組立マスクは組立中だけ・走査マスクは走査中だけ GSAP が付け外しする */}
+      <g className="scan-fill-wrap">
+        <g className="mwrap-top"><path className="logo-fill face-top" d={CUBE_TOP} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
+        <g className="mwrap-left"><path className="logo-fill face-left" d={CUBE_LEFT} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
+        <g className="mwrap-right"><path className="logo-fill face-right" d={CUBE_RIGHT} fill="url(#cubeGrad)" fillRule="evenodd" /></g>
+      </g>
+      {/* 走査線ビーム(帯の先端を走る細い光) */}
+      <g clipPath="url(#cScanBeam)" aria-hidden="true">
+        <line className="scan-beam" x1="303" y1="350" x2="697" y2="10" />
+      </g>
     </svg>
   );
 }
@@ -126,6 +287,7 @@ function Wordmark({ className }: { className?: string }) {
 export default function BecoolPage() {
   return (
     <div className={`becool ${styles.root}`}>
+      <JsonLd data={becoolLd} />
       {/* ---------- HEADER ---------- */}
       <header className={styles.header}>
         <a className={styles.brand} href="#top" aria-label="GARAGE BeCool トップへ">
@@ -142,23 +304,36 @@ export default function BecoolPage() {
         {/* ---------- HERO ---------- */}
         <section className={styles.hero} aria-label="ヒーロー">
           <div className={`${styles.heroBg} ${styles.halftone}`}>
-            <img src={asset("/becool/img/photo-porsche.webp")} alt="GARAGE BeCool 店頭に並ぶ白いポルシェ 718 ケイマン" />
+            <img src={asset("/becool/img/hero-exterior.webp")} alt="GARAGE BeCool の店舗外観（雨上がりの夕暮れ）" />
           </div>
-          <div className={styles.heroInner}>
-            <HeroMark />
-            <p className={styles.wordmark}>GARAGE <span className={styles.wmBlue}>BeCool</span></p>
-            <p className={styles.tagline}>Used Car &amp; Car Life Support — since 1999</p>
+          <div className={styles.heroInner} data-hero-stage data-intro="play">
+            <div className={`logo-zone ${styles.logoZone}`}>
+              <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
+              <HeroCubeLogo />
+            </div>
+            {/* ワードマーク: ロゴ完成後、横方向のマスクが左から右へ開いて現れる */}
+            <p className={`${styles.heroWordmark} hero-wordmark`}>
+              <span>GARAGE</span> <span className={styles.wmAccent}>BeCool</span>
+            </p>
+            <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
+          {/* JS無効時は組み上げ演出をスキップし、完成ロゴ(塗り)を表示する */}
+          <noscript>
+            <style>{`[data-hero-stage] .logo-fill,[data-hero-stage] .hero-tagline,[data-hero-stage] .hero-wordmark{opacity:1!important}[data-hero-stage] .logo-guide{display:none!important}`}</style>
+          </noscript>
+          <BecoolHeroIntro />
           <span className={styles.scrollCue} aria-hidden="true" />
         </section>
 
+        {/* ヒーローは sticky で固定し、以下のコンテンツが上に被さってせり上がる */}
+        <div className={styles.belowHero}>
         {/* ---------- CONCEPT ---------- */}
-        <section className={styles.concept} aria-label="コンセプト">
+        <section data-reveal className={`${styles.concept} ${styles.reveal}`} aria-label="コンセプト">
           <div className={`${styles.conceptPhoto} ${styles.halftone}`}>
-            <img src={asset("/becool/img/photo-lounge.webp")} alt="GARAGE BeCool のラウンジ内観" />
+            <img src={asset("/becool/img/store-exterior.webp")} alt="GARAGE BeCool の店舗外観（夕景）" />
           </div>
           <div className={styles.conceptBand}>
-            <p data-reveal className={styles.reveal}>
+            <p>
               地域のカーライフを、<br />
               もっと安心に、もっと楽しく。
             </p>
@@ -169,33 +344,58 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- ABOUT ---------- */}
-        <section id="about" className={styles.section} aria-labelledby="about-h">
-          <div data-reveal className={`${styles.sectionHead} ${styles.reveal}`}>
+        <section id="about" data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="about-h">
+          <div className={styles.sectionHead}>
             <h2 id="about-h">ABOUT US</h2>
             <span>GARAGE BeCool について</span>
           </div>
-          <div data-reveal className={`${styles.aboutBody} ${styles.reveal}`}>
-            <p>
-              GARAGE BeCool は<em>1999年創業</em>、福岡県北九州市小倉南区を中心とする地域密着型のカーショップです。
-              中古車の販売だけでなく、買取・車検・整備・メンテナンスまで一括で対応しています。
-            </p>
-            <p>
-              大切にしているのは、車選びから購入後のカーライフまでをトータルでサポートすること。
-              全国から車両を仕入れ、人気の一台を求めやすくお届けします。はじめての方でも相談しやすい店づくりと、
-              購入後も気軽に頼れる体制を整えています。
-            </p>
-            <p>
-              整備は国家資格を持つスタッフが担当し、安全と品質に責任を持って向き合います。
-              沼店・中吉田店の2店舗で、あなたのカーライフを「もっと安心に、もっと楽しく」お手伝いします。
-            </p>
+          <div className={styles.aboutGrid}>
+            <div className={styles.aboutBody}>
+              <p>
+                GARAGE BeCool は<em>1999年創業</em>、福岡県北九州市小倉南区を中心とする地域密着型のカーショップです。
+                中古車の販売だけでなく、買取・車検・整備・メンテナンスまで一括で対応しています。
+              </p>
+              <p>
+                大切にしているのは、車選びから購入後のカーライフまでをトータルでサポートすること。
+                全国から車両を仕入れ、人気の一台を求めやすくお届けします。はじめての方でも相談しやすい店づくりと、
+                購入後も気軽に頼れる体制を整えています。
+              </p>
+              <p>
+                整備は国家資格を持つスタッフが担当し、安全と品質に責任を持って向き合います。
+                沼店・中吉田店の2店舗で、あなたのカーライフを「もっと安心に、もっと楽しく」お手伝いします。
+              </p>
+            </div>
+            <figure className={`${styles.aboutMedia} ${styles.halftone}`}>
+              <img src={asset("/becool/img/about-detail.webp")} alt="GARAGE BeCool 店頭のポルシェ 718 ケイマン（ブルーグレーディング）" loading="lazy" />
+            </figure>
           </div>
         </section>
 
+        {/* ---------- SHOWROOM (店内ギャラリー) ---------- */}
+        <section id="showroom" data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="showroom-h">
+          <div className={styles.sectionHead}>
+            <h2 id="showroom-h">SHOWROOM</h2>
+            <span>店内のご案内</span>
+          </div>
+          {/* スクロールで上の写真は固定・下の写真がせり上がって重なる(スティッキー・スタック) */}
+          <div className={styles.galleryStack}>
+            {GALLERY.map((g) => (
+              <figure key={g.src} className={`${styles.stackItem} ${styles.halftone}`}>
+                <img src={asset(g.src)} alt={g.alt} loading="lazy" />
+              </figure>
+            ))}
+          </div>
+          <p className={styles.galleryNote}>ゆったりくつろげる店内で、車選びからアフターのご相談まで。お気軽にお立ち寄りください。</p>
+        </section>
+
         {/* ---------- SERVICES ---------- */}
-        <section id="service" className={styles.services} aria-label="サービス">
+        <section id="service" data-reveal className={`${styles.services} ${styles.reveal}`} aria-label="サービス">
           {SERVICES.map((s) => (
             <div key={s.title} className={styles.servicePanel}>
-              <div data-reveal className={`${styles.serviceInner} ${styles.reveal}`}>
+              <div className={styles.servicePhoto} aria-hidden="true">
+                <img src={asset(s.photo)} alt="" loading="lazy" />
+              </div>
+              <div className={styles.serviceInner}>
                 <span className={styles.serviceIcon}>{s.icon}</span>
                 <h3>{s.title}</h3>
                 <p className={styles.serviceJp}>{s.jp}</p>
@@ -205,13 +405,31 @@ export default function BecoolPage() {
           ))}
         </section>
 
+        {/* ---------- FLOW (ご利用の流れ) ---------- */}
+        <section id="flow" data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="flow-h">
+          <div className={styles.sectionHead}>
+            <h2 id="flow-h">FLOW</h2>
+            <span>ご利用の流れ</span>
+          </div>
+          <ol className={styles.flowGrid}>
+            {FLOW.map((f) => (
+              <li key={f.no} className={styles.flowStep}>
+                <span className={styles.flowNo} aria-hidden="true">{f.no}</span>
+                <span className={styles.flowEn}>{f.en}</span>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
         {/* ---------- PICK UP CAR ---------- */}
-        <section id="car" className={styles.section + " " + styles.works} aria-labelledby="car-h">
-          <div data-reveal className={`${styles.sectionHead} ${styles.reveal}`}>
+        <section id="car" data-reveal className={`${styles.section} ${styles.works} ${styles.reveal}`} aria-labelledby="car-h">
+          <div className={styles.sectionHead}>
             <h2 id="car-h">PICK UP</h2>
             <span>販売車両</span>
           </div>
-          <ul data-reveal className={`${styles.pickupGrid} ${styles.reveal}`}>
+          <ul className={styles.pickupGrid}>
             {CARS.map((c) => (
               <li key={c.name} className={`${styles.pickupItem} ${styles.halftone}`}>
                 <img src={c.src} alt={c.alt} loading="lazy" />
@@ -226,26 +444,34 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- SHOP ---------- */}
-        <section id="shop" className={styles.section + " " + styles.shop} aria-labelledby="shop-h">
-          <div data-reveal className={`${styles.sectionHead} ${styles.reveal}`}>
+        <section id="shop" data-reveal className={`${styles.section} ${styles.shop} ${styles.reveal}`} aria-labelledby="shop-h">
+          <div className={styles.sectionHead}>
             <h2 id="shop-h">SHOP</h2>
             <span>店舗案内</span>
           </div>
-          <div data-reveal className={`${styles.storeGrid} ${styles.reveal}`}>
+          <div className={styles.storeGrid}>
             {SHOPS.map((s) => (
               <article key={s.name} className={styles.storeCard}>
-                <div className={`${styles.storePhoto} ${styles.halftone}`}>
-                  <img src={s.photo} alt={s.alt} loading="lazy" />
-                </div>
+                {s.comingSoon ? (
+                  <div className={`${styles.storePhoto} ${styles.storeComingSoon}`} role="img" aria-label={s.alt}>
+                    <span>準備中</span>
+                    <small>Photo Coming Soon</small>
+                  </div>
+                ) : (
+                  <div className={`${styles.storePhoto} ${styles.halftone}`}>
+                    <img src={s.photo} alt={s.alt} loading="lazy" />
+                  </div>
+                )}
                 <div className={styles.storeBody}>
                   <h3 className={styles.storeName}>GARAGE <span>BeCool</span> {s.name}</h3>
                   <p className={styles.storeMeta}>
                     {s.zip}<br />
                     {s.addr}<br />
-                    <b>TEL</b> {s.tel}<br />
+                    <b>TEL</b> <a href={`tel:${s.tel.replaceAll("-", "")}`}>{s.tel}</a><br />
                     <b>営業時間</b> {s.hours}
                   </p>
                   <div className={styles.storeActions}>
+                    <a className={styles.telBtn} href={`tel:${s.tel.replaceAll("-", "")}`}>電話する</a>
                     <a className={styles.lineBtn} href={LINE_URL} target="_blank" rel="noopener noreferrer">LINEで予約</a>
                     <a className={styles.mapBtn} href={s.map} target="_blank" rel="noopener noreferrer">MAPで見る</a>
                   </div>
@@ -254,11 +480,32 @@ export default function BecoolPage() {
             ))}
           </div>
         </section>
+
+        {/* ---------- FAQ ---------- */}
+        <section id="faq" data-reveal className={`${styles.section} ${styles.faq} ${styles.reveal}`} aria-labelledby="faq-h">
+          <div className={styles.sectionHead}>
+            <h2 id="faq-h">FAQ</h2>
+            <span>よくあるご質問</span>
+          </div>
+          <div className={styles.faqList}>
+            {FAQS.map((f) => (
+              <details key={f.q} className={styles.faqItem}>
+                <summary>
+                  <span className={styles.faqQ} aria-hidden="true">Q</span>
+                  {f.q}
+                  <span className={styles.faqToggle} aria-hidden="true" />
+                </summary>
+                <p className={styles.faqA}>{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+        </div>{/* /belowHero */}
       </main>
 
       {/* ---------- FOOTER ---------- */}
       <footer id="contact" className={styles.footer}>
-        <div className={styles.footInner}>
+        <div data-reveal className={`${styles.footInner} ${styles.reveal}`}>
           <span className={styles.footBrand}>
             <GbSymbol size={38} />
             <Wordmark className={styles.footWordmark} />
@@ -269,7 +516,7 @@ export default function BecoolPage() {
           </p>
           <p className={styles.footMeta}>
             有限会社ビークール<br />
-            共通お問い合わせ TEL: 093-967-2345<br />
+            共通お問い合わせ TEL: <a href="tel:0939672345">093-967-2345</a><br />
             営業時間 10:00〜20:00／年中無休
           </p>
           <div className={styles.footSocial}>

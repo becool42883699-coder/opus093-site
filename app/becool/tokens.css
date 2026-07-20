@@ -25,13 +25,13 @@
   --bc-ink-soft:     #2b2f33;   /* statement bands / footer            */
   --bc-panel-black:  #15181b;   /* full-bleed service panel (dark)     */
   --bc-panel-gray:   #4a4f55;   /* full-bleed service panel (charcoal) */
-  --bc-muted:        #6b7178;   /* sub text / captions                 */
+  --bc-muted:        #59616a;   /* sub text / captions                 */
   --bc-line:         #e3e6e9;   /* hairline borders                    */
   --bc-works-bg:     #dce2e8;   /* works/portfolio backdrop            */
   --bc-mark-idle:    #8f9298;   /* logo mark settled (dimmed) state    */
   --bc-accent:       #1f63b6;   /* COOL BLUE — links / CTA / active     */
   --bc-on-dark:      #f4f5f6;   /* text on dark panels                 */
-  --bc-on-dark-mut:  #b6bbc0;   /* muted text on dark panels           */
+  --bc-on-dark-mut:  #c6ccd3;   /* muted text on dark panels           */
 
   /* ---- Typography --------------------------------------------------- */
   /* Japanese body: Noto Sans JP. Wordmark/headings: Exo 2 SemiBold.
@@ -48,10 +48,10 @@
   /* fluid type scale */
   --bc-fs-hero:   clamp(2.4rem, 6vw,   4.5rem);   /* hero wordmark        */
   --bc-fs-h2:     clamp(1.9rem, 4vw,   3rem);     /* ABOUT US / section   */
-  --bc-fs-h3:     clamp(1.3rem, 2.4vw, 1.75rem);  /* BRANDING panel title */
-  --bc-fs-lead:   clamp(1.15rem,2.2vw, 1.5rem);   /* statement band copy  */
-  --bc-fs-body:   clamp(0.95rem,1.3vw, 1.05rem);  /* body                 */
-  --bc-fs-small:  0.8rem;                          /* meta / tagline       */
+  --bc-fs-h3:     clamp(1.45rem, 2.6vw, 2.05rem);  /* BRANDING panel title */
+  --bc-fs-lead:   clamp(1.35rem,2.6vw, 2.1rem);   /* statement band copy  */
+  --bc-fs-body:   clamp(1rem,   1.2vw, 1.17rem);  /* body                 */
+  --bc-fs-small:  0.85rem;                          /* meta / tagline       */
 
   --bc-lh-body:    1.95;   /* generous JP line-height */
   --bc-lh-heading: 1.14;
@@ -69,7 +69,7 @@
   --bc-space-7: 6rem;
   --bc-space-8: 8rem;
 
-  --bc-section-y: clamp(4rem, 10vw, 9rem);  /* vertical section padding  */
+  --bc-section-y: clamp(4.5rem, 11vw, 10.5rem);  /* vertical section padding  */
   --bc-gutter:    clamp(1.25rem, 5vw, 4rem);/* horizontal page gutter    */
   --bc-maxw:      1200px;                    /* content max width         */
   --bc-maxw-text: 720px;                     /* readable text column      */
@@ -98,8 +98,10 @@
   --bc-dur-draw:   1.6s;   /* logo stroke draw            */
   --bc-dur-fill:   0.5s;   /* outline -> solid fill       */
   --bc-dur-fade:   0.9s;   /* wordmark / text reveal      */
-  --bc-dur-scroll: 0.8s;   /* on-scroll section reveal    */
-  --bc-reveal-shift: 24px; /* upward slide distance       */
+  --bc-dur-scroll: 1s;      /* on-scroll section reveal    */
+  --bc-reveal-shift: 120px; /* upward slide distance       */
+  /* 競り上がり: 序盤で一気に動き、終盤だけ減速して着地する */
+  --bc-ease-surge: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* ---- Layout helpers ----------------------------------------------- */
   --bc-header-h: clamp(64px, 8vw, 84px);
