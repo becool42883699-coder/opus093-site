@@ -1,0 +1,11 @@
+:HL["/opus093-site/_next/static/chunks/3ii8xr8mbqcru.css","style"]
+:HL["/opus093-site/_next/static/chunks/401d30zzuulv6.css","style"]
+:HL["/opus093-site/_next/static/chunks/35phzbe_2i8hu.css","style"]
+:HL["/opus093-site/_next/static/chunks/1o6klqmzink6n.css","style"]
+:HL["/opus093-site/_next/static/media/2e38944bf61518f6-s.p.2j4u47cw2wp62.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/opus093-site/_next/static/media/a626ed2fbe2db1bf-s.p.342nhdmq3f7um.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/opus093-site/_next/static/media/ad9c66e761fed85a-s.p.17y412u0mab7-.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/opus093-site/_next/static/chunks/1--0bx6otc1yg.css","style"]
+:HL["/opus093-site/becool/img/symbol.svg","image"]
+:HL["/opus093-site/becool/img/photo-porsche.webp","image"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"stock","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"VHsS8vdDaxNf6VrQDlyFl"}
