@@ -182,38 +182,10 @@
 .servicePhoto img { width: 100%; height: 100%; object-fit: cover; opacity: 0.38; }
 .servicePhoto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18, 21, 25, 0.55), rgba(18, 21, 25, 0.28) 45%, rgba(18, 21, 25, 0.62)); }
 .serviceInner { position: relative; z-index: 1; max-width: var(--bc-maxw-text); margin: 0 auto; display: grid; justify-items: center; gap: 1.2rem; }
-/* --- 豪華メダリオン(静止): ガラス質の円 + グラデ縁取り + 青いグロー --- */
-.serviceIcon {
-  position: relative;
-  width: clamp(128px, 15vw, 156px);
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  isolation: isolate;
-  background:
-    radial-gradient(circle at 50% 30%, rgba(91, 155, 230, 0.30), rgba(16, 20, 26, 0.42) 66%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.20),
-    inset 0 0 26px rgba(60, 120, 210, 0.22),
-    0 16px 40px rgba(0, 0, 0, 0.46);
-}
-/* グラデーションの縁取り(リング) */
-.serviceIcon::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  padding: 1.6px;
-  background: linear-gradient(145deg, rgba(214, 231, 255, 0.95), rgba(91, 155, 230, 0.55) 42%, rgba(130, 150, 180, 0.15) 68%, rgba(200, 222, 255, 0.7));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-.serviceIcon svg { width: 58%; height: 58%; fill: none; stroke: var(--bc-on-dark); stroke-width: 4; filter: drop-shadow(0 0 7px rgba(120, 180, 255, 0.55)); }
-/* PNGアイコン(自前の白線を保持)。メダリオン内に収める + 青グロー */
-.serviceIconImg { width: 70%; height: 70%; object-fit: contain; filter: drop-shadow(0 0 7px rgba(120, 180, 255, 0.5)); }
+/* --- アイコンのみ(メダリオン装飾なし) --- */
+.serviceIcon { display: grid; place-items: center; }
+.serviceIcon svg { width: 78px; height: 78px; fill: none; stroke: var(--bc-on-dark); stroke-width: 4; }
+.serviceIconImg { width: 108px; height: 108px; object-fit: contain; }
 .servicePanel h3 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h3); letter-spacing: 0.14em; }
 .serviceJp { color: var(--bc-blue-light) !important; font-size: 0.82rem !important; font-weight: var(--bc-fw-medium); letter-spacing: 0.16em; margin-top: -0.4rem; }
 .servicePanel p { color: var(--bc-on-dark-mut); font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); }
@@ -281,43 +253,20 @@
 .footWordmark b { font-weight: var(--bc-fw-bold); color: var(--bc-blue-light); }
 .footDesc { max-width: 40ch; color: var(--bc-on-dark-mut); line-height: 1.9; font-size: 0.92rem; }
 .footMeta { color: var(--bc-on-dark-mut); font-size: 0.9rem; line-height: 1.9; letter-spacing: 0.03em; }
-.footSocial { display: flex; gap: 0.9rem; }
-.footSocial a {
-  position: relative;
-  display: grid; place-items: center;
-  width: 46px; height: 46px;
-  border-radius: var(--bc-radius-circle);
-  isolation: isolate;
-  background: radial-gradient(circle at 50% 30%, rgba(91, 155, 230, 0.24), rgba(16, 20, 26, 0.34) 70%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 8px 20px rgba(0, 0, 0, 0.4);
-}
-.footSocial a::before {
-  content: ""; position: absolute; inset: 0; border-radius: 50%; padding: 1.4px;
-  background: linear-gradient(145deg, rgba(214, 231, 255, 0.9), rgba(91, 155, 230, 0.5) 45%, rgba(130, 150, 180, 0.12) 70%, rgba(200, 222, 255, 0.6));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
-}
-.footSocial svg { width: 19px; height: 19px; fill: var(--bc-on-dark); filter: drop-shadow(0 0 5px rgba(120, 180, 255, 0.45)); }
+.footSocial { display: flex; gap: 1rem; }
+.footSocial a { display: grid; place-items: center; }
+.footSocial svg { width: 26px; height: 26px; fill: var(--bc-on-dark); }
 .footLinks { display: flex; gap: 1.2rem; align-items: center; font-size: 0.84rem; color: var(--bc-on-dark-mut); letter-spacing: 0.08em; }
 .footLinks span { opacity: 0.4; }
 .copyright { font-size: 0.78rem; color: var(--bc-on-dark-mut); letter-spacing: 0.1em; }
 .toTop {
   position: absolute; right: var(--bc-gutter); bottom: clamp(2rem, 6vw, 3.5rem);
   display: grid; place-items: center; gap: 2px;
-  width: 78px; height: 78px;
-  border-radius: var(--bc-radius-circle);
-  isolation: isolate;
-  background: radial-gradient(circle at 50% 28%, rgba(91, 155, 230, 0.26), rgba(16, 20, 26, 0.36) 70%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 12px 28px rgba(0, 0, 0, 0.44);
+  width: 56px; height: 56px;
+  border: none; background: transparent;
   color: var(--bc-on-dark); cursor: pointer; font-size: 0.68rem; letter-spacing: 0.14em;
 }
-.toTop::before {
-  content: ""; position: absolute; inset: 0; border-radius: 50%; padding: 1.5px;
-  background: linear-gradient(145deg, rgba(214, 231, 255, 0.92), rgba(91, 155, 230, 0.52) 44%, rgba(130, 150, 180, 0.14) 70%, rgba(200, 222, 255, 0.65));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
-}
-.toTop svg { width: 16px; height: 16px; stroke: var(--bc-on-dark); fill: none; stroke-width: 2; filter: drop-shadow(0 0 5px rgba(120, 180, 255, 0.5)); }
+.toTop svg { width: 22px; height: 22px; stroke: var(--bc-on-dark); fill: none; stroke-width: 2; }
 
 /* =====================  RESPONSIVE  ===================== */
 @media (max-width: 860px) {
