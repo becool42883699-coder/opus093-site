@@ -103,12 +103,12 @@
 .heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
 
 /* --- ロゴビルド・イントロ(プロトタイプv2「精密組立版」): 1200x900ステージ --- */
-.logoZone { position: relative; width: min(92vw, 640px); }
+.logoZone { position: relative; width: min(96vw, 820px); }
 /* スマホはロゴ本体を大きく見せる。width指定だとグリッドのトラックが広がり
    中央からずれるため、レイアウトに影響しないtransformで拡大する
    (.hero が overflow:hidden なので、はみ出しは横スクロールにならない) */
 @media (max-width: 600px) {
-  .buildSvg { transform: scale(1.16); transform-origin: 50% 50%; }
+  .buildSvg { transform: scale(1.3); transform-origin: 50% 50%; }
 }
 .buildSvg { display: block; width: 100%; height: auto; overflow: visible; }
 /* パーセント指定transform(マスクrect)を要素自身のbbox基準にする。
