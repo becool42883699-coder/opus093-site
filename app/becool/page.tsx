@@ -1,4 +1,5 @@
 import styles from "./becool.module.css";
+import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
 import { MobileMenu, RevealController, ToTopButton } from "./BecoolClient";
 import BecoolHeroIntro from "./BecoolHeroIntro";
 import { CUBE_VIEWBOX, CUBE_STOPS, CUBE_D, CUBE_TOP, CUBE_LEFT, CUBE_RIGHT } from "./cubeLogo";
@@ -12,6 +13,7 @@ const SITE_URL = "https://garage-becool.co.jp/";
 /* ---- nav ------------------------------------------------------------ */
 const NAV = [
   { href: "#about", label: "ABOUT" },
+  { href: "#showroom", label: "SHOWROOM" },
   { href: "#service", label: "SERVICE" },
   { href: "#car", label: "CAR" },
   { href: "#shop", label: "SHOP" },
@@ -106,6 +108,35 @@ const SHOPS = [
   },
 ];
 
+/* ---- ローカルSEO: 2店舗ぶんの UsedCarDealer 構造化データ ---------------- */
+const becoolLd = {
+  "@context": "https://schema.org",
+  "@graph": SHOPS.map((s, i) => ({
+    "@type": ["AutoDealer", "AutoRepair"],
+    "@id": `${ROOT_URL}/becool/#store-${i + 1}`,
+    name: `GARAGE BeCool ${s.name}`,
+    url: `${ROOT_URL}/becool/`,
+    telephone: "+81-93-967-2345",
+    image: `${ROOT_URL}/becool/img/store-exterior.webp`,
+    logo: `${ROOT_URL}/becool/img/symbol.svg`,
+    foundingDate: "1999",
+    parentOrganization: { "@type": "Organization", name: "有限会社ビークール" },
+    address: {
+      "@type": "PostalAddress",
+      postalCode: s.zip.replace("〒", ""),
+      addressRegion: "福岡県",
+      addressLocality: "北九州市小倉南区",
+      streetAddress: s.addr.replace("福岡県北九州市小倉南区", ""),
+      addressCountry: "JP",
+    },
+    openingHours: "Mo,Tu,We,Th,Fr,Sa,Su 10:00-20:00",
+    priceRange: "¥¥",
+    sameAs: [SITE_URL, LINE_URL],
+    description:
+      "福岡県北九州市小倉南区の地域密着型カーショップ。中古車販売・買取・車検・整備・メンテナンス・ドレスアップに対応。",
+  })),
+};
+
 /* ---- 旧ロゴ(GBキューブ)。form-design.jp のイントロを同じ構造で再現:
        [組立] 各面が「移動+マスク」の複合で経路に沿って敷かれて現れる
               (屋根左→左面Gを下る→右面Bを上る→屋根右で閉じる)。
@@ -189,6 +220,7 @@ function Wordmark({ className }: { className?: string }) {
 export default function BecoolPage() {
   return (
     <div className={`becool ${styles.root}`}>
+      <JsonLd data={becoolLd} />
       {/* ---------- HEADER ---------- */}
       <header className={styles.header}>
         <a className={styles.brand} href="#top" aria-label="GARAGE BeCool トップへ">
