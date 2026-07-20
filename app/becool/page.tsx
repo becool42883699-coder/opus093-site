@@ -215,17 +215,6 @@ function HeroBuildStage() {
           x1={SCRIPT_GRAD.x1} y1={SCRIPT_GRAD.y1} x2={SCRIPT_GRAD.x2} y2={SCRIPT_GRAD.y2}>
           {SCRIPT_GRAD.stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c} />)}
         </linearGradient>
-        <linearGradient id="bcGloss" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#fff" stopOpacity="0" />
-          <stop offset="50%" stopColor="#fff" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
-        {/* キューブ面パネル露出用クリップ(3枚スラット・キューブ座標系) */}
-        <clipPath id="bcSlats">
-          <rect className="bc-slat" x="510" y="170" width="132" height="545" />
-          <rect className="bc-slat" x="642" y="170" width="132" height="545" />
-          <rect className="bc-slat" x="774" y="170" width="165" height="545" />
-        </clipPath>
         {/* 筆記体を左から露出する帯マスク(再生中のみCSSが reveal を動かす) */}
         <mask id="bcScriptMask">
           <rect className="bc-script-reveal" x="-20" y="-20" width="1240" height="940" fill="#fff" />
@@ -245,17 +234,18 @@ function HeroBuildStage() {
         <line className="bc-guidetick" x1="600" y1="451" x2="600" y2="471" />
       </g>
 
-      {/* キューブロゴ(六角フレーム線描画→面パネルロック→ワードマーク→分解)。
+      {/* キューブロゴ(設計図式BLUEPRINT BUILD): 六角フレーム線描画 → GBマークを
+          線画で描く → 面が塗りで埋まり立体化 → ワードマーク組立 → 分解。
           最終筆記体ロゴと同心(ロックアップ中心 y≈475)になるよう配置 */}
       <g className="bc-cube" transform="translate(345,280) scale(0.352)">
         <path className="bc-hexframe" pathLength={1} d={HEXFRAME_D} />
-        <g clipPath="url(#bcSlats)">
-          <path className="bc-p-mark" d={CUBE_MARK_D} fill="url(#bcG-mark)" fillRule="evenodd" />
-        </g>
+        {/* 02 LINEWORK: GBマークの輪郭を線画で引く */}
+        <path className="bc-mark-line" pathLength={1} d={CUBE_MARK_D} fillRule="evenodd" />
+        {/* 03 FORM & DEPTH: 面が塗りで埋まって立体になる */}
+        <path className="bc-p-mark" d={CUBE_MARK_D} fill="url(#bcG-mark)" fillRule="evenodd" />
         <path className="bc-p-garage" d={CUBE_GARAGE_D} fill="url(#bcG-garage)" fillRule="evenodd" />
         <path className="bc-p-becool" d={CUBE_BECOOL_D} fill="url(#bcG-blue)" fillRule="evenodd" />
         <path className="bc-p-since" d={CUBE_SINCE_D} fill="url(#bcG-since)" fillRule="evenodd" />
-        <rect className="bc-cube-gloss" x="480" y="150" width="150" height="800" fill="url(#bcGloss)" />
       </g>
 
       {/* 分解断片(キューブの位置から右へ飛散。キューブと同じだけ下げる) */}
@@ -273,9 +263,6 @@ function HeroBuildStage() {
           <path d={SCRIPT_D} fill="url(#bcG-script)" fillRule="evenodd" clipRule="evenodd" />
         </g>
       </g>
-
-      {/* 完成後の最終光沢 */}
-      <rect className="bc-final-gloss" x="380" y="180" width="120" height="560" fill="url(#bcGloss)" />
     </svg>
   );
 }
@@ -305,7 +292,7 @@ export default function BecoolPage() {
           </div>
           {/* JS無効時は演出をスキップし、最終ロゴ(筆記体)を表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .bc-guides,[data-hero-stage] .bc-hexframe,[data-hero-stage] .bc-cube,[data-hero-stage] .bc-frag,[data-hero-stage] .bc-cube-gloss,[data-hero-stage] .bc-final-gloss{display:none!important}[data-hero-stage] .bc-script-reveal{transform:none!important;animation:none!important}[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important;animation:none!important}`}</style>
+            <style>{`[data-hero-stage] .bc-guides,[data-hero-stage] .bc-hexframe,[data-hero-stage] .bc-cube,[data-hero-stage] .bc-frag{display:none!important}[data-hero-stage] .bc-script-reveal{transform:none!important;animation:none!important}[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important;animation:none!important}`}</style>
           </noscript>
           <BecoolLogoIntro />
           <span className={styles.scrollCue} aria-hidden="true" />
