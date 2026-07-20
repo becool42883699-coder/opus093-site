@@ -200,7 +200,6 @@ const becoolLd = {
    キューブは translate(345,120) scale(0.352)、筆記体は translate(240,155)
    scale(0.70) でステージ(1200x900)に配置(プロトタイプ座標系そのまま)。 --- */
 const HEXFRAME_D = "M 724 157 L 928 300 L 928 584 L 724 727 L 520 584 L 520 300 Z";
-const CARLINE_D = "M 200 470 C 320 330, 520 268, 700 276 C 850 282, 960 340, 1010 420";
 
 function HeroBuildStage() {
   return (
@@ -233,10 +232,11 @@ function HeroBuildStage() {
         </mask>
       </defs>
 
-      {/* ガイド線・構築マーク(ステージ座標系) */}
-      <g className="bc-guides" aria-hidden="true">
-        <line className="bc-guideline" x1="600" y1="60" x2="600" y2="840" />
-        <line className="bc-guideline" x1="120" y1="330" x2="1080" y2="330" />
+      {/* ガイド線・構築マーク(ステージ座標系)。キューブと同じだけ下げ、
+          マーク中心(600,435)に同心で重ねる */}
+      <g className="bc-guides" transform="translate(0,160)" aria-hidden="true">
+        <line className="bc-guideline" x1="600" y1="-60" x2="600" y2="720" />
+        <line className="bc-guideline" x1="120" y1="275" x2="1080" y2="275" />
         <circle className="bc-guidemark" cx="600" cy="275" r="188" />
         <circle className="bc-guidemark" cx="600" cy="275" r="122" />
         <line className="bc-guidetick" x1="404" y1="275" x2="424" y2="275" />
@@ -245,8 +245,9 @@ function HeroBuildStage() {
         <line className="bc-guidetick" x1="600" y1="451" x2="600" y2="471" />
       </g>
 
-      {/* キューブロゴ(六角フレーム線描画→面パネルロック→ワードマーク→分解) */}
-      <g className="bc-cube" transform="translate(345,120) scale(0.352)">
+      {/* キューブロゴ(六角フレーム線描画→面パネルロック→ワードマーク→分解)。
+          最終筆記体ロゴと同心(ロックアップ中心 y≈475)になるよう配置 */}
+      <g className="bc-cube" transform="translate(345,280) scale(0.352)">
         <path className="bc-hexframe" pathLength={1} d={HEXFRAME_D} />
         <g clipPath="url(#bcSlats)">
           <path className="bc-p-mark" d={CUBE_MARK_D} fill="url(#bcG-mark)" fillRule="evenodd" />
@@ -257,8 +258,8 @@ function HeroBuildStage() {
         <rect className="bc-cube-gloss" x="480" y="150" width="150" height="800" fill="url(#bcGloss)" />
       </g>
 
-      {/* 分解断片(右へ飛散) */}
-      <g aria-hidden="true">
+      {/* 分解断片(キューブの位置から右へ飛散。キューブと同じだけ下げる) */}
+      <g transform="translate(0,160)" aria-hidden="true">
         <path className="bc-frag" d="M 470 300 h 60" />
         <path className="bc-frag" d="M 520 360 h 90" />
         <path className="bc-frag" d="M 450 420 h 45" />
@@ -266,15 +267,7 @@ function HeroBuildStage() {
         <path className="bc-frag" d="M 610 400 h 55" />
       </g>
 
-      {/* 再構築A: 車体ライン + GARAGEボックス(線描画) */}
-      <g className="bc-rebuild-strokes" aria-hidden="true">
-        <line className="bc-rebuild-guide" x1="120" y1="300" x2="1080" y2="300" />
-        <line className="bc-rebuild-guide" x1="120" y1="560" x2="1080" y2="560" />
-        <path className="bc-carline" pathLength={1} d={CARLINE_D} />
-        <path className="bc-garagebox" pathLength={1} d="M 620 320 h 250 v 74 h -250 z" />
-      </g>
-
-      {/* 再構築B: 筆記体 Be Cool(提供SVGのパスを100%表示・マスク露出) */}
+      {/* 再構築: 筆記体 Be Cool(提供SVGのパスを100%表示・マスク露出) */}
       <g mask="url(#bcScriptMask)">
         <g transform="translate(240,155) scale(0.70)">
           <path d={SCRIPT_D} fill="url(#bcG-script)" fillRule="evenodd" clipRule="evenodd" />
@@ -312,7 +305,7 @@ export default function BecoolPage() {
           </div>
           {/* JS無効時は演出をスキップし、最終ロゴ(筆記体)を表示する */}
           <noscript>
-            <style>{`[data-hero-stage] .bc-guides,[data-hero-stage] .bc-hexframe,[data-hero-stage] .bc-cube,[data-hero-stage] .bc-frag,[data-hero-stage] .bc-rebuild-strokes,[data-hero-stage] .bc-cube-gloss,[data-hero-stage] .bc-final-gloss{display:none!important}[data-hero-stage] .bc-script-reveal{transform:none!important;animation:none!important}[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important;animation:none!important}`}</style>
+            <style>{`[data-hero-stage] .bc-guides,[data-hero-stage] .bc-hexframe,[data-hero-stage] .bc-cube,[data-hero-stage] .bc-frag,[data-hero-stage] .bc-cube-gloss,[data-hero-stage] .bc-final-gloss{display:none!important}[data-hero-stage] .bc-script-reveal{transform:none!important;animation:none!important}[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important;animation:none!important}`}</style>
           </noscript>
           <BecoolLogoIntro />
           <span className={styles.scrollCue} aria-hidden="true" />
