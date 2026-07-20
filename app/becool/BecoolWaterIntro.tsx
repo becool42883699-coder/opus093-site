@@ -100,16 +100,16 @@ export default function BecoolWaterIntro() {
         timeline.to(q(".wl-shadow"), { autoAlpha: 0.28, duration: 0.4, ease: "power1.out" }, 1.7);
         timeline.to(q(".wl-mouth"), { opacity: 0.3, duration: 0.4 }, 1.7);
 
-        /* ===== 04 線へ分解 (2.1-) — 水面を消しつつ塗りをフェード。
-                 エッジ線(ストローク片)は消さずに流し続け、次のロゴ露出まで運ぶ ===== */
+        /* ===== 04 線へ分解 (2.1-3.4) — 水面を消しつつ塗りをフェード。
+                 エッジ線(ストローク片)は右へ流れながら消えていく ===== */
         timeline.to(q(".wl-water"), { autoAlpha: 0, duration: 0.6, ease: "power1.inOut" }, 2.1);
         timeline.to(q(".wl-shadow"), { autoAlpha: 0, duration: 0.45 }, 2.1);
         timeline.to(q(".wl-frag"), { autoAlpha: 0.9, duration: 0.3 }, 2.1);
         timeline.to(q(".wl-mark, .wl-word-g, .wl-word-b, .wl-since"),
           { autoAlpha: 0, duration: 0.6, ease: "power1.in", stagger: 0.08 }, 2.25);
-        /* 線の流れは分解〜筆記体露出まで一続き(同じ左→右方向) */
-        timeline.to(q(".wl-frag-p"), { strokeDashoffset: -0.55, duration: 2.5, ease: "power1.inOut" }, 2.1);
-        timeline.to(q(".wl-frag"), { x: 90, duration: 2.4, ease: "sine.inOut" }, 2.2);
+        timeline.to(q(".wl-frag-p"), { strokeDashoffset: -0.4, duration: 1.3, ease: "power1.inOut" }, 2.1);
+        timeline.to(q(".wl-frag"), { x: 110, duration: 1.3, ease: "sine.in" }, 2.2);
+        timeline.to(q(".wl-frag"), { autoAlpha: 0, duration: 0.7, ease: "power1.in" }, 2.7);
 
         /* ===== 05 再構築A (2.95-3.9) — 流れる線の中に車体シルエットと
                  GARAGEボックスが線描画で立ち上がる ===== */
@@ -119,14 +119,11 @@ export default function BecoolWaterIntro() {
         timeline.to(q(".wl-guide-base"), { strokeDashoffset: 0, duration: 0.5 }, 3.4);
         timeline.to(q(".wl-cobalt"), { strokeDashoffset: 0, duration: 0.85, ease: "power2.inOut" }, 3.1);
 
-        /* ===== 06 再構築B (3.9-5.0) — 線の流れと同じ左→右で筆記体をマスク露出。
-                 露出が進むほど分解線が筆記体に「置き換わって」いき、
-                 露出完了と同時に残った線が吸い込まれて消える ===== */
+        /* ===== 06 再構築B (3.9-5.0) — 筆記体を左→右のマスクで露出 ===== */
         timeline.set(q(".wl-final-wrap"), { attr: { mask: "url(#wlReveal)" } }, 3.9);
         timeline.set(q(".wl-reveal"), { scaleX: 0, svgOrigin: "330 430" }, 3.9);
         timeline.set(q(".wl-final"), { autoAlpha: 1 }, 3.9);
         timeline.to(q(".wl-reveal"), { scaleX: 1, duration: 1.05, ease: "power2.inOut" }, 3.92);
-        timeline.to(q(".wl-frag"), { autoAlpha: 0, x: 130, duration: 0.55, ease: "power1.in" }, 4.5);
 
         /* ===== 07 完成・停止 (5.0-5.6) — 補助線を消しマスクを外して静的描画へ ===== */
         timeline.set(q(".wl-final-wrap"), { attr: { mask: "none" } }, 5.05);

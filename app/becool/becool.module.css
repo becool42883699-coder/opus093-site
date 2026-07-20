@@ -104,6 +104,12 @@
 
 /* --- 水面イントロ(仕様書v1.1): 16:9ステージにロゴ・波紋・補助線を内包 --- */
 .logoZone { position: relative; width: min(92vw, 640px); }
+/* スマホはロゴ本体を大きく見せる。width指定だとグリッドのトラックが広がり
+   中央からずれるため、レイアウトに影響しないtransformで拡大する
+   (.hero が overflow:hidden なので、はみ出しは横スクロールにならない) */
+@media (max-width: 600px) {
+  .waterSvg { transform: scale(1.22); transform-origin: 50% 50%; }
+}
 .waterSvg { display: block; width: 100%; height: auto; overflow: visible; }
 /* 再生中はfilterを付けない(毎フレームの再計算を避ける)。完成後のみ影で写真から分離 */
 .heroInner[data-intro="done"] .waterSvg,
@@ -136,6 +142,10 @@
 /* ワードマーク(ロゴ完成後に横方向のマスクが開いて現れる)。
    16:9ステージの下余白ぶんを負マージンで詰めてロゴに寄せる */
 .heroWordmark { display: flex; gap: 0.42em; margin-top: clamp(-5.4rem, -7vw, -1.6rem); font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: clamp(1.7rem, 4.6vw, 2.5rem); letter-spacing: 0.05em; color: var(--bc-on-dark); text-shadow: 0 2px 16px rgba(0, 0, 0, 0.55); }
+/* スマホはロゴ拡大で下方向にも伸びるぶん、逆にワードマークを少し離す */
+@media (max-width: 600px) {
+  .heroWordmark { margin-top: clamp(-5.4rem, -3.5vw, -0.4rem); }
+}
 .wmAccent { color: var(--bc-blue-light); }
 .tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); padding-left: var(--bc-ls-tagline); }
 
