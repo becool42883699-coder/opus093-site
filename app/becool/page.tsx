@@ -202,7 +202,7 @@ export default function BecoolPage() {
         {/* ---------- HERO ---------- */}
         <section className={styles.hero} aria-label="ヒーロー">
           <div className={`${styles.heroBg} ${styles.halftone}`}>
-            <img src={asset("/becool/img/photo-porsche.webp")} alt="GARAGE BeCool 店頭に並ぶ白いポルシェ 718 ケイマン" />
+            <img src={asset("/becool/img/hero-exterior.webp")} alt="GARAGE BeCool の店舗外観（雨上がりの夕暮れ）" />
           </div>
           <div className={styles.heroInner} data-hero-stage data-intro="play">
             <div className={`logo-zone ${styles.logoZone}`}>
