@@ -63,6 +63,14 @@ const SERVICES = [
   },
 ];
 
+/* ---- showroom gallery (real interior photos) ----------------------- */
+const GALLERY = [
+  { src: "/becool/img/interior-01.webp", shape: "tall", alt: "GARAGE BeCool 店内エントランス。観葉植物とスズキ各車カタログ" },
+  { src: "/becool/img/interior-02.webp", shape: "wide", alt: "GARAGE BeCool 店内の商談スペース。大理石調テーブルと大きな窓" },
+  { src: "/becool/img/interior-03.webp", shape: "tall", alt: "GARAGE BeCool のくつろげる待合ラウンジ" },
+  { src: "/becool/img/interior-04.webp", shape: "wide", alt: "GARAGE BeCool 店内ラウンジの全景。ソファと受付カウンター" },
+];
+
 /* ---- pick-up cars (real photos) ------------------------------------- */
 const CARS = [
   { src: asset("/becool/img/photo-porsche.webp"), name: "PORSCHE 718 CAYMAN", tag: "SPORTS", price: "¥6,980,000", alt: "GARAGE BeCool 店頭の白いポルシェ 718 ケイマン" },
@@ -259,6 +267,25 @@ export default function BecoolPage() {
               <img src={asset("/becool/img/about-detail.webp")} alt="GARAGE BeCool 店頭のポルシェ 718 ケイマン（ブルーグレーディング）" loading="lazy" />
             </figure>
           </div>
+        </section>
+
+        {/* ---------- SHOWROOM (店内ギャラリー) ---------- */}
+        <section id="showroom" data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="showroom-h">
+          <div className={styles.sectionHead}>
+            <h2 id="showroom-h">SHOWROOM</h2>
+            <span>店内のご案内</span>
+          </div>
+          <div className={styles.galleryGrid}>
+            {GALLERY.map((g) => (
+              <figure
+                key={g.src}
+                className={`${styles.galItem} ${styles.halftone} ${g.shape === "tall" ? styles.galTall : styles.galWide}`}
+              >
+                <img src={asset(g.src)} alt={g.alt} loading="lazy" />
+              </figure>
+            ))}
+          </div>
+          <p className={styles.galleryNote}>ゆったりくつろげる店内で、車選びからアフターのご相談まで。お気軽にお立ち寄りください。</p>
         </section>
 
         {/* ---------- SERVICES ---------- */}
