@@ -67,11 +67,7 @@ const SERVICES = [
 
 /* ---- showroom gallery (real interior photos) ----------------------- */
 const GALLERY = [
-  { src: "/becool/img/interior-01.webp", shape: "tall", alt: "GARAGE BeCool 店内エントランス。観葉植物とスズキ各車カタログ" },
-  { src: "/becool/img/interior-02.webp", shape: "wide", alt: "GARAGE BeCool 店内の商談スペース。大理石調テーブルと大きな窓" },
   { src: "/becool/img/interior-03.webp", shape: "tall", alt: "GARAGE BeCool のくつろげる待合ラウンジ" },
-  { src: "/becool/img/interior-04.webp", shape: "wide", alt: "GARAGE BeCool 店内ラウンジの全景。ソファと受付カウンター" },
-  { src: "/becool/img/interior-05.webp", shape: "wide", alt: "GARAGE BeCool 窓際の商談テーブル。夕方の光が差し込む店内" },
   { src: "/becool/img/interior-06.webp", shape: "tall", alt: "GARAGE BeCool 受付まわりのラウンジ。木目の天井と間接照明" },
   { src: "/becool/img/interior-07.webp", shape: "tall", alt: "GARAGE BeCool のテーブルにちょこんと座るオレンジのマスコット" },
 ];
