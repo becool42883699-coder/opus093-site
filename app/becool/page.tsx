@@ -221,9 +221,9 @@ function HeroBuildStage() {
         </mask>
       </defs>
 
-      {/* ガイド線・構築マーク(ステージ座標系)。拡大したキューブのマーク中心
-          (≈599,418)に、同じ倍率(×1.42)で同心に重ねる */}
-      <g className="bc-guides" transform="translate(599,418) scale(1.42) translate(-600,-275)" aria-hidden="true">
+      {/* ガイド線・十字線(ステージ座標系)。マーク中心(≈599,418)に同心で置くが、
+          キューブは拡大してもガイドは控えめな元サイズのまま(=後ろの線は小さく) */}
+      <g className="bc-guides" transform="translate(-1,143)" aria-hidden="true">
         <line className="bc-guideline" x1="600" y1="-60" x2="600" y2="720" />
         <line className="bc-guideline" x1="120" y1="275" x2="1080" y2="275" />
         <circle className="bc-guidemark" cx="600" cy="275" r="188" />
