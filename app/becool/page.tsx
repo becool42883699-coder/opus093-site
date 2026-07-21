@@ -268,7 +268,50 @@ function HeroBuildStage() {
   );
 }
 
+/* ---- ヒーローのロゴ演出 切替(すぐ戻せるように) --------------------------
+   "sweep"     : クラウド状の光が流れてキューブが実体化する常時ループ演出(新)
+   "blueprint" : 設計図式ビルド→筆記体露出の1回再生演出(旧)
+   旧に戻すには下の値を "blueprint" にするだけ。 */
+const HERO_ANIM: "sweep" | "blueprint" = "sweep";
+
+/* ---- ロゴ演出(sweep): GBマークに雲状の光マスクが流れ続け、実体(塗り)が
+   現れては消える。下地に薄いワイヤーフレーム。SMILで常時ループ(1回再生ではない)。
+   マーク単体を表示し、下のワードマーク文字と縦に積んでロックアップを構成。 --- */
+function HeroSweepStage() {
+  const g = CUBE_GRADS.mark;
+  return (
+    <svg className={styles.sweepSvg} viewBox="480 170 470 560" role="img" aria-label="GARAGE BeCool ロゴ">
+      <defs>
+        <linearGradient id="swMark" gradientUnits="userSpaceOnUse" x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2}>
+          {g.stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c} />)}
+        </linearGradient>
+        {/* 流れる雲状ノイズ→高コントラストのアルファに変換して露出マスクに使う */}
+        <filter id="swNoise" x="-30%" y="-30%" width="160%" height="160%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.01 0.016" numOctaves={2} seed={7} result="n">
+            <animate attributeName="baseFrequency" dur="16s" values="0.01 0.016; 0.013 0.02; 0.01 0.016" repeatCount="indefinite" />
+          </feTurbulence>
+          <feOffset in="n" dx="0" dy="0" result="no">
+            <animate attributeName="dx" dur="13s" values="-60;60;-60" repeatCount="indefinite" />
+            <animate attributeName="dy" dur="10s" values="-45;45;-45" repeatCount="indefinite" />
+          </feOffset>
+          <feColorMatrix in="no" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 7 -3.4" />
+        </filter>
+        {/* 白面から雲(黒)が抜けて穴になる=塗りが雲状に現れる */}
+        <mask id="swHole">
+          <rect x="440" y="150" width="560" height="620" fill="#fff" />
+          <g filter="url(#swNoise)"><rect x="440" y="150" width="560" height="620" fill="#fff" /></g>
+        </mask>
+      </defs>
+      <g mask="url(#swHole)">
+        <path d={CUBE_MARK_D} fill="url(#swMark)" fillRule="evenodd" />
+      </g>
+      <path className="sw-wire" d={CUBE_MARK_D} fillRule="evenodd" />
+    </svg>
+  );
+}
+
 export default function BecoolPage() {
+  const sweep = HERO_ANIM === "sweep";
   return (
     <div className={`becool ${styles.root}`}>
       <JsonLd data={becoolLd} />
@@ -277,13 +320,15 @@ export default function BecoolPage() {
       <main id="top">
         {/* ---------- HERO ---------- */}
         <section className={styles.hero} aria-label="ヒーロー">
-          <div className={`${styles.heroBg} ${styles.halftone}`}>
+          <div className={styles.heroBg}>
             <img src={asset("/becool/img/hero-exterior.webp")} alt="GARAGE BeCool の店舗外観（雨上がりの夕暮れ）" />
           </div>
-          <div className={styles.heroInner} data-hero-stage data-intro="play">
-            <div className={`logo-zone ${styles.logoZone}`}>
+          {/* sweepは常時ループ演出なので data-intro="done"(ワードマーク即表示)。
+              blueprintは1回再生なので "play"(BecoolLogoIntroが再生を制御) */}
+          <div className={`${styles.heroInner} ${sweep ? styles.heroInnerSweep : ""}`} data-hero-stage data-intro={sweep ? "done" : "play"}>
+            <div className={`logo-zone ${styles.logoZone} ${sweep ? styles.logoZoneSweep : ""}`}>
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
-              <HeroBuildStage />
+              {sweep ? <HeroSweepStage /> : <HeroBuildStage />}
             </div>
             {/* ワードマーク: ロゴ完成後、横方向のマスクが左から右へ開いて現れる */}
             <p className={`${styles.heroWordmark} hero-wordmark`}>
@@ -291,11 +336,15 @@ export default function BecoolPage() {
             </p>
             <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
-          {/* JS無効時は演出をスキップし、最終ロゴ(筆記体)を表示する */}
-          <noscript>
-            <style>{`[data-hero-stage] .bc-guides,[data-hero-stage] .bc-hexframe,[data-hero-stage] .bc-cube,[data-hero-stage] .bc-frag{display:none!important}[data-hero-stage] .bc-script-reveal{transform:none!important;animation:none!important}[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important;animation:none!important}`}</style>
-          </noscript>
-          <BecoolLogoIntro />
+          {/* blueprint(1回再生)時のみ: JS無効フォールバックと再生ゲート */}
+          {!sweep && (
+            <>
+              <noscript>
+                <style>{`[data-hero-stage] .bc-guides,[data-hero-stage] .bc-hexframe,[data-hero-stage] .bc-cube,[data-hero-stage] .bc-frag{display:none!important}[data-hero-stage] .bc-script-reveal{transform:none!important;animation:none!important}[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important;animation:none!important}`}</style>
+              </noscript>
+              <BecoolLogoIntro />
+            </>
+          )}
           <span className={styles.scrollCue} aria-hidden="true" />
         </section>
 
