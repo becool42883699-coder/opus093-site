@@ -221,9 +221,9 @@ function HeroBuildStage() {
         </mask>
       </defs>
 
-      {/* ガイド線・構築マーク(ステージ座標系)。キューブと同じだけ下げ、
-          マーク中心(600,435)に同心で重ねる */}
-      <g className="bc-guides" transform="translate(0,160)" aria-hidden="true">
+      {/* ガイド線・構築マーク(ステージ座標系)。拡大したキューブのマーク中心
+          (≈599,418)に、同じ倍率(×1.42)で同心に重ねる */}
+      <g className="bc-guides" transform="translate(599,418) scale(1.42) translate(-600,-275)" aria-hidden="true">
         <line className="bc-guideline" x1="600" y1="-60" x2="600" y2="720" />
         <line className="bc-guideline" x1="120" y1="275" x2="1080" y2="275" />
         <circle className="bc-guidemark" cx="600" cy="275" r="188" />
@@ -236,8 +236,9 @@ function HeroBuildStage() {
 
       {/* キューブロゴ(設計図式BLUEPRINT BUILD): 六角フレーム線描画 → GBマークを
           線画で描く → 面が塗りで埋まり立体化 → ワードマーク組立 → 分解。
-          最終筆記体ロゴと同心(ロックアップ中心 y≈475)になるよう配置 */}
-      <g className="bc-cube" transform="translate(345,280) scale(0.352)">
+          最終筆記体ロゴと同心(ロックアップ中心 ≈606,475)になるよう配置。
+          キューブを拡大(scale 0.352→0.5)しても中心が動かないよう translate 再計算 */}
+      <g className="bc-cube" transform="translate(237,198) scale(0.5)">
         <path className="bc-hexframe" pathLength={1} d={HEXFRAME_D} />
         {/* 02 LINEWORK: GBマークの輪郭を線画で引く */}
         <path className="bc-mark-line" pathLength={1} d={CUBE_MARK_D} fillRule="evenodd" />
@@ -248,8 +249,8 @@ function HeroBuildStage() {
         <path className="bc-p-since" d={CUBE_SINCE_D} fill="url(#bcG-since)" fillRule="evenodd" />
       </g>
 
-      {/* 分解断片(キューブの位置から右へ飛散。キューブと同じだけ下げる) */}
-      <g transform="translate(0,160)" aria-hidden="true">
+      {/* 分解断片(拡大したキューブの位置から右へ飛散) */}
+      <g transform="translate(599,418) scale(1.42) translate(-557,-340)" aria-hidden="true">
         <path className="bc-frag" d="M 470 300 h 60" />
         <path className="bc-frag" d="M 520 360 h 90" />
         <path className="bc-frag" d="M 450 420 h 45" />
