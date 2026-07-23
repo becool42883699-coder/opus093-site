@@ -148,10 +148,10 @@ export default function HeroParticleLogo() {
     setStartParticles(false);
   }, [active]);
 
-  // 元ロゴ(静止SVG)を約1.7秒長く見せてから粒子アニメを開始
+  // 元ロゴ(静止SVG)を約0.9秒見せてから粒子アニメを開始
   useEffect(() => {
     if (!active) return;
-    const t = setTimeout(() => setStartParticles(true), 1700);
+    const t = setTimeout(() => setStartParticles(true), 900);
     return () => clearTimeout(t);
   }, [active]);
 
