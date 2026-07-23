@@ -146,10 +146,10 @@ export default function HeroParticleLogo() {
     setFormed(false);
   }, [active]);
 
-  // 形成完了: 読込完了(=描画準備完了)から約2.9s(ゆっくり集合に合わせる)
+  // 形成完了: 読込完了(=描画準備完了)から約5s(ゆっくり集合に合わせる)
   useEffect(() => {
     if (!loaded) return;
-    const t = setTimeout(() => setFormed(true), 2900);
+    const t = setTimeout(() => setFormed(true), 5000);
     return () => clearTimeout(t);
   }, [loaded]);
 
@@ -190,10 +190,10 @@ export default function HeroParticleLogo() {
           radius={mobile ? 60 : 110}
           strength={mobile ? 0.0 : 1.0}
           swirl={0.6}
-          spring={0.42}
-          damping={0.3}
+          spring={0.22}
+          damping={0.32}
           intro
-          introSpread={1.95}
+          introSpread={2.15}
           onLoad={() => setLoaded(true)}
           onError={() => setCount(0)}
         />
