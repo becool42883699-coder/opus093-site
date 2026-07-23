@@ -3,6 +3,7 @@ import styles from "./becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
 import { RevealController } from "./BecoolClient";
 import BecoolLogoIntro from "./BecoolLogoIntro";
+import HeroParticleLogo from "./HeroParticleLogo";
 import { CUBE_MARK_D, CUBE_GARAGE_D, CUBE_BECOOL_D, CUBE_SINCE_D, CUBE_GRADS, SCRIPT_D, SCRIPT_GRAD } from "./brandLogo";
 import { asset, LINE_URL, SITE_URL, BecoolHeader, BecoolFooter } from "./Chrome";
 
@@ -269,10 +270,12 @@ function HeroBuildStage() {
 }
 
 /* ---- ヒーローのロゴ演出 切替(すぐ戻せるように) --------------------------
-   "sweep"     : クラウド状の光が流れてキューブが実体化する常時ループ演出(新)
-   "blueprint" : 設計図式ビルド→筆記体露出の1回再生演出(旧)
-   旧に戻すには下の値を "blueprint" にするだけ。 */
-const HERO_ANIM: "sweep" | "blueprint" = "blueprint";
+   "particle"  : Canvas UI「Particle Object」(Three.js/WebGL)。散布した粒子が
+                 中央へ集合しGBキューブを形成→ホバーで散り離すと復帰(新)
+   "sweep"     : クラウド状の光が流れてキューブが実体化する常時ループ演出
+   "blueprint" : 設計図式ビルド→筆記体露出の1回再生演出
+   値を変えるだけで切替(3演出のコードはすべて残置)。 */
+const HERO_ANIM: "particle" | "sweep" | "blueprint" = "particle";
 
 /* ---- ロゴ演出(sweep): GBマークに雲状の光マスクが流れ続け、実体(塗り)が
    現れては消える。下地に薄いワイヤーフレーム。SMILで常時ループ(1回再生ではない)。
@@ -311,7 +314,9 @@ function HeroSweepStage() {
 }
 
 export default function BecoolPage() {
+  const particle = HERO_ANIM === "particle";
   const sweep = HERO_ANIM === "sweep";
+  const compact = particle || sweep; // マーク単体表示: ワードマークの間隔を詰める
   return (
     <div className={`becool ${styles.root}`}>
       <JsonLd data={becoolLd} />
@@ -323,12 +328,12 @@ export default function BecoolPage() {
           <div className={styles.heroBg}>
             <img src={asset("/becool/img/hero-exterior.webp")} alt="GARAGE BeCool の店舗外観（雨上がりの夕暮れ）" />
           </div>
-          {/* sweepは常時ループ演出なので data-intro="done"(ワードマーク即表示)。
+          {/* particle/sweep は常時演出なので data-intro="done"(ワードマーク即表示)。
               blueprintは1回再生なので "play"(BecoolLogoIntroが再生を制御) */}
-          <div className={`${styles.heroInner} ${sweep ? styles.heroInnerSweep : ""}`} data-hero-stage data-intro={sweep ? "done" : "play"}>
-            <div className={`logo-zone ${styles.logoZone} ${sweep ? styles.logoZoneSweep : ""}`}>
+          <div className={`${styles.heroInner} ${compact ? styles.heroInnerSweep : ""}`} data-hero-stage data-intro={compact ? "done" : "play"}>
+            <div className={`logo-zone ${styles.logoZone} ${particle ? styles.logoZoneParticle : sweep ? styles.logoZoneSweep : ""}`}>
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
-              {sweep ? <HeroSweepStage /> : <HeroBuildStage />}
+              {particle ? <HeroParticleLogo /> : sweep ? <HeroSweepStage /> : <HeroBuildStage />}
             </div>
             {/* ワードマーク: ロゴ完成後、横方向のマスクが左から右へ開いて現れる */}
             <p className={`${styles.heroWordmark} hero-wordmark`}>
@@ -337,7 +342,7 @@ export default function BecoolPage() {
             <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
           </div>
           {/* blueprint(1回再生)時のみ: JS無効フォールバックと再生ゲート */}
-          {!sweep && (
+          {!compact && (
             <>
               <noscript>
                 <style>{`[data-hero-stage] .bc-guides,[data-hero-stage] .bc-hexframe,[data-hero-stage] .bc-cube,[data-hero-stage] .bc-frag{display:none!important}[data-hero-stage] .bc-script-reveal{transform:none!important;animation:none!important}[data-hero-stage] .hero-wordmark,[data-hero-stage] .hero-tagline{opacity:1!important;animation:none!important}`}</style>
