@@ -651,9 +651,9 @@ export function createParticleObject(
       const spread = Math.max(config.introSpread, 0);
       for (let i = 0; i < count; i++) {
         const ix = i * 3;
-        let ux = Math.random() * 2 - 1;
-        let uy = Math.random() * 2 - 1;
-        let uz = Math.random() * 2 - 1;
+        const ux = Math.random() * 2 - 1;
+        const uy = Math.random() * 2 - 1;
+        const uz = Math.random() * 2 - 1;
         const len = Math.hypot(ux, uy, uz) || 1;
         const r = spread * (0.55 + Math.random() * 0.7);
         startPositions[ix] += (ux / len) * r;

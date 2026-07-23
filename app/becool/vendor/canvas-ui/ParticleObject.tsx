@@ -40,13 +40,15 @@ export function ParticleObject({
     <div className={className} style={{ position: "relative", ...style }}>
       <canvas
         ref={canvasRef}
+        aria-hidden="true"
         style={{
           position: "absolute",
           inset: 0,
           width: "100%",
           height: "100%",
           display: "block",
-          touchAction: "none",
+          // [GARAGE BeCool 変更] 縦スクロールを妨げないよう none → pan-y
+          touchAction: "pan-y",
         }}
       />
     </div>

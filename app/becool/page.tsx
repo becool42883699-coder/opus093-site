@@ -1,7 +1,7 @@
 import Link from "next/link";
 import styles from "./becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
-import { RevealController } from "./BecoolClient";
+import { RevealController, ParallaxController } from "./BecoolClient";
 import BecoolLogoIntro from "./BecoolLogoIntro";
 import HeroParticleLogo from "./HeroParticleLogo";
 import { CUBE_MARK_D, CUBE_GARAGE_D, CUBE_BECOOL_D, CUBE_SINCE_D, CUBE_GRADS, SCRIPT_D, SCRIPT_GRAD } from "./brandLogo";
@@ -326,7 +326,7 @@ export default function BecoolPage() {
         {/* ---------- HERO ---------- */}
         <section className={styles.hero} aria-label="ヒーロー">
           <div className={styles.heroBg}>
-            <img src={asset("/becool/img/hero-exterior.webp")} alt="GARAGE BeCool の店舗外観（雨上がりの夕暮れ）" />
+            <img src={asset("/becool/img/hero-exterior.webp")} alt="GARAGE BeCool の店舗外観（雨上がりの夕暮れ）" data-parallax="0.05" />
           </div>
           {/* particle/sweep は常時演出なので data-intro="done"(ワードマーク即表示)。
               blueprintは1回再生なので "play"(BecoolLogoIntroが再生を制御) */}
@@ -357,7 +357,7 @@ export default function BecoolPage() {
         <div className={styles.belowHero}>
         {/* ---------- CONCEPT ---------- */}
         <section data-reveal className={`${styles.concept} ${styles.reveal}`} aria-label="コンセプト">
-          <div className={`${styles.conceptPhoto} ${styles.halftone}`}>
+          <div className={`${styles.conceptPhoto} ${styles.halftone}`} data-reveal-img="center">
             <img src={asset("/becool/img/store-exterior.webp")} alt="GARAGE BeCool の店舗外観（夕景）" />
           </div>
           <div className={styles.conceptBand}>
@@ -366,7 +366,7 @@ export default function BecoolPage() {
               もっと安心に、もっと楽しく。
             </p>
           </div>
-          <div className={`${styles.cardsPhoto} ${styles.halftone}`}>
+          <div className={`${styles.cardsPhoto} ${styles.halftone}`} data-reveal-img="vertical">
             <img src={asset("/becool/img/photo-alphard.webp")} alt="GARAGE BeCool でカスタムしたトヨタ アルファード" />
           </div>
         </section>
@@ -393,7 +393,7 @@ export default function BecoolPage() {
                 沼店・中吉田店の2店舗で、あなたのカーライフを「もっと安心に、もっと楽しく」お手伝いします。
               </p>
             </div>
-            <figure className={`${styles.aboutMedia} ${styles.halftone}`}>
+            <figure className={`${styles.aboutMedia} ${styles.halftone}`} data-reveal-img="horizontal">
               <img src={asset("/becool/img/about-detail.webp")} alt="GARAGE BeCool 店頭のポルシェ 718 ケイマン（ブルーグレーディング）" loading="lazy" />
             </figure>
           </div>
@@ -408,7 +408,7 @@ export default function BecoolPage() {
           {/* スクロールで上の写真は固定・下の写真がせり上がって重なる(スティッキー・スタック) */}
           <div className={styles.galleryStack}>
             {GALLERY.map((g) => (
-              <figure key={g.src} className={`${styles.stackItem} ${styles.halftone}`}>
+              <figure key={g.src} className={`${styles.stackItem} ${styles.halftone}`} data-reveal-img="vertical group">
                 <img src={asset(g.src)} alt={g.alt} loading="lazy" />
               </figure>
             ))}
@@ -419,9 +419,9 @@ export default function BecoolPage() {
         {/* ---------- SERVICES ---------- */}
         <section id="service" data-reveal className={`${styles.services} ${styles.reveal}`} aria-label="サービス">
           {SERVICES.map((s) => (
-            <div key={s.title} className={styles.servicePanel}>
+            <div key={s.title} className={styles.servicePanel} data-service={s.title}>
               <div className={styles.servicePhoto} aria-hidden="true">
-                <img src={asset(s.photo)} alt="" loading="lazy" />
+                <img src={asset(s.photo)} alt="" loading="lazy" data-parallax="0.04" />
               </div>
               <div className={styles.serviceInner}>
                 <span className={styles.serviceIcon}>{s.icon}</span>
@@ -460,7 +460,7 @@ export default function BecoolPage() {
           </div>
           <ul className={styles.pickupGrid}>
             {CARS.map((c) => (
-              <li key={c.name} className={`${styles.pickupItem} ${styles.halftone}`}>
+              <li key={c.name} className={`${styles.pickupItem} ${styles.halftone}`} data-reveal-img="horizontal group">
                 <img src={c.src} alt={c.alt} loading="lazy" />
                 <span className={styles.pickupCap}>
                   <span className={styles.pickupName}><strong>{c.name}</strong><span>{c.tag}</span></span>
@@ -487,7 +487,7 @@ export default function BecoolPage() {
                     <small>Photo Coming Soon</small>
                   </div>
                 ) : (
-                  <div className={`${styles.storePhoto} ${styles.halftone}`}>
+                  <div className={`${styles.storePhoto} ${styles.halftone}`} data-reveal-img="horizontal">
                     <img src={s.photo} alt={s.alt} loading="lazy" />
                   </div>
                 )}
@@ -535,6 +535,7 @@ export default function BecoolPage() {
       <BecoolFooter />
 
       <RevealController />
+      <ParallaxController />
     </div>
   );
 }
