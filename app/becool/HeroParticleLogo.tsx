@@ -108,6 +108,7 @@ export default function HeroParticleLogo() {
   const [tabVisible, setTabVisible] = useState(true);
   const [loaded, setLoaded] = useState(false); // Particle Object 読込完了
   const [formed, setFormed] = useState(false); // ロゴ形成完了
+  const [startParticles, setStartParticles] = useState(false); // 粒子開始(元ロゴを少し長く見せる)
 
   // 能力判定(reduced-motion / WebGL / 端末性能)
   useEffect(() => {
@@ -144,6 +145,14 @@ export default function HeroParticleLogo() {
     if (active) return;
     setLoaded(false);
     setFormed(false);
+    setStartParticles(false);
+  }, [active]);
+
+  // 元ロゴ(静止SVG)を約1.7秒長く見せてから粒子アニメを開始
+  useEffect(() => {
+    if (!active) return;
+    const t = setTimeout(() => setStartParticles(true), 1700);
+    return () => clearTimeout(t);
   }, [active]);
 
   // 形成完了: 読込完了(=描画準備完了)から約5s(ゆっくり集合に合わせる)
@@ -168,7 +177,7 @@ export default function HeroParticleLogo() {
     >
       {/* 読込完了までロゴ(実SVG)を消さない */}
       <CubeSvg hidden={loaded} />
-      {active && (
+      {active && startParticles && (
         <ParticleObject
           className={styles.particleCanvas}
           src={`${BASE}/becool/img/gb-cube.svg`}
