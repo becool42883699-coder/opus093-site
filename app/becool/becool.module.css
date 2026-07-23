@@ -143,9 +143,16 @@
 .logoZoneParticle { width: min(82vw, 440px); }
 .particleWrap { position: relative; width: 100%; aspect-ratio: 480 / 580; }
 /* ParticleObjectのラッパdiv(inline position:relative)をゾーン全面に広げる */
-.particleCanvas { position: absolute !important; inset: 0; }
-/* 実SVGロゴ(初期/フォールバック)。粒子起動で透明化(軽くクロスフェード) */
-.particleFallback { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 0.4s ease; filter: drop-shadow(0 8px 30px rgba(0, 0, 0, 0.55)); }
+/* 粒子canvasは読込完了で0→1にフェードイン。淡い下地SVGのフェードアウトと重なり、
+   SVG→粒子の切替の瞬間を見せずに自然なクロスフェードになる。 */
+.particleCanvas { position: absolute !important; inset: 0; opacity: 0; transition: opacity 0.9s ease; }
+.particleCanvasIn { opacity: 1; }
+/* 実SVGロゴ。
+   - 通常(reduced/非対応/低性能): 不透明の実ロゴ。
+   - data-placeholder: 粒子起動時の「淡い下地」。巨大な完成ロゴにはしない。
+   - data-hidden: 読込完了。opacityを0へ→粒子へ自然にクロスフェード(切替は見せない)。 */
+.particleFallback { position: absolute; inset: 0; width: 100%; height: 100%; transition: opacity 0.9s ease; filter: drop-shadow(0 8px 30px rgba(0, 0, 0, 0.55)); }
+.particleFallback[data-placeholder="true"] { opacity: 0.26; filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.3)); }
 .particleFallback[data-hidden="true"] { opacity: 0; }
 /* スマホ: canvasはタッチ反応オフ＝縦スクロールを一切妨げない(inline touch-actionを上書き) */
 .particleWrapMobile canvas { touch-action: auto !important; pointer-events: none !important; }

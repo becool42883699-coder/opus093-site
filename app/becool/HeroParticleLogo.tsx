@@ -4,10 +4,13 @@
  * ヒーローのロゴを Canvas UI「Particle Object」(公式React版, Three.js/WebGL)で
  * 粒子化して表示する。既存実装は維持し、状態管理・性能ティア・Rippleを追加。
  *
- * 状態: svg(初期/フォールバック) → loaded(Particle Object読込完了/SVGから切替)
- *        → formed(約1.8sで集合完了) → ripple操作可能
+ * 状態: svg(準備中の淡い下地) → loaded(Particle Object読込完了/淡くクロスフェード)
+ *        → formed(約2.5sで集合完了) → ripple操作可能
+ *  - 初期表示は背景写真とコピーを主役に。SVGは巨大な完成ロゴとして出さず、
+ *    最終Particleロゴと同じ位置・大きさで「低い不透明度の下地」としてだけ置く。
+ *  - 読込中はその淡いSVGを表示。onLoad後、SVGを自然にフェードアウトして粒子へ
+ *    クロスフェード(切替の瞬間は見せない)。粒子は周辺から静かに中央へ集合する。
  *  - reduced-motion / WebGL非対応 / 低性能・saveData: 粒子を起動せず実SVGを表示
- *  - 読込中はロゴ(実SVG)を消さない。onLoad後にクロスフェードで粒子へ
  *  - three は動的import・クライアント限定。画面外/タブ非表示で停止(GPU解放)
  *  - Rippleは formed 後のみ、ロゴ領域クリック/タップで発生
  */
@@ -77,15 +80,22 @@ function pickCount(): number {
   return c;
 }
 
-/** 実SVGロゴ(初期表示 / フォールバック)。粒子読込後は透明化 */
-function CubeSvg({ hidden }: { hidden: boolean }) {
+/**
+ * 実SVGロゴ。用途は2つ:
+ *  - placeholder=true(粒子を起動する場合): 最終Particleロゴと同位置・同サイズの
+ *    「淡い下地」。読込完了(hidden)で自然にフェードアウトして粒子へクロスフェード。
+ *  - placeholder=false(reduced-motion/WebGL非対応/低性能): 通常の実ロゴ(不透明)。
+ */
+function CubeSvg({ hidden, placeholder }: { hidden: boolean; placeholder: boolean }) {
   return (
     <svg
       className={styles.particleFallback}
+      data-placeholder={placeholder ? "true" : undefined}
       data-hidden={hidden ? "true" : undefined}
       viewBox="480 160 480 580"
       role="img"
       aria-label="GARAGE BeCool ロゴ"
+      aria-hidden={placeholder ? "true" : undefined}
     >
       <defs>
         <linearGradient id="pfCube" gradientUnits="userSpaceOnUse" x1="532" y1="193" x2="915" y2="691">
@@ -108,7 +118,7 @@ export default function HeroParticleLogo() {
   const [tabVisible, setTabVisible] = useState(true);
   const [loaded, setLoaded] = useState(false); // Particle Object 読込完了
   const [formed, setFormed] = useState(false); // ロゴ形成完了
-  const [startParticles, setStartParticles] = useState(false); // 粒子開始(元ロゴを少し長く見せる)
+  const [decided, setDecided] = useState(false); // 能力判定・粒子読込の完了
 
   // 能力判定(reduced-motion / WebGL / 端末性能)
   useEffect(() => {
@@ -116,9 +126,12 @@ export default function HeroParticleLogo() {
     setMobile(window.matchMedia("(max-width: 700px)").matches);
     if (reduce || !hasWebGL()) {
       setCount(0);
+      setDecided(true); // 粒子なし確定 → 実ロゴ(不透明)を表示
       return;
     }
+    // pickCount() が 0 を返す場合(saveData/低性能)も粒子なし = 実ロゴ表示
     setCount(pickCount());
+    setDecided(true);
   }, []);
 
   // 画面外・タブ非表示で停止(アンマウントでGPU解放), 復帰で再生
@@ -145,20 +158,12 @@ export default function HeroParticleLogo() {
     if (active) return;
     setLoaded(false);
     setFormed(false);
-    setStartParticles(false);
   }, [active]);
 
-  // 元ロゴ(静止SVG)を約0.9秒見せてから粒子アニメを開始
-  useEffect(() => {
-    if (!active) return;
-    const t = setTimeout(() => setStartParticles(true), 900);
-    return () => clearTimeout(t);
-  }, [active]);
-
-  // 形成完了: 読込完了(=描画準備完了)から約5s(ゆっくり集合に合わせる)
+  // 形成完了: 読込完了(=描画準備完了)から約2.5s(粒子が中央へ集合する時間)
   useEffect(() => {
     if (!loaded) return;
-    const t = setTimeout(() => setFormed(true), 5000);
+    const t = setTimeout(() => setFormed(true), 2500);
     return () => clearTimeout(t);
   }, [loaded]);
 
@@ -175,34 +180,35 @@ export default function HeroParticleLogo() {
       className={`${styles.particleWrap} ${mobile ? styles.particleWrapMobile : ""}`}
       onClick={onClick}
     >
-      {/* 読込完了までロゴ(実SVG)を消さない */}
-      <CubeSvg hidden={loaded} />
-      {active && startParticles && (
+      {/* 判定前 or 粒子起動時: 最終ロゴと同位置・同サイズの淡い下地(巨大な完成ロゴに
+          しない / loadedでフェードアウト)。判定後に粒子なしと確定した時だけ実ロゴ(不透明)。 */}
+      <CubeSvg hidden={loaded} placeholder={!decided || count > 0} />
+      {active && (
         <ParticleObject
-          className={styles.particleCanvas}
+          className={`${styles.particleCanvas} ${loaded ? styles.particleCanvasIn : ""}`}
           src={`${BASE}/becool/img/gb-cube.svg`}
           background=""
           color=""
           count={count}
           size={mobile ? 2.0 : 2.4}
-          sizeVariance={0.55}
+          sizeVariance={0.5}
           scale={3.1}
           cameraDistance={4.2}
           fov={60}
           orbit={false}
           zoom={false}
           autoRotate={false}
-          floatIntensity={0.5}
-          rotationIntensity={0.35}
-          floatSpeed={1.2}
-          drift={0.5}
+          floatIntensity={0.14}
+          rotationIntensity={0.1}
+          floatSpeed={0.7}
+          drift={0.18}
           radius={mobile ? 60 : 110}
           strength={mobile ? 0.0 : 1.0}
-          swirl={0.6}
-          spring={0.22}
-          damping={0.32}
+          swirl={0.4}
+          spring={0.5}
+          damping={0.6}
           intro
-          introSpread={2.15}
+          introSpread={1.7}
           onLoad={() => setLoaded(true)}
           onError={() => setCount(0)}
         />
