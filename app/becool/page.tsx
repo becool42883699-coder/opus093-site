@@ -280,7 +280,7 @@ function HeroBuildStage() {
    "sweep"     : クラウド状の光が流れてキューブが実体化する常時ループ演出
    "blueprint" : 設計図式ビルド→筆記体露出の1回再生演出
    値を変えるだけで切替(全演出のコードは残置)。 */
-const HERO_ANIM: "glass" | "particle" | "sweep" | "blueprint" = "glass";
+const HERO_ANIM: "glass" | "particle" | "sweep" | "blueprint" = "blueprint";
 
 /* ---- ロゴ演出(sweep): GBマークに雲状の光マスクが流れ続け、実体(塗り)が
    現れては消える。下地に薄いワイヤーフレーム。SMILで常時ループ(1回再生ではない)。
