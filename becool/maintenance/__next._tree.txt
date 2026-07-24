@@ -8,4 +8,4 @@
 :HL["/opus093-site/_next/static/chunks/3iyh1uahvbg6x.css","style"]
 :HL["/opus093-site/becool/img/symbol.svg","image"]
 :HL["/opus093-site/becool/img/service-inspection.webp","image"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"maintenance","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"PyY2vcw9VJIkja62MGHiF"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"maintenance","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"2bZ2OeUsjMcZ6HPVamgt6"}
