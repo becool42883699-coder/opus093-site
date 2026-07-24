@@ -4,6 +4,10 @@ import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
 import { RevealController, ParallaxController } from "./BecoolClient";
 import BecoolLogoIntro from "./BecoolLogoIntro";
 import HeroParticleLogo from "./HeroParticleLogo";
+import HeroGlassLogo from "./HeroGlassLogo";
+import FooterParticleMark from "./FooterParticleMark";
+import ParticleScrollReveal from "./ParticleScrollReveal";
+import PeelReveal from "./PeelReveal";
 import { CUBE_MARK_D, CUBE_GARAGE_D, CUBE_BECOOL_D, CUBE_SINCE_D, CUBE_GRADS, SCRIPT_D, SCRIPT_GRAD } from "./brandLogo";
 import { asset, LINE_URL, SITE_URL, BecoolHeader, BecoolFooter } from "./Chrome";
 
@@ -270,12 +274,13 @@ function HeroBuildStage() {
 }
 
 /* ---- ヒーローのロゴ演出 切替(すぐ戻せるように) --------------------------
-   "particle"  : Canvas UI「Particle Object」(Three.js/WebGL)。散布した粒子が
-                 中央へ集合しGBキューブを形成→ホバーで散り離すと復帰(新)
+   "glass"     : Canvas UI「Glass Object」(Three.js/WebGL)。SVGを押し出した
+                 ガラス質のGBキューブ。スタジオ環境の屈折・映り込み・微分散(現)
+   "particle"  : Canvas UI「Particle Object」。散布した粒子が中央へ集合し形成
    "sweep"     : クラウド状の光が流れてキューブが実体化する常時ループ演出
    "blueprint" : 設計図式ビルド→筆記体露出の1回再生演出
-   値を変えるだけで切替(3演出のコードはすべて残置)。 */
-const HERO_ANIM: "particle" | "sweep" | "blueprint" = "particle";
+   値を変えるだけで切替(全演出のコードは残置)。 */
+const HERO_ANIM: "glass" | "particle" | "sweep" | "blueprint" = "glass";
 
 /* ---- ロゴ演出(sweep): GBマークに雲状の光マスクが流れ続け、実体(塗り)が
    現れては消える。下地に薄いワイヤーフレーム。SMILで常時ループ(1回再生ではない)。
@@ -314,9 +319,10 @@ function HeroSweepStage() {
 }
 
 export default function BecoolPage() {
+  const glass = HERO_ANIM === "glass";
   const particle = HERO_ANIM === "particle";
   const sweep = HERO_ANIM === "sweep";
-  const compact = particle || sweep; // マーク単体表示: ワードマークの間隔を詰める
+  const compact = glass || particle || sweep; // マーク単体表示: ワードマークの間隔を詰める
   return (
     <div className={`becool ${styles.root}`}>
       <JsonLd data={becoolLd} />
@@ -331,9 +337,9 @@ export default function BecoolPage() {
           {/* particle/sweep は常時演出なので data-intro="done"(ワードマーク即表示)。
               blueprintは1回再生なので "play"(BecoolLogoIntroが再生を制御) */}
           <div className={`${styles.heroInner} ${compact ? styles.heroInnerSweep : ""}`} data-hero-stage data-intro={compact ? "done" : "play"}>
-            <div className={`logo-zone ${styles.logoZone} ${particle ? styles.logoZoneParticle : sweep ? styles.logoZoneSweep : ""}`}>
+            <div className={`logo-zone ${styles.logoZone} ${glass || particle ? styles.logoZoneParticle : sweep ? styles.logoZoneSweep : ""}`}>
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
-              {particle ? <HeroParticleLogo /> : sweep ? <HeroSweepStage /> : <HeroBuildStage />}
+              {glass ? <HeroGlassLogo /> : particle ? <HeroParticleLogo /> : sweep ? <HeroSweepStage /> : <HeroBuildStage />}
             </div>
             {/* ワードマーク: ロゴ完成後、横方向のマスクが左から右へ開いて現れる */}
             <p className={`${styles.heroWordmark} hero-wordmark`}>
@@ -393,8 +399,9 @@ export default function BecoolPage() {
                 沼店・中吉田店の2店舗で、あなたのカーライフを「もっと安心に、もっと楽しく」お手伝いします。
               </p>
             </div>
-            <figure className={`${styles.aboutMedia} ${styles.halftone}`} data-reveal-img="horizontal">
-              <img src={asset("/becool/img/about-detail.webp")} alt="GARAGE BeCool 店頭のポルシェ 718 ケイマン（ブルーグレーディング）" loading="lazy" />
+            {/* Peel: 設計図(ブループリント)から完成写真へ、ビュー到達時に斜めにめくって切替 */}
+            <figure className={styles.aboutMedia}>
+              <PeelReveal src={asset("/becool/img/store-nakayoshida.webp")} alt="GARAGE BeCool 中吉田店の外観（青空の下の店舗）" />
             </figure>
           </div>
         </section>
@@ -460,8 +467,9 @@ export default function BecoolPage() {
           </div>
           <ul className={styles.pickupGrid}>
             {CARS.map((c) => (
-              <li key={c.name} className={`${styles.pickupItem} ${styles.halftone}`} data-reveal-img="horizontal group">
-                <img src={c.src} alt={c.alt} loading="lazy" />
+              <li key={c.name} className={`${styles.pickupItem} ${styles.halftone}`}>
+                {/* Particle Scroll: 在庫車の切替として、ビュー到達時に1回だけ砂状の粒子から組み上げ */}
+                <ParticleScrollReveal src={c.src} alt={c.alt} />
                 <span className={styles.pickupCap}>
                   <span className={styles.pickupName}><strong>{c.name}</strong><span>{c.tag}</span></span>
                   <span className={styles.pickupPrice}>{c.price}<small>（税込）</small></span>
@@ -528,6 +536,12 @@ export default function BecoolPage() {
               </details>
             ))}
           </div>
+        </section>
+        {/* ---------- CLOSING BRAND MARK (フッター前) ---------- */}
+        <section data-reveal className={`${styles.brandOutro} ${styles.reveal}`} aria-label="ブランドマーク">
+          <FooterParticleMark />
+          <p className={styles.brandOutroWord}><span>GARAGE</span> <span className={styles.wmAccent}>BeCool</span></p>
+          <p className={styles.brandOutroSub}>Used Car &amp; Car Life Support — since 1999</p>
         </section>
         </div>{/* /belowHero */}
       </main>
