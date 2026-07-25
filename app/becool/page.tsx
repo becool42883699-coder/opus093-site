@@ -402,9 +402,9 @@ export default function BecoolPage() {
           <div className={styles.heroBg}>
             <img src={asset("/becool/img/hero-exterior.webp")} alt="GARAGE BeCool の店舗外観（雨上がりの夕暮れ）" data-parallax="0.05" />
           </div>
-          {/* 高級路線: ごく淡い光が横切る層 + 極細フレーム + 隅のメタ表記 */}
+          {/* ごく淡い光が横切る層 + 隅のメタ表記。
+              額縁(フレーム)は画面を箱で囲って表示領域を狭く見せるため使わない。 */}
           <span className={styles.heroSheen} aria-hidden="true" />
-          <span className={styles.heroFrame} aria-hidden="true" />
           <span className={`${styles.heroMeta} ${styles.heroMetaL}`} aria-hidden="true">Kitakyushu, Fukuoka</span>
           <span className={`${styles.heroMeta} ${styles.heroMetaR}`} aria-hidden="true">Est. 1999</span>
           {/* particle/sweep は常時演出なので data-intro="done"(ワードマーク即表示)。

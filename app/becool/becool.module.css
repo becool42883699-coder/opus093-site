@@ -112,7 +112,8 @@
 .brand svg { width: 34px; height: 34px; }
 .brandName { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.2rem; letter-spacing: 0.01em; color: var(--bc-ink); }
 .brandName b { font-weight: var(--bc-fw-bold); color: var(--bc-blue); }
-.navDesktop { display: flex; align-items: center; gap: clamp(1.4rem, 2.6vw, 2.8rem); font-family: var(--bc-font-display); font-size: 0.82rem; font-weight: var(--bc-fw-bold); letter-spacing: var(--bc-ls-head); }
+/* ナビは大見出し用のトラッキング(締め気味)ではなく従来の 0.06em を使う */
+.navDesktop { display: flex; align-items: center; gap: clamp(1.4rem, 2.6vw, 2.8rem); font-family: var(--bc-font-display); font-size: 0.82rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.06em; }
 .navDesktop a { position: relative; padding: 0.4rem 0; color: var(--bc-ink); }
 .navDesktop a::after { content: ""; position: absolute; left: 0; right: 100%; bottom: 0; height: 2px; background: var(--bc-blue); transition: right 0.28s var(--bc-ease); }
 .navDesktop a:hover::after, .navDesktop a:focus-visible::after { right: 0; }
@@ -155,17 +156,9 @@
   to   { transform: scale(1.09); }
 }
 
-/* --- 高級路線: ヒーローの額装(極細フレーム) + ゆっくり流れる光 --- */
-/* 四辺の極細ライン。広告の“額装”のように内容を引き締める */
-.heroFrame { position: absolute; z-index: 1; pointer-events: none;
-  inset: calc(var(--bc-header-h) + clamp(12px, 2.2vw, 30px)) clamp(14px, 3vw, 42px) clamp(14px, 3vw, 42px);
-  border: 1px solid rgba(233, 240, 249, 0.16);
-}
-/* 四隅だけプラチナ調に光らせて“銘板感”を出す(太い発光にはしない) */
-.heroFrame::before, .heroFrame::after { content: ""; position: absolute; width: clamp(28px, 5vw, 66px); height: clamp(28px, 5vw, 66px); }
-.heroFrame::before { top: -1px; left: -1px; border-top: 1px solid rgba(226,238,252,0.85); border-left: 1px solid rgba(226,238,252,0.85); }
-.heroFrame::after { bottom: -1px; right: -1px; border-bottom: 1px solid rgba(226,238,252,0.85); border-right: 1px solid rgba(226,238,252,0.85); }
-/* ヒーロー隅の小さなメタ表記(高級ブランドの版面によくある要素) */
+/* --- ヒーロー: 隅のメタ表記 + ゆっくり流れる光 ---
+   ※ 以前あった額縁(極細フレーム)は、画面を箱で囲って表示領域が狭く見えるため撤去。 */
+/* ヒーロー隅の小さなメタ表記 */
 .heroMeta { position: absolute; z-index: 2; pointer-events: none;
   font-family: var(--bc-font-tagline); font-size: clamp(0.56rem, 1.1vw, 0.7rem);
   font-weight: var(--bc-fw-medium); letter-spacing: 0.3em; text-transform: uppercase;
