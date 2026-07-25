@@ -191,19 +191,31 @@ export function SpotlightController() {
 }
 
 /**
- * トップページ用: ヘッダーをヒーロー上では透明、通り過ぎたら白下地に切り替える。
+ * ヘッダーをヒーロー上では透明、通り過ぎたら白下地に切り替える。
  * data-scrolled を付け外しするだけで、見た目はすべてCSS側。
  * JS無効時は data-overlay の透明状態のまま(ヒーローは暗いので明色文字で読める)。
+ *
+ * 切替位置は [data-hero] の実際の高さから求める。以前は innerHeight*0.82 の
+ * 決め打ちで、100svh のヒーロー(TOP/CONTACT)専用だった。サブページの
+ * ヒーローは 480px 程度しかないため、そのままでは白い本文の上でヘッダーが
+ * 透明(＝白文字)のままになり、ナビが読めなくなる。
  */
 export function HeaderScrollController() {
   useEffect(() => {
     const header = document.querySelector<HTMLElement>('header[data-overlay="true"]');
     if (!header) return;
+    const hero = document.querySelector<HTMLElement>("[data-hero]");
     let ticking = false;
+    /** ヒーロー下端の位置。ヒーローは4ページとも main の先頭で、ヘッダーは
+     *  position:fixed で場所を取らないため、下端 = ヒーローの高さでよい。
+     *  ※ offsetTop / getBoundingClientRect は使わないこと。トップの
+     *    ヒーローは position:sticky で、貼り付いている間はどちらも
+     *    スクロール量に追従して増え続け、閾値が永遠に先へ逃げる。 */
+    const heroBottom = () => (hero ? hero.offsetHeight : window.innerHeight * 0.82);
     const apply = () => {
       ticking = false;
-      // ヒーロー(100svh)をほぼ抜けたら白下地へ
-      const past = window.scrollY > window.innerHeight * 0.82;
+      // 下のコンテンツがヘッダーに触れる少し手前で白下地へ
+      const past = window.scrollY > heroBottom() - header.offsetHeight * 1.15;
       if (past) header.setAttribute("data-scrolled", "true");
       else header.removeAttribute("data-scrolled");
     };

@@ -17,10 +17,21 @@
   --bc-blue-mid:     #31557c;   /* gradient mid stop                  */
   --bc-blue-light:   #5b9be6;   /* lighter blue for text on dark      */
   --bc-gradient:     linear-gradient(135deg, #4a4f55 0%, #31557c 55%, #1f63b6 100%);
+  /* 全幅の帯(CTAバンド)用。ブランドのグラデをそのまま全幅に敷くと、暗端の
+     チャコール(#4a4f55 / 彩度7%のグレー)が上下のネイビー帯と別の色family に
+     見えて浮いていた。暗端だけネイビー側(--bc-ink-soft)に寄せ、ブルーへの
+     抜けはブランドのままにする。 */
+  --bc-gradient-band: linear-gradient(135deg, #222a34 0%, #31557c 52%, #1f63b6 100%);
 
   /* ---- Surface / text: light base, charcoal ink, blue accent --------
      高級路線: ダーク面はニュートラル黒ではなく「深いネイビー寄り」に統一し、
-     明るい面はごく僅かに寒色の紙白にして、ブランドのブルーと地続きにする。 */
+     明るい面はごく僅かに寒色の紙白にして、ブランドのブルーと地続きにする。
+
+     【統一ルール / 面は2色だけ】
+     明るい面は --bc-white と --bc-paper の2つのみ。セクションごとに交互に
+     敷く(白→紙→白→紙)。3色目を足さないこと。
+     暗い面は下の「ダークランプ」から選ぶ。いずれも同じ色相(H≈215°)なので、
+     どれを隣り合わせても色味が転ばない。 */
   --bc-white:        #ffffff;   /* page / header background            */
   --bc-paper:        #f4f7fa;   /* off-white (ごく僅かに寒色)           */
   --bc-ink:          #1b2129;   /* primary text (深いチャコールネイビー) */
@@ -29,11 +40,39 @@
   --bc-panel-gray:   #2c3742;   /* full-bleed panel (ネイビーチャコール) */
   --bc-muted:        #5b6572;   /* sub text / captions                 */
   --bc-line:         #e4e9ee;   /* hairline borders                    */
-  --bc-works-bg:     #e7ecf2;   /* works/portfolio backdrop            */
+  /* 旧: 独自の第3の明色(#e7ecf2)。面を2色に統一したため paper へ集約した。
+     互換のため名前は残すが、新規に使わないこと。 */
+  --bc-works-bg:     var(--bc-paper);
   --bc-mark-idle:    #8f9298;   /* logo mark settled (dimmed) state    */
   --bc-accent:       #1f63b6;   /* COOL BLUE — links / CTA / active     */
   --bc-on-dark:      #f4f6f9;   /* text on dark panels                 */
   --bc-on-dark-mut:  #b9c3cf;   /* muted text on dark panels           */
+
+  /* ---- 暗幕(スクリム)・影の“唯一の黒” -------------------------------
+     以前は写真の上に敷く暗幕が箇所ごとに rgb(10,13,18) / (18,21,25) /
+     (9,14,22) / (8,13,20) / (17,17,17) / (0,0,0) とバラバラで、同じ役割の
+     暗幕なのにページごとに色味(彩度0%〜43%)が転んでいた。
+     → 暗幕・影は必ず下のRGBトークン経由で rgba(var(--bc-scrim-rgb), α) と書く。
+     生の rgba(0,0,0,…) や別の黒を新しく持ち込まないこと。 */
+  --bc-scrim-rgb:  9, 14, 22;    /* 唯一のネイビーブラック(H215/S42/L6)  */
+  --bc-shadow-rgb: 12, 18, 25;   /* 影用(スクリムよりわずかに明るい)      */
+  /* rgba() で濃度を指定したい時に使う。生の数値を書かずに必ずここを参照する。 */
+  --bc-blue-rgb:       31, 99, 182;
+  --bc-blue-light-rgb: 91, 155, 230;
+  --bc-blue-mid-rgb:   49, 85, 124;
+  --bc-ink-soft-rgb:   34, 42, 52;
+  --bc-on-dark-rgb:    244, 246, 249;
+
+  /* 製図ガイド線(ヒーローのビルド演出)。以前は #b9c6d2 / #c3ced9 / #aebccb /
+     #8fa6ba と役割の違わないグレーが4色あった。細線と強調線の2つに統一。 */
+  --bc-guide:        #b9c6d2;
+  --bc-guide-strong: #8fa6ba;
+
+  /* LINE のブランドカラー。ブランド指定色なので配色ルールの唯一の例外として
+     扱い、LINE 関連の要素以外には絶対に使わない。 */
+  --bc-line-green:      #06c755;
+  --bc-line-green-dark: #05b34c;
+  --bc-line-green-rgb:  6, 199, 85;
 
   /* ---- Premium: プラチナ調の光沢・ガラス面・シネマスクリム ------------
      金色は使わずブランド配色内で「上質な光沢」を作る（白〜ライトグレー〜
@@ -50,13 +89,22 @@
   --bc-glass-border-light: rgba(255,255,255,0.85);
   --bc-glass-border-dark:  rgba(255,255,255,0.14);
   /* 写真の上に敷くシネマティックなスクリム(下を暗く落として文字を乗せる) */
-  --bc-scrim: linear-gradient(180deg, rgba(8,13,20,0.05) 0%, rgba(8,13,20,0.28) 46%, rgba(8,13,20,0.82) 100%);
-  --bc-scrim-soft: linear-gradient(180deg, rgba(8,13,20,0) 0%, rgba(8,13,20,0.55) 100%);
+  --bc-scrim: linear-gradient(180deg, rgba(var(--bc-scrim-rgb),0.05) 0%, rgba(var(--bc-scrim-rgb),0.28) 46%, rgba(var(--bc-scrim-rgb),0.82) 100%);
+  --bc-scrim-soft: linear-gradient(180deg, rgba(var(--bc-scrim-rgb),0) 0%, rgba(var(--bc-scrim-rgb),0.55) 100%);
+  /* 全ページ共通のヒーロー暗幕。TOP / CONTACT / サブページの見出し用ヒーローは
+     必ずこれを使う(以前はページごとに違う黒と濃度で、同じ写真でも色味が違った)。
+     周辺減光 + 上下を締める縦グラデの2枚重ね。 */
+  --bc-scrim-hero:
+    radial-gradient(ellipse 74% 62% at 50% 46%, rgba(var(--bc-scrim-rgb),0.14) 0%, rgba(var(--bc-scrim-rgb),0.48) 62%, rgba(var(--bc-scrim-rgb),0.80) 100%),
+    linear-gradient(180deg, rgba(var(--bc-scrim-rgb),0.72) 0%, rgba(var(--bc-scrim-rgb),0.26) 34%, rgba(var(--bc-scrim-rgb),0.34) 62%, rgba(var(--bc-scrim-rgb),0.82) 100%);
 
   /* ---- Typography --------------------------------------------------- */
   /* Japanese body: Noto Sans JP. Wordmark/headings: Exo 2 SemiBold.
      Tagline: Montserrat Medium. next/font vars fall back to system stacks. */
-  --bc-font-sans: "Noto Sans JP", "Yu Gothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
+  /* next/font が生成する metric 調整済みフォールバック("… Fallback")まで含めるため、
+     和文も必ず var(--font-noto) 経由で参照する(素の "Noto Sans JP" 直書きだと
+     読込中/失敗時に Yu Gothic へ飛び、字幅が変わってレイアウトがずれる)。 */
+  --bc-font-sans: var(--font-noto, "Noto Sans JP"), "Yu Gothic", "Hiragino Kaku Gothic ProN", system-ui, sans-serif;
   --bc-font-display: var(--font-exo, "Exo 2"), "Noto Sans JP", system-ui, sans-serif;
   --bc-font-tagline: var(--font-montserrat, "Montserrat"), var(--font-exo, "Exo 2"), sans-serif;
 
@@ -74,6 +122,15 @@
   --bc-fs-body:   clamp(1rem,   1.2vw, 1.17rem);  /* body                 */
   --bc-fs-small:  0.82rem;                          /* meta / tagline       */
 
+  /* ---- 役割ごとの文字トークン(サイズをここ以外で決めない) --------------
+     以前はカード見出しが 1.0/1.02/1.05/1.12/1.15rem、カード本文が
+     0.88/0.9/0.92/0.94/0.95rem と、同じ役割なのにページ・コンポーネント
+     ごとに全部違っていた。役割は下の3つだけ。新しいカードもこれを使う。 */
+  --bc-fs-card-title: 1.06rem;  /* カード見出し(FLOW/整備メニュー/相談例/LINE等) */
+  --bc-fs-card-body:  0.92rem;  /* カード本文                                    */
+  --bc-fs-label:      0.7rem;   /* 欧文の極小ラベル(FLOWのEN/STEP番号/タグ等)     */
+  --bc-lh-card:       1.9;      /* カード本文の行間                              */
+
   --bc-lh-body:    1.95;   /* generous JP line-height */
   --bc-lh-heading: 1.08;
   --bc-ls-tagline: 0.28em; /* "since 20XX" wide tracking (ヒーローのタグライン) */
@@ -82,6 +139,10 @@
      和文のサブ見出しには使わないこと(和文は 0.1em 前後に留める)。 */
   --bc-ls-label:   0.2em;
   --bc-ls-body:    0.02em;
+  /* 和文サブ見出し(見出し直下の「整備・車検」「お問い合わせ」等)の字間。
+     以前は 0.1 / 0.16 / 0.22em が混在し、ページごとに詰まり方が違った。
+     和文はここだけを使う(--bc-ls-label は広すぎるので使わない)。 */
+  --bc-ls-jp:      0.12em;
 
   /* ---- Spacing scale (4px base) ------------------------------------- */
   --bc-space-1: 0.5rem;
@@ -108,13 +169,14 @@
 
   /* ---- Elevation — 高級路線: 浅く広い影を重ねて「浮き」を上品に出す --- */
   --bc-shadow-none:  none;
-  --bc-shadow-card:  0 2px 6px rgba(12, 18, 25, 0.05), 0 18px 48px rgba(12, 18, 25, 0.11);
-  --bc-shadow-hover: 0 4px 12px rgba(12, 18, 25, 0.08), 0 32px 70px rgba(12, 18, 25, 0.20);
+  --bc-shadow-card:  0 2px 6px rgba(var(--bc-shadow-rgb), 0.05), 0 18px 48px rgba(var(--bc-shadow-rgb), 0.11);
+  --bc-shadow-hover: 0 4px 12px rgba(var(--bc-shadow-rgb), 0.08), 0 32px 70px rgba(var(--bc-shadow-rgb), 0.20);
 
   /* ---- Halftone / mesh texture --------------------------------------
      元は網点が強く「印刷物」寄りで、写真の質感を落として安っぽく見えていた。
      高級路線では“ほぼ見えない極薄のグレイン”に留める(質感の保険としてのみ)。 */
-  --bc-dot-color: rgba(38, 38, 38, 0.16);
+  /* 網点もニュートラル黒(38,38,38)ではなく共通のネイビーブラックにする */
+  --bc-dot-color: rgba(var(--bc-scrim-rgb), 0.16);
   --bc-dot-gap:   3px;   /* tile size of the dot grid */
   --bc-dot-r:     0.5px; /* dot radius                */
   /* reusable dot pattern layer */
