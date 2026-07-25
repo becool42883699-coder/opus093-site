@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "../becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../../components/TrmSeo";
-import { RevealController, ParallaxController, HeaderScrollController } from "../BecoolClient";
+import { ParallaxController, HeaderScrollController } from "../BecoolClient";
 import { asset, LINE_URL, TEL, TEL_HREF, BecoolHeader, BecoolFooter } from "../Chrome";
 import ContactPulse from "../ContactPulse";
 import OpenStatus from "../OpenStatus";
+import ScrollAnim from "../ScrollAnim";
 
 export const metadata: Metadata = {
   title: "お問い合わせ｜GARAGE BeCool｜北九州市小倉南区の中古車販売・車検・整備",
@@ -152,7 +153,7 @@ const contactLd = {
 
 export default function BecoolContactPage() {
   return (
-    <div className={`becool ${styles.root}`}>
+    <div className={`becool ${styles.root} ${styles.contactPage}`}>
       <JsonLd data={contactLd} />
       <BecoolHeader overlay />
 
@@ -182,17 +183,18 @@ export default function BecoolContactPage() {
             <OpenStatus />
             <p className={styles.contactHours}>10:00〜20:00／年中無休（沼店・中吉田店 共通）</p>
           </div>
+          <span className={styles.scrollCueLabel} aria-hidden="true">SCROLL</span>
           <span className={styles.scrollCue} aria-hidden="true" />
         </section>
 
         <div className={styles.belowHero}>
           {/* ---------- 連絡手段 ---------- */}
-          <section data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="ch-h">
-            <div className={styles.sectionHead}>
+          <section className={styles.section} aria-labelledby="ch-h">
+            <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="ch-h">HOW TO CONTACT</h2>
               <span>ご相談の方法</span>
             </div>
-            <ul className={styles.channelGrid}>
+            <ul className={`${styles.channelGrid} ${styles.jsReveal}`} data-reveal="stagger">
               {CHANNELS.map((c) => (
                 <li key={c.en} className={styles.channelCard}>
                   <span className={styles.channelIcon} aria-hidden="true">
@@ -212,17 +214,17 @@ export default function BecoolContactPage() {
           </section>
 
           {/* ---------- LINE 導入 ---------- */}
-          <section id="line" data-reveal className={`${styles.section} ${styles.lineSection} ${styles.reveal}`} aria-labelledby="line-h">
-            <div className={styles.sectionHead}>
+          <section id="line" className={`${styles.section} ${styles.lineSection}`} aria-labelledby="line-h">
+            <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="line-h">LINE</h2>
               <span>LINEでできること</span>
             </div>
-            <p className={styles.lineLead}>
+            <p className={`${styles.lineLead} ${styles.jsReveal}`} data-reveal="up">
               友だち追加していただければ、<em>車検・整備のご予約</em>から、お車探し・買取査定のご相談まで
               チャットで完結します。写真をそのまま送れるので、電話では伝えにくいこともスムーズです。
             </p>
 
-            <ul className={styles.lineCanGrid}>
+            <ul className={`${styles.lineCanGrid} ${styles.jsReveal}`} data-reveal="stagger">
               {LINE_CAN.map((c) => (
                 <li key={c.t} className={styles.lineCan}>
                   <span className={styles.lineCanIcon} aria-hidden="true">
@@ -234,7 +236,7 @@ export default function BecoolContactPage() {
               ))}
             </ul>
 
-            <ol className={styles.lineSteps}>
+            <ol className={`${styles.lineSteps} ${styles.jsReveal}`} data-reveal="stagger">
               {LINE_STEPS.map((s) => (
                 <li key={s.n} className={styles.lineStep}>
                   <span className={styles.lineStepNo} aria-hidden="true">{s.n}</span>
@@ -244,7 +246,7 @@ export default function BecoolContactPage() {
               ))}
             </ol>
 
-            <div className={styles.lineCta}>
+            <div className={`${styles.lineCta} ${styles.jsReveal}`} data-reveal="up">
               <a className={styles.lineAddBtn} href={LINE_URL} target="_blank" rel="noopener noreferrer">
                 <span className={styles.lineAddMark} aria-hidden="true">LINE</span>
                 友だち追加する
@@ -257,12 +259,12 @@ export default function BecoolContactPage() {
           </section>
 
           {/* ---------- よくある入口 ---------- */}
-          <section data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="case-h">
-            <div className={styles.sectionHead}>
+          <section className={styles.section} aria-labelledby="case-h">
+            <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="case-h">SUCH AS</h2>
               <span>こんなご相談から</span>
             </div>
-            <ul className={styles.caseGrid}>
+            <ul className={`${styles.caseGrid} ${styles.jsReveal}`} data-reveal="stagger">
               {CASES.map((c) => (
                 <li key={c.t} className={styles.caseItem}>
                   <h3>{c.t}</h3>
@@ -273,12 +275,12 @@ export default function BecoolContactPage() {
           </section>
 
           {/* ---------- 店舗 ---------- */}
-          <section id="shops" data-reveal className={`${styles.section} ${styles.shop} ${styles.reveal}`} aria-labelledby="shop-h">
-            <div className={styles.sectionHead}>
+          <section id="shops" className={`${styles.section} ${styles.shop}`} aria-labelledby="shop-h">
+            <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="shop-h">SHOP</h2>
               <span>店舗のご案内</span>
             </div>
-            <div className={styles.storeGrid}>
+            <div className={`${styles.storeGrid} ${styles.jsReveal}`} data-reveal="stagger">
               {SHOPS.map((s) => (
                 <article key={s.name} className={styles.storeCard}>
                   {s.comingSoon ? (
@@ -287,7 +289,7 @@ export default function BecoolContactPage() {
                       <small>Photo Coming Soon</small>
                     </div>
                   ) : (
-                    <div className={`${styles.storePhoto} ${styles.halftone}`}>
+                    <div className={`${styles.storePhoto} ${styles.halftone} ${styles.jsReveal}`} data-reveal="zoom">
                       <img src={s.photo} alt={s.alt} loading="lazy" />
                     </div>
                   )}
@@ -311,12 +313,12 @@ export default function BecoolContactPage() {
           </section>
 
           {/* ---------- FAQ ---------- */}
-          <section data-reveal className={`${styles.section} ${styles.faq} ${styles.reveal}`} aria-labelledby="cfaq-h">
-            <div className={styles.sectionHead}>
+          <section className={`${styles.section} ${styles.faq}`} aria-labelledby="cfaq-h">
+            <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="cfaq-h">FAQ</h2>
               <span>お問い合わせの前に</span>
             </div>
-            <div className={styles.faqList}>
+            <div className={`${styles.faqList} ${styles.jsReveal}`} data-reveal="stagger">
               {FAQS.map((f) => (
                 <details key={f.q} className={styles.faqItem}>
                   <summary>
@@ -334,7 +336,7 @@ export default function BecoolContactPage() {
 
       <BecoolFooter />
 
-      <RevealController />
+      <ScrollAnim />
       <ParallaxController />
       <HeaderScrollController />
     </div>

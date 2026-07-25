@@ -986,3 +986,168 @@
   :global([data-motion-ready]) .reveal .bc-svc-tabs { opacity: 1; transform: none; transition: none; }
   .bc-svc-panels .bc-svc-card { transition: none; }
 }
+
+/* =====================================================================
+   統一スクロール演出 (CONTACT系ページ)
+   ---------------------------------------------------------------------
+   duration / easing / stagger / 移動量は必ず --anim-* トークン経由で書く。
+   演出の種類ごとに値を変えないことが「統一感」の核。
+
+   no-JS安全: 「アニメ前(=非表示)」の指定は全て
+   :global([data-anim-ready]) …:not(.isInview) でゲートしてある。
+   JS無効・初期化失敗・reduced-motion では ScrollAnim が属性を付けないので
+   opacity:0 が残らず、全コンテンツがそのまま表示される。
+   ===================================================================== */
+
+/* --- スクロール進捗バー(rAFスロットルで scaleX のみ更新) --- */
+.scrollProgress {
+  position: fixed; top: 0; left: 0; right: 0; height: 2px;
+  z-index: calc(var(--bc-z-header) + 10);
+  background: var(--bc-blue);
+  transform: scaleX(0); transform-origin: 0 50%;
+  pointer-events: none;
+  will-change: transform; /* 常時アニメ対象なので固定で持たせてよい */
+}
+
+/* --- ヒーローの SCROLL ラベル(既存の縦線 .scrollCue と組で使う) --- */
+.scrollCueLabel {
+  position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+  writing-mode: vertical-rl;
+  font-family: var(--bc-font-display); font-size: 0.62rem; font-weight: var(--bc-fw-bold);
+  letter-spacing: 0.34em; color: var(--bc-on-dark-mut);
+  pointer-events: none;
+}
+
+/* --- up: 下から静かにフェードアップ --- */
+:global([data-anim-ready]) .jsReveal[data-reveal="up"] {
+  transition: opacity var(--anim-duration) var(--anim-ease), transform var(--anim-duration) var(--anim-ease);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="up"]:not(.isInview) {
+  opacity: 0; transform: translateY(var(--anim-distance));
+}
+
+/* --- line: セクション見出し(EN → 下線 → 和文サブ) ---
+   下線は和文サブの ::before なので、和文が出るのと同時に伸び始める。 */
+:global([data-anim-ready]) .jsReveal[data-reveal="line"] h2 {
+  transition: opacity var(--anim-duration) var(--anim-ease),
+              transform var(--anim-duration) var(--anim-ease),
+              letter-spacing var(--anim-duration) var(--anim-ease);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="line"]:not(.isInview) h2 {
+  opacity: 0; transform: translateY(var(--anim-distance));
+  letter-spacing: calc(var(--bc-ls-head) + 0.06em);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="line"] span {
+  transition: opacity var(--anim-duration) var(--anim-ease);
+  transition-delay: var(--anim-stagger);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="line"]:not(.isInview) span { opacity: 0; }
+:global([data-anim-ready]) .jsReveal[data-reveal="line"] span::before {
+  transition: transform var(--anim-duration-slow) var(--anim-ease);
+  transition-delay: var(--anim-stagger);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="line"]:not(.isInview) span::before {
+  transform: translateX(-50%) scaleX(0);
+}
+
+/* --- stagger: 同一セクション内のカードを --anim-stagger ずつ遅らせる ---
+   --i は子の並び順。アイコンや行にも継承させて遅延の基準に使う。 */
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] > * {
+  transition: opacity var(--anim-duration) var(--anim-ease),
+              transform var(--anim-duration) var(--anim-ease),
+              box-shadow var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-stagger) * var(--i, 0));
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) > * {
+  opacity: 0; transform: translateY(var(--anim-distance)); box-shadow: var(--bc-shadow-none);
+}
+.jsReveal[data-reveal="stagger"] > *:nth-child(1) { --i: 0; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(2) { --i: 1; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(3) { --i: 2; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(4) { --i: 3; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(5) { --i: 4; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(6) { --i: 5; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(7) { --i: 6; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(8) { --i: 7; }
+
+/* カード内の線画アイコンはカード出現の 0.2s 後に立ち上がる */
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] .channelIcon,
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] .lineCanIcon {
+  transition: opacity var(--anim-duration) var(--anim-ease), transform var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-stagger) * var(--i, 0) + 0.2s);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) .channelIcon,
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) .lineCanIcon {
+  opacity: 0; transform: scale(0.8);
+}
+
+/* ステップ: 番号 → 見出し → 本文 の順。番号だけ左からスライドイン */
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] .lineStepNo {
+  transition: opacity var(--anim-duration) var(--anim-ease), transform var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-stagger) * var(--i, 0));
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) .lineStepNo {
+  opacity: 0; transform: translateX(calc(var(--anim-distance) * -0.5));
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] .lineStep h3 {
+  transition: transform var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-stagger) * var(--i, 0) + var(--anim-stagger));
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] .lineStep p {
+  transition: transform var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-stagger) * var(--i, 0) + var(--anim-stagger) * 2);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) .lineStep h3,
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) .lineStep p {
+  transform: translateY(calc(var(--anim-distance) * 0.4));
+}
+
+/* --- zoom: 写真がゆっくり引きながら現れる --- */
+.jsReveal[data-reveal="zoom"] { overflow: hidden; }
+:global([data-anim-ready]) .jsReveal[data-reveal="zoom"] img {
+  transition: opacity var(--anim-duration-slow) var(--anim-ease), transform var(--anim-duration-slow) var(--anim-ease);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="zoom"]:not(.isInview) img {
+  opacity: 0; transform: scale(1.08);
+}
+
+/* --- ボタンのタップ/ホバー反応(CONTACTページ限定) --- */
+.contactPage .channelAction,
+.contactPage .lineAddBtn,
+.contactPage .telBtn,
+.contactPage .lineBtn,
+.contactPage .mapBtn {
+  transition: background var(--anim-duration) var(--anim-ease),
+              color var(--anim-duration) var(--anim-ease),
+              transform var(--anim-duration) var(--anim-ease),
+              box-shadow var(--anim-duration) var(--anim-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .contactPage .channelAction:hover,
+  .contactPage .lineAddBtn:hover,
+  .contactPage .telBtn:hover,
+  .contactPage .lineBtn:hover,
+  .contactPage .mapBtn:hover { transform: translateY(-2px); box-shadow: var(--bc-shadow-hover); }
+}
+.contactPage .channelAction:active,
+.contactPage .lineAddBtn:active,
+.contactPage .telBtn:active,
+.contactPage .lineBtn:active,
+.contactPage .mapBtn:active { transform: scale(0.98); }
+
+/* --- 動きを抑える設定: 演出は一切かけず即時表示 --- */
+@media (prefers-reduced-motion: reduce) {
+  .scrollProgress { display: none; }
+  .scrollCue::after { animation: none; }
+  .jsReveal,
+  .jsReveal h2, .jsReveal span, .jsReveal img,
+  .jsReveal > *, .jsReveal .channelIcon, .jsReveal .lineCanIcon,
+  .jsReveal .lineStepNo, .jsReveal .lineStep h3, .jsReveal .lineStep p {
+    opacity: 1 !important; transform: none !important; transition: none !important;
+  }
+  .contactPage .channelAction,
+  .contactPage .lineAddBtn,
+  .contactPage .telBtn,
+  .contactPage .lineBtn,
+  .contactPage .mapBtn { transition: none; }
+}

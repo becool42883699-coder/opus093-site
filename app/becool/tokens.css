@@ -131,6 +131,15 @@
   /* 競り上がり: 序盤で一気に動き、終盤だけ減速して着地する */
   --bc-ease-surge: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* ---- 統一スクロール演出トークン ------------------------------------
+     CONTACT系ページのスクロールインは全てこの5つ経由で書く。
+     演出の種類ごとに duration/easing を変えないことが統一感の核。 */
+  --anim-duration:      0.7s;
+  --anim-duration-slow: 1.1s;
+  --anim-ease:          cubic-bezier(0.22, 1, 0.36, 1);
+  --anim-stagger:       0.12s;
+  --anim-distance:      24px;
+
   /* ---- Layout helpers ----------------------------------------------- */
   --bc-header-h: clamp(64px, 8vw, 84px);
   --bc-z-header: 50;
@@ -144,5 +153,9 @@
     --bc-dur-fade: 0.01ms;
     --bc-dur-scroll: 0.01ms;
     --bc-reveal-shift: 0px;
+    --anim-duration: 0.01ms;
+    --anim-duration-slow: 0.01ms;
+    --anim-stagger: 0s;
+    --anim-distance: 0px;
   }
 }
