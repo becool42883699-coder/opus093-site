@@ -20,7 +20,7 @@ export const NAV = [
   { href: "/becool/maintenance/", label: "MAINTENANCE" },
   { href: "/becool/stock/", label: "STOCK" },
   { href: "/becool/#shop", label: "SHOP" },
-  { href: "/becool/#contact", label: "CONTACT" },
+  { href: "/becool/contact/", label: "CONTACT" },
 ];
 
 export function GbSymbol({ size = 34 }: { size?: number }) {

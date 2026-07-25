@@ -747,3 +747,107 @@
   .footLinks { flex-wrap: wrap; }
   .toTop { position: static; margin: 1.5rem 0 0 auto; }
 }
+
+/* =====================================================================
+   CONTACT ページ
+   ===================================================================== */
+
+/* --- ヒーロー: 店内写真 + ネイビースクリム + 中心から広がるシグナル --- */
+.contactHero {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: calc(var(--bc-header-h) + clamp(2.5rem, 7vw, 5rem)) var(--bc-gutter) clamp(4rem, 9vw, 7rem);
+  color: var(--bc-on-dark);
+  background: var(--bc-panel-black);
+  isolation: isolate;
+  overflow: hidden;
+  text-align: center;
+}
+.contactHeroBg { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
+.contactHeroBg img { width: 100%; height: 100%; object-fit: cover; }
+/* 写真を深く落として文字とシグナルを主役にする */
+.contactHero::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse 72% 62% at 50% 46%, rgba(9, 14, 22, 0.18) 0%, rgba(9, 14, 22, 0.55) 62%, rgba(9, 14, 22, 0.8) 100%),
+    linear-gradient(180deg, rgba(9, 14, 22, 0.72) 0%, rgba(9, 14, 22, 0.3) 40%, rgba(9, 14, 22, 0.78) 100%);
+}
+/* シグナルの波紋(canvas)。操作は一切奪わない */
+.contactPulse { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none; touch-action: auto; }
+
+.contactHeroInner { display: grid; justify-items: center; gap: 0.9rem; max-width: 760px; }
+.contactHeroInner .breadcrumb { margin-bottom: 0.4rem; }
+.contactTitle {
+  font-family: var(--bc-font-display); font-weight: var(--bc-fw-black);
+  font-size: clamp(2.8rem, 9vw, 5.4rem); line-height: 1; letter-spacing: 0.04em;
+  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.55);
+}
+.contactJp { position: relative; padding-top: 1.1rem; font-size: 0.95rem; font-weight: var(--bc-fw-medium); letter-spacing: 0.1em; color: var(--bc-on-dark-mut); }
+.contactJp::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: clamp(80px, 14vw, 150px); height: 1px; background: var(--bc-rule); }
+.contactLead { margin-top: 0.6rem; font-size: var(--bc-fs-body); line-height: 2; letter-spacing: 0.02em; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); }
+.contactHours { font-size: 0.8rem; letter-spacing: 0.1em; color: var(--bc-on-dark-mut); }
+
+/* 営業中バッジ(クライアントで判定。判定前は高さだけ確保) */
+.openBadge { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.2rem; margin-top: 0.6rem; padding: 0.45rem 1.1rem; font-size: 0.82rem; font-weight: var(--bc-fw-medium); letter-spacing: 0.06em; border: 1px solid rgba(255, 255, 255, 0.22); border-radius: var(--bc-radius-pill); background: rgba(255, 255, 255, 0.06); }
+.openBadge[data-pending="true"] { border-color: transparent; background: none; }
+.openDot { width: 8px; height: 8px; border-radius: 50%; background: var(--bc-on-dark-mut); }
+.openBadge[data-open="true"] { border-color: rgba(122, 200, 140, 0.5); color: #d8f0de; }
+.openBadge[data-open="true"] .openDot { background: #7ac88c; box-shadow: 0 0 0 3px rgba(122, 200, 140, 0.18); }
+.openBadge[data-open="false"] { color: var(--bc-on-dark-mut); }
+
+/* --- 連絡手段カード --- */
+.channelGrid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; gap: clamp(1rem, 2.4vw, 1.8rem); grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 860px) { .channelGrid { grid-template-columns: 1fr; } }
+.channelCard { position: relative; display: grid; align-content: start; justify-items: center; gap: 0.7rem; padding: clamp(2rem, 4vw, 3rem) clamp(1.3rem, 2.4vw, 2rem) clamp(1.6rem, 3vw, 2.2rem); text-align: center; background: var(--bc-white); border: 1px solid var(--bc-line); box-shadow: var(--bc-shadow-card); transition: transform 0.45s var(--bc-ease), box-shadow 0.45s var(--bc-ease); }
+.channelCard::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--bc-rule); }
+@media (hover: hover) { .channelCard:hover { transform: translateY(-5px); box-shadow: var(--bc-shadow-hover); } }
+.channelIcon { display: grid; place-items: center; width: 60px; height: 60px; }
+.channelIcon svg { width: 46px; height: 46px; fill: none; stroke: var(--bc-blue); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.channelEn { font-family: var(--bc-font-display); font-size: 0.7rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.22em; color: var(--bc-muted); }
+.channelCard h3 { font-size: 1.15rem; font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
+.channelCard p { font-size: 0.94rem; line-height: 1.9; color: var(--bc-muted); }
+.channelAction { position: relative; overflow: hidden; isolation: isolate; margin-top: 0.5rem; padding: 0.85rem 2rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 0.92rem; letter-spacing: 0.08em; color: var(--bc-white); background: var(--bc-blue); border-radius: var(--bc-radius-sm); transition: background 0.28s var(--bc-ease), box-shadow 0.35s var(--bc-ease); }
+.channelAction:hover { background: var(--bc-blue-mid); box-shadow: 0 12px 30px rgba(31, 99, 182, 0.26); }
+
+/* --- 相談内容コンポーザー --- */
+.composeSection { background: var(--bc-paper); }
+.composeLead { max-width: var(--bc-maxw-text); margin: 0 auto clamp(2rem, 4vw, 3rem); text-align: center; font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); color: var(--bc-muted); }
+.composer { max-width: 880px; margin: 0 auto; display: grid; gap: clamp(1.4rem, 3vw, 2.4rem); }
+.composerStep { margin: 0; padding: clamp(1.4rem, 3vw, 2.2rem); border: 1px solid var(--bc-line); background: var(--bc-white); box-shadow: var(--bc-shadow-card); }
+.composerStep legend { display: flex; align-items: center; gap: 0.7rem; padding: 0 0.6rem; font-weight: var(--bc-fw-bold); font-size: 1rem; color: var(--bc-ink); }
+.stepNo { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: 0.82rem; letter-spacing: 0.1em; color: var(--bc-blue); }
+/* 相談内容チップ */
+.chips { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.4rem; }
+.chip { padding: 0.62rem 1.15rem; font-size: 0.9rem; font-weight: var(--bc-fw-medium); color: var(--bc-ink); background: var(--bc-white); border: 1px solid var(--bc-line); border-radius: var(--bc-radius-pill); cursor: pointer; transition: background 0.25s var(--bc-ease), color 0.25s var(--bc-ease), border-color 0.25s var(--bc-ease); }
+.chip:hover { border-color: var(--bc-blue); color: var(--bc-blue); }
+.chip[data-on="true"] { color: var(--bc-white); background: var(--bc-blue); border-color: var(--bc-blue); }
+/* 入力欄 */
+.fieldGrid { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; margin-top: 0.8rem; }
+@media (max-width: 640px) { .fieldGrid { grid-template-columns: 1fr; } }
+.field { display: grid; gap: 0.45rem; font-size: 0.88rem; color: var(--bc-muted); }
+.field > span { display: flex; align-items: baseline; gap: 0.6rem; font-weight: var(--bc-fw-medium); color: var(--bc-ink); }
+.field > span small { font-size: 0.76rem; font-weight: var(--bc-fw-body); color: var(--bc-muted); }
+.fieldWide { margin-top: 1rem; }
+.field input, .field textarea, .preview {
+  width: 100%; padding: 0.85rem 1rem; font: inherit; font-size: 0.95rem; color: var(--bc-ink);
+  background: var(--bc-white); border: 1px solid var(--bc-line); border-radius: var(--bc-radius-sm);
+  transition: border-color 0.25s var(--bc-ease), box-shadow 0.25s var(--bc-ease);
+}
+.field textarea { resize: vertical; line-height: 1.8; }
+.field input:focus, .field textarea:focus, .preview:focus { outline: none; border-color: var(--bc-blue); box-shadow: 0 0 0 3px rgba(31, 99, 182, 0.14); }
+.composerNote { margin-top: 0.7rem; font-size: 0.9rem; line-height: 1.9; color: var(--bc-muted); }
+.preview { margin-top: 0.9rem; background: var(--bc-paper); line-height: 1.9; white-space: pre-wrap; }
+.composerActions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1rem; }
+.copyBtn { position: relative; overflow: hidden; isolation: isolate; padding: 0.85rem 1.8rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 0.9rem; letter-spacing: 0.08em; color: var(--bc-white); background: var(--bc-ink); border: none; border-radius: var(--bc-radius-sm); cursor: pointer; transition: background 0.28s var(--bc-ease); }
+.copyBtn:hover { background: var(--bc-blue); }
+
+/* --- こんなご相談から --- */
+.caseGrid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; gap: clamp(0.9rem, 2vw, 1.4rem); grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 960px) { .caseGrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .caseGrid { grid-template-columns: 1fr; } }
+.caseItem { position: relative; padding: clamp(1.5rem, 3vw, 2.1rem) clamp(1.2rem, 2vw, 1.6rem); background: var(--bc-white); border: 1px solid var(--bc-line); box-shadow: var(--bc-shadow-card); }
+.caseItem::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--bc-rule); }
+.caseItem h3 { margin-bottom: 0.5rem; font-size: 1.02rem; font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
+.caseItem p { font-size: 0.9rem; line-height: 1.9; color: var(--bc-muted); }
