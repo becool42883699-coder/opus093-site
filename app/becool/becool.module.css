@@ -752,6 +752,65 @@
    CONTACT ページ
    ===================================================================== */
 
+/* --- ヒーロー: 店内写真 + ネイビースクリム + 中心から広がるシグナル --- */
+.contactHero {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: calc(var(--bc-header-h) + clamp(2.5rem, 7vw, 5rem)) var(--bc-gutter) clamp(4rem, 9vw, 7rem);
+  color: var(--bc-on-dark);
+  background: var(--bc-panel-black);
+  isolation: isolate;
+  overflow: hidden;
+  text-align: center;
+}
+.contactHeroBg { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
+.contactHeroBg img { width: 100%; height: 100%; object-fit: cover; }
+/* 写真を深く落として文字とシグナルを主役にする */
+.contactHero::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background:
+    radial-gradient(ellipse 72% 62% at 50% 46%, rgba(9, 14, 22, 0.18) 0%, rgba(9, 14, 22, 0.55) 62%, rgba(9, 14, 22, 0.8) 100%),
+    linear-gradient(180deg, rgba(9, 14, 22, 0.72) 0%, rgba(9, 14, 22, 0.3) 40%, rgba(9, 14, 22, 0.78) 100%);
+}
+/* シグナルの波紋(canvas)。操作は一切奪わない */
+.contactPulse { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; pointer-events: none; touch-action: auto; }
+
+.contactHeroInner { display: grid; justify-items: center; gap: 0.9rem; max-width: 760px; }
+.contactHeroInner .breadcrumb { margin-bottom: 0.4rem; }
+.contactTitle {
+  font-family: var(--bc-font-display); font-weight: var(--bc-fw-black);
+  font-size: clamp(2.8rem, 9vw, 5.4rem); line-height: 1; letter-spacing: 0.04em;
+  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.55);
+}
+.contactJp { position: relative; padding-top: 1.1rem; font-size: 0.95rem; font-weight: var(--bc-fw-medium); letter-spacing: 0.1em; color: var(--bc-on-dark-mut); }
+.contactJp::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: clamp(80px, 14vw, 150px); height: 1px; background: var(--bc-rule); }
+.contactLead { margin-top: 0.6rem; font-size: var(--bc-fs-body); line-height: 2; letter-spacing: 0.02em; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); }
+.contactHours { font-size: 0.8rem; letter-spacing: 0.1em; color: var(--bc-on-dark-mut); }
+
+/* 営業中バッジ(クライアントで判定。判定前は高さだけ確保) */
+.openBadge { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.2rem; margin-top: 0.6rem; padding: 0.45rem 1.1rem; font-size: 0.82rem; font-weight: var(--bc-fw-medium); letter-spacing: 0.06em; border: 1px solid rgba(255, 255, 255, 0.22); border-radius: var(--bc-radius-pill); background: rgba(255, 255, 255, 0.06); }
+.openBadge[data-pending="true"] { border-color: transparent; background: none; }
+.openDot { width: 8px; height: 8px; border-radius: 50%; background: var(--bc-on-dark-mut); }
+.openBadge[data-open="true"] { border-color: rgba(122, 200, 140, 0.5); color: #d8f0de; }
+.openBadge[data-open="true"] .openDot { background: #7ac88c; box-shadow: 0 0 0 3px rgba(122, 200, 140, 0.18); }
+.openBadge[data-open="false"] { color: var(--bc-on-dark-mut); }
+
+/* --- 連絡手段カード --- */
+.channelGrid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; gap: clamp(1rem, 2.4vw, 1.8rem); grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 860px) { .channelGrid { grid-template-columns: 1fr; } }
+.channelCard { position: relative; display: grid; align-content: start; justify-items: center; gap: 0.7rem; padding: clamp(2rem, 4vw, 3rem) clamp(1.3rem, 2.4vw, 2rem) clamp(1.6rem, 3vw, 2.2rem); text-align: center; background: var(--bc-white); border: 1px solid var(--bc-line); box-shadow: var(--bc-shadow-card); transition: transform 0.45s var(--bc-ease), box-shadow 0.45s var(--bc-ease); }
+.channelCard::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--bc-rule); }
+@media (hover: hover) { .channelCard:hover { transform: translateY(-5px); box-shadow: var(--bc-shadow-hover); } }
+.channelIcon { display: grid; place-items: center; width: 60px; height: 60px; }
+.channelIcon svg { width: 46px; height: 46px; fill: none; stroke: var(--bc-blue); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.channelEn { font-family: var(--bc-font-display); font-size: 0.7rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.22em; color: var(--bc-muted); }
+.channelCard h3 { font-size: 1.15rem; font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
+.channelCard p { font-size: 0.94rem; line-height: 1.9; color: var(--bc-muted); }
+.channelAction { position: relative; overflow: hidden; isolation: isolate; margin-top: 0.5rem; padding: 0.85rem 2rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 0.92rem; letter-spacing: 0.08em; color: var(--bc-white); background: var(--bc-blue); border-radius: var(--bc-radius-sm); transition: background 0.28s var(--bc-ease), box-shadow 0.35s var(--bc-ease); }
+.channelAction:hover { background: var(--bc-blue-mid); box-shadow: 0 12px 30px rgba(31, 99, 182, 0.26); }
+
 /* --- 相談内容コンポーザー --- */
 .composeSection { background: var(--bc-paper); }
 .composeLead { max-width: var(--bc-maxw-text); margin: 0 auto clamp(2rem, 4vw, 3rem); text-align: center; font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); color: var(--bc-muted); }
@@ -793,134 +852,9 @@
 .caseItem h3 { margin-bottom: 0.5rem; font-size: 1.02rem; font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
 .caseItem p { font-size: 0.9rem; line-height: 1.9; color: var(--bc-muted); }
 
-/* =====================================================================
-   CONTACT — 流体シェーダー / キネティックタイポ / 追従UI
-   ===================================================================== */
-
-/* PCでカスタムカーソルを出す間は既定のカーソルを消す(タッチ端末には影響しない) */
-@media (hover: hover) and (pointer: fine) {
-  .contactRoot, .contactRoot a, .contactRoot button { cursor: none; }
+/* CONTACT: 「LINEから整備・車検の予約ができる」ことを目立たせる一行 */
+.lineNotice { display: inline-flex; align-items: center; gap: 0.7rem; margin-top: 0.5rem; padding: 0.55rem 1.2rem 0.55rem 0.6rem; font-size: 0.9rem; font-weight: var(--bc-fw-medium); letter-spacing: 0.03em; color: var(--bc-on-dark); border: 1px solid rgba(122, 175, 236, 0.45); border-radius: var(--bc-radius-pill); background: rgba(31, 99, 182, 0.18); }
+.lineNotice span { padding: 0.2em 0.6em; font-family: var(--bc-font-display); font-size: 0.66rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.14em; color: var(--bc-white); background: #06c755; border-radius: var(--bc-radius-pill); }
+@media (max-width: 560px) {
+  .lineNotice { padding: 0.6rem 0.9rem 0.6rem 0.6rem; font-size: 0.84rem; line-height: 1.6; text-align: left; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .contactRoot, .contactRoot a, .contactRoot button { cursor: auto; }
-}
-.cursor {
-  position: fixed; top: 0; left: 0; z-index: 200; pointer-events: none;
-  display: grid; place-items: center;
-  width: 26px; height: 26px; border-radius: 50%;
-  border: 1px solid rgba(226, 238, 252, 0.75);
-  opacity: 0; transition: opacity 0.25s ease, width 0.3s var(--bc-ease), height 0.3s var(--bc-ease), background 0.3s var(--bc-ease), border-color 0.3s var(--bc-ease);
-}
-.cursor[data-on="true"] { opacity: 1; }
-.cursor[data-hover="true"] { width: 92px; height: 92px; background: rgba(31, 99, 182, 0.9); border-color: transparent; }
-.cursor[data-down="true"] { transform-origin: center; filter: brightness(0.9); }
-.cursorLabel { font-family: var(--bc-font-display); font-size: 0.68rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.16em; color: #fff; opacity: 0; transition: opacity 0.2s ease; }
-.cursor[data-hover="true"] .cursorLabel { opacity: 1; }
-
-/* --- 流体シェーダーのヒーロー --- */
-.fluidHero {
-  position: relative; display: grid; place-items: center;
-  min-height: 100svh;
-  padding: calc(var(--bc-header-h) + clamp(2rem, 6vw, 4rem)) var(--bc-gutter) clamp(4rem, 9vw, 7rem);
-  color: var(--bc-on-dark); background: #080d16; isolation: isolate; overflow: hidden; text-align: center;
-}
-/* シェーダー非対応/reduced-motion のときの静的下地(常に敷いておく) */
-.fluidHero::before {
-  content: ""; position: absolute; inset: 0; z-index: -2;
-  background:
-    radial-gradient(ellipse 80% 70% at 50% 40%, rgba(24, 58, 108, 0.85) 0%, rgba(12, 20, 34, 0.95) 60%, #080d16 100%),
-    linear-gradient(160deg, #0b1524 0%, #14304f 55%, #0a1220 100%);
-}
-.contactFluid { position: absolute; inset: 0; z-index: -1; }
-.contactFluidCanvas { display: block; width: 100% !important; height: 100% !important; }
-.fluidHeroInner { position: relative; z-index: 1; display: grid; justify-items: center; gap: clamp(0.9rem, 2vw, 1.4rem); max-width: 1100px; }
-
-/* 巨大キネティックタイポ: 1文字ずつ下から立ち上がる */
-.kinetic { display: flex; justify-content: center; gap: 0.01em; font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: clamp(3.4rem, 15vw, 11rem); line-height: 0.92; letter-spacing: -0.01em; }
-.kinetic span { display: block; overflow: hidden; }
-.kinetic b { display: block; font-weight: inherit; transform: translateY(105%); animation: bcKin 1s var(--bc-ease) forwards; animation-delay: calc(var(--i) * 60ms + 120ms); }
-@keyframes bcKin { to { transform: translateY(0); } }
-@media (prefers-reduced-motion: reduce) {
-  .kinetic b { transform: none; animation: none; }
-}
-.fluidLead { font-size: var(--bc-fs-body); line-height: 2; color: rgba(244, 246, 249, 0.9); text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5); }
-.fluidStatus { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: clamp(0.8rem, 2vw, 1.6rem); margin-top: 0.4rem; }
-.heroTel { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: clamp(1.3rem, 3vw, 2rem); letter-spacing: 0.04em; color: var(--bc-on-dark); border-bottom: 1px solid rgba(255, 255, 255, 0.3); transition: border-color 0.3s var(--bc-ease); }
-.heroTel:hover { border-color: var(--bc-blue-light); }
-
-/* 営業中バッジ */
-.openBadge { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.2rem; padding: 0.45rem 1.1rem; font-size: 0.82rem; font-weight: var(--bc-fw-medium); letter-spacing: 0.06em; border: 1px solid rgba(255, 255, 255, 0.22); border-radius: var(--bc-radius-pill); background: rgba(255, 255, 255, 0.06); }
-.openBadge[data-pending="true"] { border-color: transparent; background: none; }
-.openDot { width: 8px; height: 8px; border-radius: 50%; background: var(--bc-on-dark-mut); }
-.openBadge[data-open="true"] { border-color: rgba(122, 200, 140, 0.5); color: #d8f0de; }
-.openBadge[data-open="true"] .openDot { background: #7ac88c; box-shadow: 0 0 0 3px rgba(122, 200, 140, 0.18); }
-.openBadge[data-open="false"] { color: var(--bc-on-dark-mut); }
-
-/* --- ティッカー --- */
-.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.marquee { position: relative; overflow: hidden; padding: clamp(0.9rem, 2vw, 1.4rem) 0; background: var(--bc-panel-black); color: var(--bc-on-dark); border-block: 1px solid rgba(255, 255, 255, 0.08); }
-.marqueeTrack { display: flex; width: max-content; }
-.marqueeGroup { display: flex; align-items: center; }
-.marqueeItem { display: inline-flex; align-items: center; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: clamp(0.9rem, 1.8vw, 1.15rem); letter-spacing: 0.14em; white-space: nowrap; }
-.marqueeItem i { display: inline-block; width: 7px; height: 7px; margin: 0 clamp(1.4rem, 3vw, 2.6rem); border-radius: 50%; background: var(--bc-blue); }
-@media (prefers-reduced-motion: no-preference) {
-  .marqueeTrack { animation: bcMarquee 32s linear infinite; }
-  .marquee[data-reverse="true"] .marqueeTrack { animation-direction: reverse; }
-}
-@keyframes bcMarquee { from { transform: translate3d(0,0,0); } to { transform: translate3d(-50%,0,0); } }
-
-/* --- 連絡手段: 大きな組版 + カーソル追従プレビュー --- */
-.channelsWrap { max-width: var(--bc-maxw); margin: 0 auto; }
-.channelList { position: relative; list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--bc-line); }
-.channelRow { border-bottom: 1px solid var(--bc-line); }
-.channelLink { position: relative; display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: clamp(1rem, 3vw, 2.6rem); padding: clamp(1.6rem, 3.6vw, 2.9rem) clamp(0.4rem, 1.5vw, 1.2rem); color: var(--bc-ink); }
-/* ホバーで行がわずかに右へ滑り、下地がネイビーに沈む */
-.channelLink::before { content: ""; position: absolute; inset: 0; background: var(--bc-panel-black); transform: scaleY(0); transform-origin: bottom; transition: transform 0.45s var(--bc-ease); z-index: -1; }
-@media (hover: hover) {
-  .channelRow:hover .channelLink::before { transform: scaleY(1); transform-origin: top; }
-  .channelRow:hover .channelLink { color: var(--bc-on-dark); }
-  .channelRow:hover .channelTitle { transform: translateX(clamp(6px, 1.4vw, 18px)); }
-  .channelRow:hover .channelArrow { transform: translateX(8px); opacity: 1; }
-}
-.channelNo { font-family: var(--bc-font-display); font-size: 0.78rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.16em; color: var(--bc-blue); }
-.channelMain { display: grid; gap: 0.4rem; min-width: 0; }
-.channelTitle { display: block; font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: clamp(1.6rem, 4.4vw, 3.1rem); line-height: 1.05; letter-spacing: 0.01em; transition: transform 0.45s var(--bc-ease); }
-.channelNote { font-size: 0.92rem; line-height: 1.8; color: var(--bc-muted); }
-.channelRow:hover .channelNote { color: var(--bc-on-dark-mut); }
-.channelMeta { display: grid; justify-items: end; gap: 0.3rem; text-align: right; }
-.channelEn { font-family: var(--bc-font-display); font-size: 0.68rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.22em; color: var(--bc-muted); }
-.channelRow:hover .channelEn { color: var(--bc-blue-light); }
-.channelCta { font-size: 0.92rem; font-weight: var(--bc-fw-medium); white-space: nowrap; }
-.channelArrow { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid currentColor; opacity: 0.5; transition: transform 0.45s var(--bc-ease), opacity 0.3s var(--bc-ease); }
-.channelArrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-@media (max-width: 700px) {
-  .channelLink { grid-template-columns: auto 1fr; gap: 0.9rem 1rem; }
-  .channelMeta { grid-column: 2; justify-items: start; text-align: left; }
-  .channelArrow { display: none; }
-}
-/* カーソル追従プレビュー(PCのみ・reduced-motionでは data-on が付かない) */
-.channelPreview { position: absolute; top: 0; left: 0; z-index: 3; width: clamp(220px, 22vw, 340px); aspect-ratio: 4 / 3; overflow: hidden; pointer-events: none; opacity: 0; transition: opacity 0.35s var(--bc-ease); box-shadow: var(--bc-shadow-hover); }
-.channelPreview[data-on="true"] { opacity: 1; }
-.channelPreview img { width: 100%; height: 100%; object-fit: cover; }
-@media (max-width: 900px) { .channelPreview { display: none; } }
-
-/* --- 相談内容コンポーザー(既存スタイルを踏襲) --- */
-.composeSection { background: var(--bc-paper); }
-.composeLead { max-width: var(--bc-maxw-text); margin: 0 auto clamp(2rem, 4vw, 3rem); text-align: center; font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); color: var(--bc-muted); }
-
-/* --- こんなご相談から --- */
-.caseGrid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; gap: clamp(0.9rem, 2vw, 1.4rem); grid-template-columns: repeat(4, 1fr); }
-@media (max-width: 960px) { .caseGrid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 560px) { .caseGrid { grid-template-columns: 1fr; } }
-.caseItem { position: relative; padding: clamp(1.6rem, 3vw, 2.2rem) clamp(1.2rem, 2vw, 1.6rem); background: var(--bc-white); border: 1px solid var(--bc-line); box-shadow: var(--bc-shadow-card); }
-.caseItem::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--bc-rule); }
-.caseNo { font-family: var(--bc-font-display); font-size: 0.72rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.18em; color: var(--bc-blue); }
-.caseItem h3 { margin: 0.5rem 0; font-size: 1.02rem; font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
-.caseItem p { font-size: 0.9rem; line-height: 1.9; color: var(--bc-muted); }
-
-/* --- 締めの連絡先 --- */
-.contactOutro { display: grid; justify-items: center; gap: 0.8rem; padding: clamp(4rem, 10vw, 8rem) var(--bc-gutter); text-align: center; background: var(--bc-panel-black); color: var(--bc-on-dark); }
-.outroSmall { font-size: 0.8rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--bc-on-dark-mut); }
-.outroTel { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: clamp(2rem, 7vw, 4.6rem); letter-spacing: 0.02em; line-height: 1; color: var(--bc-on-dark); transition: color 0.3s var(--bc-ease); }
-.outroTel:hover { color: var(--bc-blue-light); }
-.outroHours { font-size: 0.85rem; letter-spacing: 0.08em; color: var(--bc-on-dark-mut); }
