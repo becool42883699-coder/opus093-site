@@ -196,8 +196,7 @@
     radial-gradient(ellipse 74% 60% at 50% 45%, rgba(10,13,18,0) 0%, rgba(10,13,18,0.34) 60%, rgba(10,13,18,0.7) 100%),
     linear-gradient(180deg, rgba(10,13,18,0.66) 0%, rgba(10,13,18,0.14) 24%, rgba(10,13,18,0.22) 58%, rgba(10,13,18,0.82) 100%);
 }
-/* 下側は額装フレーム + 隅のメタ表記の分だけ空けて、ロックアップを衝突させない */
-.heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem clamp(5rem, 9vw, 8.5rem); text-align: center; }
+.heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
 
 /* --- ロゴビルド・イントロ(プロトタイプv2「精密組立版」): 1200x900ステージ --- */
 .logoZone { position: relative; width: min(96vw, 820px); }
@@ -369,9 +368,9 @@
   .heroWordmark { margin-top: clamp(-4.6rem, -2vw, -0.2rem); }
 }
 .wmAccent { color: var(--bc-blue-light); }
-/* タグライン: 上に極細のメタリック罫を置き、ワードマークと“銘板”として組む */
-.tagline { position: relative; margin-top: 0.55rem; padding-top: 1.25rem; font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: rgba(244, 246, 249, 0.86); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); padding-left: var(--bc-ls-tagline); }
-.tagline::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: clamp(90px, 16vw, 190px); height: 1px; background: var(--bc-rule); opacity: 0.75; }
+/* タグライン: ヒーローのロックアップは従来のまま(罫線などの装飾は付けない)。
+   font-size は --bc-fs-small を高級路線で微調整したため、ここは元の値を明示。 */
+.tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: 0.85rem; letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); padding-left: var(--bc-ls-tagline); }
 .heroInner[data-intro="play"] .heroWordmark { opacity: 0; animation: bcWordIn .7s var(--bc-ease) 6.2s both; }
 .heroInner[data-intro="play"] .tagline { opacity: 0; animation: bcWordIn .7s var(--bc-ease) 6.5s both; }
 /* reduced-motion / 2回目以降: 完成状態を短フェードで表示 */
