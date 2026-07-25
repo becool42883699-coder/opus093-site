@@ -61,6 +61,92 @@ const SERVICES: {
   },
 ];
 
+/* ---- SERVICE のカードUI 切替 -------------------------------------------
+   "A" = 縦積みの大型カード(ダークサーフェス)
+   "B" = 明るいカード + ダークなアイコン帯(PCタブ / モバイル横スワイプ)
+   どちらも「上=画像ブロック / 下=テキストブロック」で、写真に文字を重ねない。 */
+const SVC_UI: "A" | "B" = "B";
+
+/* 画像ブロックは 3:2。実寸を width/height に入れてレイアウトシフトを防ぐ。 */
+const SVC_IMG_W = 900;
+const SVC_IMG_H = 600;
+
+/** 1枚ぶんの中身。本文・ボタン文言は SERVICES の値をそのまま使う(書き換えない)。 */
+function ServiceCardBody({ s }: { s: (typeof SERVICES)[number] }) {
+  return (
+    <>
+      <div className={styles["bc-svc-media"]} data-service={s.title}>
+        <img
+          src={asset(s.photo)}
+          alt=""
+          loading="lazy"
+          width={SVC_IMG_W}
+          height={SVC_IMG_H}
+        />
+      </div>
+      <div className={styles["bc-svc-body"]}>
+        <span className={styles["bc-svc-icon"]}>{s.icon}</span>
+        <h3 className={styles["bc-svc-title"]}>{s.title}</h3>
+        <p className={styles["bc-svc-jp"]}>{s.jp}</p>
+        <p className={styles["bc-svc-text"]}>{s.body}</p>
+        {s.link ? (
+          <Link className={styles["bc-svc-link"]} href={s.link.href}>{s.link.label}</Link>
+        ) : null}
+      </div>
+    </>
+  );
+}
+
+/** 案A: 4枚を並べる大型カード。切替UIを持たず常時すべて表示。 */
+function ServiceCardsA() {
+  return (
+    <ul className={styles["bc-svc-grid"]}>
+      {SERVICES.map((s) => (
+        <li key={s.title} className={`${styles["bc-svc-card"]} ${styles["bc-svc-card-dark"]}`}>
+          <ServiceCardBody s={s} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * 案B: 明るいカード。PCはタブ切替、モバイルは横スワイプ。
+ * 切替はラジオ+CSSのみで行うのでJS無効でも動作し、
+ * モバイルでは全カードを横スクロールで読めるためどの環境でも4件に到達できる。
+ */
+function ServiceCardsB() {
+  return (
+    <div className={styles["bc-svc-tabs"]}>
+      {SERVICES.map((s, i) => (
+        <input
+          key={`r-${s.title}`}
+          type="radio"
+          name="bc-svc"
+          id={`bc-svc-${i}`}
+          className={styles["bc-svc-radio"]}
+          defaultChecked={i === 0}
+        />
+      ))}
+      <div className={styles["bc-svc-tablist"]}>
+        {SERVICES.map((s, i) => (
+          <label key={`l-${s.title}`} htmlFor={`bc-svc-${i}`} className={styles["bc-svc-tab"]}>
+            <span className={styles["bc-svc-tab-en"]}>{s.title}</span>
+            <span className={styles["bc-svc-tab-jp"]}>{s.jp}</span>
+          </label>
+        ))}
+      </div>
+      <ul className={styles["bc-svc-panels"]}>
+        {SERVICES.map((s) => (
+          <li key={s.title} className={`${styles["bc-svc-card"]} ${styles["bc-svc-card-light"]}`}>
+            <ServiceCardBody s={s} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /* ---- showroom gallery (real interior photos) ----------------------- */
 const GALLERY = [
   { src: "/becool/img/interior-03.webp", shape: "tall", alt: "GARAGE BeCool のくつろげる待合ラウンジ" },
@@ -494,21 +580,12 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- SERVICES ---------- */}
-        <section id="service" data-reveal className={`${styles.services} ${styles.reveal}`} aria-label="サービス">
-          {SERVICES.map((s) => (
-            <div key={s.title} className={styles.servicePanel} data-service={s.title} data-spotlight>
-              <div className={styles.servicePhoto} aria-hidden="true">
-                <img src={asset(s.photo)} alt="" loading="lazy" data-parallax="0.04" />
-              </div>
-              <div className={styles.serviceInner}>
-                <span className={styles.serviceIcon}>{s.icon}</span>
-                <h3>{s.title}</h3>
-                <p className={styles.serviceJp}>{s.jp}</p>
-                <p>{s.body}</p>
-                {s.link ? <Link className={styles.serviceLink} href={s.link.href}>{s.link.label}</Link> : null}
-              </div>
-            </div>
-          ))}
+        <section id="service" data-reveal className={`${styles["bc-svc-section"]} ${styles.reveal}`} aria-labelledby="svc-h">
+          <div className={styles.sectionHead}>
+            <h2 id="svc-h">SERVICE</h2>
+            <span>サービス</span>
+          </div>
+          {SVC_UI === "A" ? <ServiceCardsA /> : <ServiceCardsB />}
         </section>
 
         {/* ---------- FLOW (ご利用の流れ) ---------- */}
