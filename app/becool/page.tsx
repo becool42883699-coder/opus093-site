@@ -206,6 +206,40 @@ const becoolLd = {
    scale(0.70) でステージ(1200x900)に配置(プロトタイプ座標系そのまま)。 --- */
 const HEXFRAME_D = "M 724 157 L 928 300 L 928 584 L 724 727 L 520 584 L 520 300 Z";
 
+/* ---- ヒーロー: ブランドロゴそのもの(キューブ + garage becool + SINCE 1999) ----
+   public/becool/img/logo.svg と同じ4パス構成。暗いヒーロー写真の上に置くので、
+   "garage" と "SINCE 1999" だけ明色版で塗る(元の濃いチャコールでは沈んで読めない)。
+   キューブとブルーの "becool" はブランド本来のグラデーションのまま。 --- */
+function HeroFullLogo() {
+  const g = CUBE_GRADS.mark;
+  return (
+    <svg
+      className={styles.fullLogo}
+      viewBox="138 165 1176 771"
+      role="img"
+      aria-label="GARAGE BeCool — since 1999"
+    >
+      <defs>
+        <linearGradient id="fl-mark" gradientUnits="userSpaceOnUse" x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2}>
+          {g.stops.map(([o, c]) => <stop key={o} offset={o} stopColor={c} />)}
+        </linearGradient>
+        <linearGradient id="fl-blue" gradientUnits="userSpaceOnUse" x1="0" y1="710" x2="0" y2="825">
+          <stop offset="0" stopColor="#8dc2f5" />
+          <stop offset="1" stopColor="#4f95df" />
+        </linearGradient>
+        <linearGradient id="fl-garage" gradientUnits="userSpaceOnUse" x1="0" y1="720" x2="0" y2="830">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#dde4ec" />
+        </linearGradient>
+      </defs>
+      <path d={CUBE_MARK_D} fill="url(#fl-mark)" fillRule="evenodd" />
+      <path d={CUBE_GARAGE_D} fill="url(#fl-garage)" fillRule="evenodd" />
+      <path d={CUBE_BECOOL_D} fill="url(#fl-blue)" fillRule="evenodd" />
+      <path d={CUBE_SINCE_D} fill="rgba(226, 234, 243, 0.82)" fillRule="evenodd" />
+    </svg>
+  );
+}
+
 /* ---- ヒーローのワードマーク(ブランドロゴ下段の正規アートワーク) ----------
    "garage"(チャコール) + "becool"(ブルー) + "SINCE 1999"(罫線付き)。
    元ロゴのパスをそのまま使うので字形・字間はブランド指定どおり。
@@ -311,7 +345,7 @@ function HeroBuildStage() {
    "sweep"     : クラウド状の光が流れてキューブが実体化する常時ループ演出
    "blueprint" : 設計図式ビルド→筆記体露出の1回再生演出
    値を変えるだけで切替(全演出のコードは残置)。 */
-const HERO_ANIM: "glass" | "particle" | "sweep" | "blueprint" = "glass";
+const HERO_ANIM: "logo" | "glass" | "particle" | "sweep" | "blueprint" = "logo";
 
 /* ---- ロゴ演出(sweep): GBマークに雲状の光マスクが流れ続け、実体(塗り)が
    現れては消える。下地に薄いワイヤーフレーム。SMILで常時ループ(1回再生ではない)。
@@ -350,10 +384,13 @@ function HeroSweepStage() {
 }
 
 export default function BecoolPage() {
+  const plainLogo = HERO_ANIM === "logo";
   const glass = HERO_ANIM === "glass";
   const particle = HERO_ANIM === "particle";
   const sweep = HERO_ANIM === "sweep";
-  const compact = glass || particle || sweep; // マーク単体表示: ワードマークの間隔を詰める
+  // マーク単体表示(glass/particle/sweep)はワードマークを別途下に置くので間隔を詰める。
+  // "logo" はロゴ自体に garage becool / SINCE 1999 が入っているので別ワードマークは出さない。
+  const compact = glass || particle || sweep;
   return (
     <div className={`becool ${styles.root}`}>
       <JsonLd data={becoolLd} />
@@ -372,14 +409,13 @@ export default function BecoolPage() {
           <span className={`${styles.heroMeta} ${styles.heroMetaR}`} aria-hidden="true">Est. 1999</span>
           {/* particle/sweep は常時演出なので data-intro="done"(ワードマーク即表示)。
               blueprintは1回再生なので "play"(BecoolLogoIntroが再生を制御) */}
-          <div className={`${styles.heroInner} ${compact ? styles.heroInnerSweep : ""}`} data-hero-stage data-intro={compact ? "done" : "play"}>
-            <div className={`logo-zone ${styles.logoZone} ${glass || particle ? styles.logoZoneParticle : sweep ? styles.logoZoneSweep : ""}`}>
+          <div className={`${styles.heroInner} ${compact ? styles.heroInnerSweep : ""}`} data-hero-stage data-intro={plainLogo || compact ? "done" : "play"}>
+            <div className={`logo-zone ${styles.logoZone} ${plainLogo ? styles.logoZoneFull : glass || particle ? styles.logoZoneParticle : sweep ? styles.logoZoneSweep : ""}`}>
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
-              {glass ? <HeroGlassLogo /> : particle ? <HeroParticleLogo /> : sweep ? <HeroSweepStage /> : <HeroBuildStage />}
+              {plainLogo ? <HeroFullLogo /> : glass ? <HeroGlassLogo /> : particle ? <HeroParticleLogo /> : sweep ? <HeroSweepStage /> : <HeroBuildStage />}
             </div>
-            {/* ワードマーク: ブランドロゴ本来のアートワーク(garage becool + SINCE 1999)。
-                以前はHTMLテキストで組んでいたが、正規ロゴの字形に戻している。 */}
-            <HeroWordmark />
+            {/* ロゴ自体に garage becool / SINCE 1999 が入っている場合は別ワードマークを出さない */}
+            {!plainLogo && <HeroWordmark />}
           </div>
           {/* blueprint(1回再生)時のみ: JS無効フォールバックと再生ゲート */}
           {!compact && (
