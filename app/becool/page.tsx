@@ -206,6 +206,37 @@ const becoolLd = {
    scale(0.70) でステージ(1200x900)に配置(プロトタイプ座標系そのまま)。 --- */
 const HEXFRAME_D = "M 724 157 L 928 300 L 928 584 L 724 727 L 520 584 L 520 300 Z";
 
+/* ---- ヒーローのワードマーク(ブランドロゴ下段の正規アートワーク) ----------
+   "garage"(チャコール) + "becool"(ブルー) + "SINCE 1999"(罫線付き)。
+   元ロゴのパスをそのまま使うので字形・字間はブランド指定どおり。
+   x:167-1284 / y:729-906 に収まるので、少し余白を足した viewBox にする。 --- */
+function HeroWordmark() {
+  return (
+    <svg
+      className={`${styles.heroLockup} hero-wordmark`}
+      viewBox="150 715 1155 205"
+      role="img"
+      aria-label="GARAGE BeCool — since 1999"
+    >
+      {/* 暗いヒーロー写真の上に置くため、字形は正規ロゴのまま「明色版」で塗る
+          (元の濃いチャコールだと背景に沈んで読めないため)。becoolはブランドブルー。 */}
+      <defs>
+        <linearGradient id="hw-garage" gradientUnits="userSpaceOnUse" x1="0" y1="720" x2="0" y2="830">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="1" stopColor="#dde4ec" />
+        </linearGradient>
+        <linearGradient id="hw-blue" gradientUnits="userSpaceOnUse" x1="0" y1="710" x2="0" y2="825">
+          <stop offset="0" stopColor="#8dc2f5" />
+          <stop offset="1" stopColor="#4f95df" />
+        </linearGradient>
+      </defs>
+      <path d={CUBE_GARAGE_D} fill="url(#hw-garage)" fillRule="evenodd" />
+      <path d={CUBE_BECOOL_D} fill="url(#hw-blue)" fillRule="evenodd" />
+      <path d={CUBE_SINCE_D} fill="rgba(226, 234, 243, 0.82)" fillRule="evenodd" />
+    </svg>
+  );
+}
+
 function HeroBuildStage() {
   return (
     <svg className={styles.buildSvg} viewBox="0 0 1200 900" role="img" aria-label="GARAGE BeCool ロゴ">
@@ -346,11 +377,9 @@ export default function BecoolPage() {
               <span className={`logo-backing ${styles.logoBacking}`} aria-hidden="true" />
               {glass ? <HeroGlassLogo /> : particle ? <HeroParticleLogo /> : sweep ? <HeroSweepStage /> : <HeroBuildStage />}
             </div>
-            {/* ワードマーク: ロゴ完成後、横方向のマスクが左から右へ開いて現れる */}
-            <p className={`${styles.heroWordmark} hero-wordmark`}>
-              <span>GARAGE</span> <span className={styles.wmAccent}>BeCool</span>
-            </p>
-            <p className={`${styles.tagline} hero-tagline`}>Used Car &amp; Car Life Support — since 1999</p>
+            {/* ワードマーク: ブランドロゴ本来のアートワーク(garage becool + SINCE 1999)。
+                以前はHTMLテキストで組んでいたが、正規ロゴの字形に戻している。 */}
+            <HeroWordmark />
           </div>
           {/* blueprint(1回再生)時のみ: JS無効フォールバックと再生ゲート */}
           {!compact && (

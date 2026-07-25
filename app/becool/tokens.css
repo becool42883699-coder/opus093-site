@@ -78,7 +78,9 @@
   --bc-lh-heading: 1.08;
   --bc-ls-tagline: 0.28em; /* "since 20XX" wide tracking (ヒーローのタグライン) */
   --bc-ls-head:    0.02em; /* 大見出しは締める            */
-  --bc-ls-label:   0.24em; /* 小さいラベル/日本語サブは広く */
+  /* 欧文の小ラベル用。日本語に広いトラッキングを掛けると可読性が落ちるので、
+     和文のサブ見出しには使わないこと(和文は 0.1em 前後に留める)。 */
+  --bc-ls-label:   0.2em;
   --bc-ls-body:    0.02em;
 
   /* ---- Spacing scale (4px base) ------------------------------------- */
@@ -91,8 +93,9 @@
   --bc-space-7: 6rem;
   --bc-space-8: 8rem;
 
-  /* 余白は高級感の主成分。セクション間をさらに広く取る */
-  --bc-section-y: clamp(5.5rem, 14vw, 13.5rem);  /* vertical section padding  */
+  /* 余白は高級感の主成分。ただし広げすぎると間延びして読みにくくなるので、
+     元(10.5rem)より少しだけ広い程度に留める。 */
+  --bc-section-y: clamp(4.8rem, 11vw, 11rem);  /* vertical section padding  */
   --bc-gutter:    clamp(1.25rem, 5vw, 4rem);/* horizontal page gutter    */
   --bc-maxw:      1240px;                    /* content max width         */
   --bc-maxw-text: 720px;                     /* readable text column      */

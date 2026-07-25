@@ -196,7 +196,8 @@
     radial-gradient(ellipse 74% 60% at 50% 45%, rgba(10,13,18,0) 0%, rgba(10,13,18,0.34) 60%, rgba(10,13,18,0.7) 100%),
     linear-gradient(180deg, rgba(10,13,18,0.66) 0%, rgba(10,13,18,0.14) 24%, rgba(10,13,18,0.22) 58%, rgba(10,13,18,0.82) 100%);
 }
-.heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
+/* 下は額装フレーム/隅のメタ表記と重ならない程度に空ける(空けすぎると上に寄る) */
+.heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem clamp(2.2rem, 4vw, 3.6rem); text-align: center; }
 
 /* --- ロゴビルド・イントロ(プロトタイプv2「精密組立版」): 1200x900ステージ --- */
 .logoZone { position: relative; width: min(96vw, 820px); }
@@ -303,7 +304,7 @@
 /* 下地ワイヤーフレーム: 暗い背景に映える淡い明るい線 */
 .sweepSvg :global(.sw-wire) { fill: none; stroke: rgba(214, 226, 238, 0.34); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
 /* マークが縦長(単体)なので、ワードマークは負マージンをやめて自然な間隔に */
-.heroInnerSweep .heroWordmark { margin-top: clamp(0.2rem, 1vw, 0.9rem); }
+.heroInnerSweep .heroLockup { margin-top: clamp(0.2rem, 1vw, 0.9rem); }
 /* パーセント指定transform(マスクrect)を要素自身のbbox基準にする。
    ※ scale付き配置グループ(.bc-cube等)には絶対に付けない(拡大基準がずれる/Safari) */
 .buildSvg :global(.bc-script-reveal) { transform-box: fill-box; }
@@ -368,11 +369,14 @@
   .heroWordmark { margin-top: clamp(-4.6rem, -2vw, -0.2rem); }
 }
 .wmAccent { color: var(--bc-blue-light); }
-/* タグライン: ヒーローのロックアップは従来のまま(罫線などの装飾は付けない)。
-   font-size は --bc-fs-small を高級路線で微調整したため、ここは元の値を明示。 */
-.tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: 0.85rem; letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); padding-left: var(--bc-ls-tagline); }
-.heroInner[data-intro="play"] .heroWordmark { opacity: 0; animation: bcWordIn .7s var(--bc-ease) 6.2s both; }
-.heroInner[data-intro="play"] .tagline { opacity: 0; animation: bcWordIn .7s var(--bc-ease) 6.5s both; }
+/* ヒーローのワードマーク: ブランドロゴ下段の正規アートワーク(garage becool /
+   SINCE 1999)をSVGで表示。字形はロゴのままなので字間・比率は触らない。
+   ロゴ(キューブ)との間隔だけレイアウト側で調整する。 */
+.heroLockup { display: block; width: min(80vw, 520px); height: auto; margin-top: clamp(-3.4rem, -3vw, -0.6rem); filter: drop-shadow(0 3px 18px rgba(0, 0, 0, 0.6)); }
+@media (max-width: 700px) {
+  .heroLockup { width: min(84vw, 420px); margin-top: clamp(-2.4rem, -3vw, -0.4rem); }
+}
+.heroInner[data-intro="play"] .heroLockup { opacity: 0; animation: bcWordIn .7s var(--bc-ease) 6.2s both; }
 /* reduced-motion / 2回目以降: 完成状態を短フェードで表示 */
 .heroInner[data-intro="done"] { animation: bcHeroFade 0.5s var(--bc-ease) both; }
 
@@ -394,8 +398,7 @@
   .heroInner[data-intro="play"] .buildSvg :global(.bc-cube),
   .heroInner[data-intro="play"] .buildSvg :global(.bc-frag) { opacity: 0 !important; }
   .heroInner[data-intro="play"] .buildSvg :global(.bc-script-reveal) { transform: none !important; }
-  .heroInner[data-intro="play"] .heroWordmark,
-  .heroInner[data-intro="play"] .tagline { animation: none !important; opacity: 1 !important; }
+  .heroInner[data-intro="play"] .heroLockup { animation: none !important; opacity: 1 !important; }
   .heroInner[data-intro="play"] ~ .scrollCue { animation: none !important; opacity: 1 !important; }
 }
 
@@ -417,7 +420,8 @@
 .conceptBand::before, .conceptBand::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); width: min(560px, 62vw); height: 1px; background: var(--bc-rule); opacity: 0.55; }
 .conceptBand::before { top: clamp(2.4rem, 6vw, 5rem); }
 .conceptBand::after { bottom: clamp(2.4rem, 6vw, 5rem); }
-.conceptBand p { font-size: var(--bc-fs-lead); font-weight: var(--bc-fw-medium); line-height: 1.85; letter-spacing: 0.08em; }
+/* 和文のステートメント。字間は詰めめ(0.04em)にして大きな文字でも読みやすく */
+.conceptBand p { font-size: var(--bc-fs-lead); font-weight: var(--bc-fw-medium); line-height: 1.8; letter-spacing: 0.04em; }
 .cardsPhoto { height: clamp(400px, 54vw, 680px); }
 
 /* =====================  SHOWROOM ギャラリー(スティッキー・スタック)  ===================== */
@@ -444,7 +448,8 @@
 .sectionHead { text-align: center; margin-bottom: clamp(2.6rem, 6vw, 4.5rem); }
 .sectionHead h2 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h2); letter-spacing: var(--bc-ls-head); line-height: var(--bc-lh-heading); color: var(--bc-ink); }
 /* 日本語サブラベル: 上に極細のメタリック罫を敷いて“銘板”のように見せる */
-.sectionHead span { display: block; margin-top: 1.15rem; padding-top: 1.15rem; position: relative; font-size: var(--bc-fs-small); font-weight: var(--bc-fw-medium); letter-spacing: var(--bc-ls-label); color: var(--bc-muted); }
+/* 和文のサブ見出し。字間を詰めすぎず広げすぎず、サイズを少し上げて読みやすく */
+.sectionHead span { display: block; margin-top: 1.15rem; padding-top: 1.15rem; position: relative; font-size: 0.95rem; font-weight: var(--bc-fw-medium); letter-spacing: 0.1em; color: var(--bc-muted); }
 .sectionHead span::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: clamp(72px, 12vw, 132px); height: 1px; background: var(--bc-rule); }
 /* ABOUT: テキスト + グレーディング写真の2カラム(モバイルは縦積み) */
 .aboutGrid { max-width: 1100px; margin: 0 auto; display: grid; gap: clamp(2rem, 4vw, 3.5rem); align-items: stretch; }
