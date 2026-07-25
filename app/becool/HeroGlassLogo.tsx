@@ -139,6 +139,40 @@ export default function HeroGlassLogo() {
     setLoaded(false);
   }, [active]);
 
+  // 回転は使わず、スクロールに合わせて静かに2〜4度だけ傾ける(CSSの3D transform)。
+  // reduced-motion では傾けない。1つの scroll ハンドラ + rAF のみ。
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const MAX = 3.5; // 最大傾き(度)
+    el.style.willChange = "transform";
+    let ticking = false;
+    const update = () => {
+      ticking = false;
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight || 1;
+      // ロゴ中心が画面中央からどれだけ上下にずれているか(概ね -1..1)
+      const off = Math.max(-1, Math.min(1, (rect.top + rect.height / 2 - vh / 2) / (vh / 2)));
+      const rx = (-off * MAX).toFixed(2); // 上に行くほど少し上向き、下がると手前へ
+      const ry = (off * (MAX * 0.5)).toFixed(2);
+      el.style.transform = `perspective(1100px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    update();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      el.style.transform = "";
+    };
+  }, []);
+
   const onClick = (e: MouseEvent<HTMLDivElement>) => {
     if (!loaded) return; // 読込完了まで Ripple 無効
     const rect = wrapRef.current?.getBoundingClientRect();
@@ -160,26 +194,32 @@ export default function HeroGlassLogo() {
           className={`${styles.particleCanvas} ${loaded ? styles.particleCanvasIn : ""}`}
           src={`${BASE}/becool/img/gb-cube.svg`}
           background=""
-          tint="#3f7fd0"
-          tintDensity={1.1}
-          ior={1.5}
-          thickness={3}
-          roughness={mobile ? 0.12 : 0.06}
-          dispersion={mobile ? 0.2 : 0.35}
-          clearcoat={1}
-          depth={0.22}
-          bevel={0.35}
-          highlight="#5aa2ec"
-          environmentIntensity={1.1}
+          /* ロゴ本来のネイビー〜明るいブルーを保つ。白く抜けないようしっかり色を乗せるが、
+             濃い青の“透明ガラス”ではなくマットな模型的ブルーにする(密度で発色) */
+          tint="#2f62b0"
+          tintDensity={2.6}
+          /* 屈折・立体感・厚み(見た目)は最小限。色の濃さ用にthicknessのみ少し持たせる */
+          ior={1.26}
+          thickness={1.6}
+          depth={0.045}
+          bevel={0.1}
+          /* マットな質感(強い白ハイライト/発光輪郭を出さない)。ただし白飛びしない程度 */
+          roughness={mobile ? 0.38 : 0.33}
+          dispersion={0}
+          clearcoat={0.06}
+          /* 輪郭光はくすんだ明るいブルー(白く強く光らせない)。環境光は控えめ */
+          highlight="#6aa6e8"
+          environmentIntensity={0.6}
           scale={3.0}
-          fov={50}
-          cameraDistance={4.2}
+          fov={44}
+          cameraDistance={4.4}
           orbit={false}
           zoom={false}
           autoRotate={false}
-          floatIntensity={mobile ? 0.35 : 0.5}
-          rotationIntensity={mobile ? 0.22 : 0.32}
-          floatSpeed={1.1}
+          /* 常時の浮遊・回転は無し(傾きはスクロールでCSS制御) */
+          floatIntensity={0}
+          rotationIntensity={0}
+          floatSpeed={0}
           onLoad={() => setLoaded(true)}
           onError={() => setTier(0)}
         />
