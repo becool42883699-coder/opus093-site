@@ -3,6 +3,11 @@
 このファイルは `becool42883699-coder/opus093-site` リポジトリでの作業方針・決定事項をまとめたもの。
 新しいセッションはここを読んでから作業を始めること。
 
+> ## 最重要ルール
+> **スマホ表示を絶対に崩さないこと。** どんな小さな変更でも、作業完了前に必ず
+> モバイル幅（390px前後）で見た目とスクロール動作を検証する（§4参照）。
+> 「PCでは直った、スマホは未確認」のまま完了報告しない。
+
 ## 1. プロジェクトの構成と目的
 
 - Next.js（App Router / Turbopack）+ React + TypeScript のマルチページサイト。
@@ -10,10 +15,18 @@
   コーポレートサイト）。他ルート（`/about` 等）は基本的に触らない。
 - スタイリングは **CSS Modules のみ**（`app/becool/becool.module.css`）。Tailwind・
   shadcn・`@/` パスエイリアスは使わない方針。
-- デプロイ形態は **静的エクスポート**。ビルドコマンド:
-  `NEXT_OUTPUT=export NEXT_PUBLIC_BASE_PATH=/opus093-site npm run build` → `out/`。
-  GitHub Actions（`.github/workflows/deploy-pages.yml`）が `main` push を `gh-pages` へ
-  デプロイする。公開URL: `https://becool42883699-coder.github.io/opus093-site/becool/`。
+- **ホスティング（2系統・移行中）**:
+  - **現状の実運用・検証先**: 静的エクスポート → GitHub Actions
+    （`.github/workflows/deploy-pages.yml`）が `main` push を `gh-pages` ブランチへ
+    デプロイ。公開URL: `https://becool42883699-coder.github.io/opus093-site/becool/`。
+    ビルドコマンド: `NEXT_OUTPUT=export NEXT_PUBLIC_BASE_PATH=/opus093-site npm run build`
+    → `out/`。これまでの動作確認・デプロイは全てこの経路。
+  - **将来/並行の配置先**: Xserver上で、既存のWordPressサイトと**同居**させる形で
+    この静的HTML出力を配置する想定がある。`out/` をそのまま、または
+    WordPressのURL構造と衝突しないサブディレクトリに置くことを想定。
+    `.htaccess` はWordPress側の設定を壊さないよう**このプロジェクトからは触らない**
+    （`.claude/settings.json` で編集を拒否済み）。Xserver固有の詳細（配置パス・
+    ベースパスの扱い等）は未確定のため、着手時は必ずユーザーに確認すること。
 - 依存追加は原則禁止。3D/粒子演出はすべて既存の `three`（1つだけの実行時依存）を使う。
   GSAP・Framer Motion・Lenis 等は無断で追加しない。
 
@@ -48,9 +61,7 @@
   **重要**: Canvas UI 公式の `Peel` / `ParticleScroll` は実験的な HTML-in-Canvas API
   （`drawElementImage` / `requestPaint`）が前提で、フラグ無効の一般ブラウザでは
   演出が無効化される（＝本番で何も起きない）。そのため **この2つだけは公式ソースを
-  使わず、画像ベースの Canvas 2D / CSS clip-path で自前実装している。** 今後
-  Canvas UI の新コンポーネントを採用する際も、まず `supportsHtmlInCanvas` 系の
-  実験的APIに依存していないか確認すること。
+  使わず、画像ベースの Canvas 2D / CSS clip-path で自前実装している。**
 
 ### デザインルール（禁止事項）
 - 配色は 白 / ライトグレー / チャコール / ネイビー / ブランドブルーのみ。
@@ -71,72 +82,64 @@
 ## 3. 踏んだ地雷と再発防止ルール
 
 1. **clip-pathで隠した要素はIntersectionObserverが発火しない**
-   `[data-reveal-img]` を直接IOで監視すると、`clip-path: inset(0 100% 0 0)` 等で
-   可視面積が0のため交差判定が来ず、永久に表示されないデッドロックになった。
-   → **ルール**: IOで監視するのは親の `[data-reveal]` セクションのみ。
-   写真側のclip解除はCSSで `.reveal.isIn [data-reveal-img]` として連動させる。
+   `[data-reveal-img]` を直接IOで監視すると可視面積0のため交差判定が来ず、
+   永久に表示されないデッドロックになった。
+   → IOで監視するのは親の `[data-reveal]` セクションのみ。写真側のclip解除は
+   CSSで `.reveal.isIn [data-reveal-img]` として連動させる。
 
-2. **能力判定前に「完成ロゴがフルオパシティで一瞬見えて粒子へ切り替わる」問題**
-   WebGL初期化やthreeの動的importが完了するまでの間、SVGフォールバックが
-   不透明表示のままだと「完成形→崩壊」に見えてしまい、デザインルール違反になる。
-   → **ルール**: 能力判定完了前・粒子/ガラス起動時は、SVGを常に**低い不透明度の
-   下地**として表示し、`onLoad` 完了で自然にクロスフェード。「完成品が一瞬映って
-   から崩れる」演出は絶対に作らない。
+2. **能力判定前に「完成ロゴが一瞬見えて粒子へ切り替わる」問題**
+   WebGL初期化完了までSVGフォールバックが不透明のままだと「完成形→崩壊」に
+   見えてしまう。→ 能力判定完了前・粒子/ガラス起動時は、SVGを常に**低い
+   不透明度の下地**として表示し、`onLoad` 完了で自然にクロスフェード。
 
 3. **useEffect内でのstate初期化順序の鶏卵問題**
-   `PeelReveal` で「refが存在する条件」と「refを描画させるstate」を同じuseEffect内で
-   扱い、初回は必ずrefがnullで早期returnしてしまうバグを作った。
-   → **ルール**: 「JS準備完了フラグを立てる」処理と「そのフラグに依存するDOMを
-   操作する」処理は別のuseEffectに分離し、後者は前者のstateを依存配列に入れる。
+   `PeelReveal` で「refが存在する条件」と「refを描画させるstate」を同じ
+   useEffect内で扱い、初回は必ずrefがnullで早期returnするバグを作った。
+   → フラグを立てる処理とそのフラグに依存するDOM操作は別のuseEffectに分離する。
 
 4. **検証用ローカルサーバーの静的ファイルが古いまま**という事故
-   `python3 -m http.server` をシンボリックリンク経由で使い回すと、リビルド後も
-   古いディレクトリを指したまま/古いプロセスが生き残り、Playwright検証が
-   「直っていないように見える」誤判定を出した。
-   → **ルール**: ビルドし直したら検証前に **サーバープロセスを殺して再起動**、
-   シンボリックリンクも作り直す。`curl` でHTMLの中身（例: 変更したdata属性）が
-   実際に新しいか必ず確認してから検証スクリプトを回す。
+   symlink経由の`python3 -m http.server`使い回しで、リビルド後も古い内容を
+   返し続け「直っていないように見える」誤判定を出した。
+   → ビルドし直したら**サーバープロセスを殺して再起動**、symlinkも作り直す。
+   `curl`でHTMLの中身が実際に新しいか確認してから検証する。
 
-5. **スマホ / iOS Safari 表示での注意点**（再発防止ルール）
+5. **スマホ / iOS Safari 表示での注意点**（最重要ルールの再発防止策）
    - 演出用canvasは **必ず `pointer-events: none` + `touch-action: auto`** を
-     モバイルで強制上書きする（ベンダーコンポーネントのinlineスタイルが
-     `touch-action: none` を当ててくることがあり、それだと縦スクロールが
-     止まる）。CSS Modulesで `.particleWrapMobile canvas { ... !important }` の形。
+     モバイルで強制上書きする（ベンダーコンポーネントのinline styleが
+     `touch-action: none` を当て、縦スクロールを止めることがある）。
    - 実装後は必ず **横スクロール（overflow-x）が発生していないか**
      `document.documentElement.scrollWidth > clientWidth` で確認する。
-   - モバイルは粒子数を大幅に減らし、ホバー/カーソル追従系のパラメータ
-     （`radius`/`strength`）は0にしてタッチでの誤動作・重さを避ける。
+   - モバイルは粒子数を大幅に減らし、`radius`/`strength`等のホバー系
+     パラメータは0にしてタッチでの誤動作・重さを避ける。
    - reduced-motion・低性能端末・画面外では演出を**確実にアンマウント**し、
      iOS SafariでWebGLコンテキストを掴んだまま重くなる状態を作らない。
-   - 実機の代わりにPlaywrightの `isMobile/hasTouch` コンテキスト＋
-     `deviceScaleFactor` を上げた検証を必ず通してから完了報告すること
-     （見た目だけでなく「スクロールできるか」を実際に操作して確認する）。
+   - 実機の代わりにPlaywrightの `isMobile/hasTouch` + `deviceScaleFactor`を
+     上げた検証を必ず通す（見た目だけでなく実際にスクロール操作して確認）。
 
-6. **Next 16 で `next lint` コマンドが廃止**されている。
-   → lintは `npm run lint`（内部で `eslint .`）を使う。
+6. **Next 16 で `next lint` コマンドが廃止**。→ `npm run lint`（`eslint .`）を使う。
 
 7. **squash-merge運用でのブランチ再利用**
-   このリポジトリはPRをsquash mergeする運用。同じ作業ブランチに次の変更を積むと、
-   ローカルの旧コミットが「mainに既にマージ済みの内容」と衝突してpushが弾かれる。
-   → **手順**: `git fetch origin main` → `git stash` →
-   `git reset --hard origin/main` → `git stash pop` → 変更をコミット →
-   `git push --force-with-lease`。マージ済みの古い履歴を捨てるだけなので
-   force-with-leaseで安全。ただし**未マージの作業が残っている場合は絶対に
-   reset --hardしない**（stashで退避できているか必ず確認してから実行する）。
+   同じ作業ブランチに次の変更を積むと、旧コミットが「mainに既にマージ済み」と
+   衝突してpushが弾かれる。
+   → `git fetch origin main` → `git stash` → `git reset --hard origin/main` →
+   `git stash pop` → コミット → `git push --force-with-lease`。
+   ただし**未マージの作業が残っている場合は絶対にreset --hardしない**
+   （stashで退避できているか必ず確認してから実行する）。
 
 ## 4. 今後の作業で守るべきルール
 
+- **変更後は必ずモバイル幅（390px前後）で検証してから完了報告する**（最重要）。
+  PC幅の確認だけで終わらせない。
 - 新規npm依存は追加しない。既存の `three` / IntersectionObserver /
   ResizeObserver / requestAnimationFrame / CSS Modules の範囲で実装する。
 - 演出を追加・変更する時は必ず: (a) reduced-motion, (b) WebGL非対応,
   (c) 低性能/データセーバー, (d) モバイルのタッチスクロール、の4点を
   Playwrightで検証してからデプロイする。
 - コンソールエラー・TypeScriptエラー・lintエラー（新規追加分）はゼロが前提。
-  既存の pre-existing なエラー（`BecoolClient.tsx`/`TrmMenu.tsx` の
-  set-state-in-effect、`<img>` 警告など）はスコープ外なので触らない。
+  既存の pre-existing なエラーはスコープ外なので触らない。
 - デザインルール（配色5色・禁止演出リスト）は毎回のレビュー基準にする。
 - 既存の演出（Ripple・Grid・Particle Object・Particle Scroll・Peel）は、
-  明示的に依頼が無い限り削除・全面書き換えしない。ヒーローの切替だけを
-  求められた場合は `HERO_ANIM` の変更に留める。
+  明示的に依頼が無い限り削除・全面書き換えしない。
+- `.htaccess` は編集しない（Xserver側WordPressの設定を壊すリスクがあるため）。
 - 作業ブランチは `claude/becool-particle-logo` を使い続ける（都度作り直さない）。
   コミットメッセージ末尾には `Co-Authored-By` / `Claude-Session` トレーラーを付ける。
