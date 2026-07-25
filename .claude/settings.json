@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(**/*.tsx)",
+      "Edit(**/*.ts)",
+      "Edit(**/*.css)",
+      "Edit(**/*.html)",
+      "Edit(**/*.json)",
+      "Edit(**/*.md)",
+      "Write(**/*.tsx)",
+      "Write(**/*.ts)",
+      "Write(**/*.css)",
+      "Write(**/*.html)",
+      "Write(**/*.json)",
+      "Write(**/*.md)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run start:*)",
+      "Bash(npm run lint:*)",
+      "Bash(python3 -m http.server:*)",
+      "Bash(npx serve:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Edit(./.htaccess)"
+    ]
+  }
+}

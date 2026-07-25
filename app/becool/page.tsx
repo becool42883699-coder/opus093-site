@@ -1,7 +1,7 @@
 import Link from "next/link";
 import styles from "./becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
-import { RevealController, ParallaxController } from "./BecoolClient";
+import { RevealController, ParallaxController, SpotlightController } from "./BecoolClient";
 import BecoolLogoIntro from "./BecoolLogoIntro";
 import HeroParticleLogo from "./HeroParticleLogo";
 import HeroGlassLogo from "./HeroGlassLogo";
@@ -334,6 +334,11 @@ export default function BecoolPage() {
           <div className={styles.heroBg}>
             <img src={asset("/becool/img/hero-exterior.webp")} alt="GARAGE BeCool の店舗外観（雨上がりの夕暮れ）" data-parallax="0.05" />
           </div>
+          {/* 高級路線: ごく淡い光が横切る層 + 極細フレーム + 隅のメタ表記 */}
+          <span className={styles.heroSheen} aria-hidden="true" />
+          <span className={styles.heroFrame} aria-hidden="true" />
+          <span className={`${styles.heroMeta} ${styles.heroMetaL}`} aria-hidden="true">Kitakyushu, Fukuoka</span>
+          <span className={`${styles.heroMeta} ${styles.heroMetaR}`} aria-hidden="true">Est. 1999</span>
           {/* particle/sweep は常時演出なので data-intro="done"(ワードマーク即表示)。
               blueprintは1回再生なので "play"(BecoolLogoIntroが再生を制御) */}
           <div className={`${styles.heroInner} ${compact ? styles.heroInnerSweep : ""}`} data-hero-stage data-intro={compact ? "done" : "play"}>
@@ -426,7 +431,7 @@ export default function BecoolPage() {
         {/* ---------- SERVICES ---------- */}
         <section id="service" data-reveal className={`${styles.services} ${styles.reveal}`} aria-label="サービス">
           {SERVICES.map((s) => (
-            <div key={s.title} className={styles.servicePanel} data-service={s.title}>
+            <div key={s.title} className={styles.servicePanel} data-service={s.title} data-spotlight>
               <div className={styles.servicePhoto} aria-hidden="true">
                 <img src={asset(s.photo)} alt="" loading="lazy" data-parallax="0.04" />
               </div>
@@ -550,6 +555,7 @@ export default function BecoolPage() {
 
       <RevealController />
       <ParallaxController />
+      <SpotlightController />
     </div>
   );
 }

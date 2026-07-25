@@ -137,6 +137,59 @@ export function ParallaxController() {
   return null;
 }
 
+/**
+ * 暗いサービスパネルに、カーソル位置へ追従するごく淡いスポットライトを当てる。
+ * 高級感のためのマイクロインタラクションなので、演出は「淡く・ゆっくり」。
+ * - PC(ホバー可能)限定。スマホ / reduced-motion では何もしない。
+ * - CSS変数(--mx/--my)を更新するだけで、描画はCSSのradial-gradientに任せる。
+ * - パネルから出たら消す。アンマウントでリスナーと変数を確実に片付ける。
+ */
+export function SpotlightController() {
+  useEffect(() => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    if (reduce || !canHover) return;
+    const panels = Array.from(document.querySelectorAll<HTMLElement>("[data-spotlight]"));
+    if (panels.length === 0) return;
+
+    let raf: number | null = null;
+    let pending: { el: HTMLElement; x: number; y: number } | null = null;
+    const flush = () => {
+      raf = null;
+      if (!pending) return;
+      const { el, x, y } = pending;
+      el.style.setProperty("--mx", `${x}%`);
+      el.style.setProperty("--my", `${y}%`);
+    };
+    const onMove = (e: PointerEvent) => {
+      const el = e.currentTarget as HTMLElement;
+      const r = el.getBoundingClientRect();
+      pending = { el, x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 };
+      if (raf == null) raf = requestAnimationFrame(flush);
+    };
+    const onEnter = (e: PointerEvent) => (e.currentTarget as HTMLElement).style.setProperty("--spot", "1");
+    const onLeave = (e: PointerEvent) => (e.currentTarget as HTMLElement).style.setProperty("--spot", "0");
+
+    panels.forEach((p) => {
+      p.addEventListener("pointermove", onMove as EventListener, { passive: true });
+      p.addEventListener("pointerenter", onEnter as EventListener, { passive: true });
+      p.addEventListener("pointerleave", onLeave as EventListener, { passive: true });
+    });
+    return () => {
+      if (raf != null) cancelAnimationFrame(raf);
+      panels.forEach((p) => {
+        p.removeEventListener("pointermove", onMove as EventListener);
+        p.removeEventListener("pointerenter", onEnter as EventListener);
+        p.removeEventListener("pointerleave", onLeave as EventListener);
+        p.style.removeProperty("--mx");
+        p.style.removeProperty("--my");
+        p.style.removeProperty("--spot");
+      });
+    };
+  }, []);
+  return null;
+}
+
 export function ToTopButton() {
   return (
     <button

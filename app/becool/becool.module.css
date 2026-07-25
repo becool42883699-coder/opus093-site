@@ -21,6 +21,31 @@
 /* neutralize the global T-REX <main> background (dark particle image) */
 .root main { background: var(--bc-white); }
 
+/* =====================================================================
+   PREMIUM UTILITIES — 高級路線の共通仕上げ
+   金色や強い発光は使わず、白〜ライトグレー〜ブルーの微グラデ(プラチナ調)
+   でのみ「上質な光沢」を作る。すべて prefers-reduced-motion で静止する。
+   ===================================================================== */
+
+/* ボタン類に光沢スイープ。hoverで細い光が横切る(常時光らせない) */
+.readMore, .serviceLink, .readMoreDark, .telBtn, .lineBtn, .mapBtn { position: relative; overflow: hidden; isolation: isolate; }
+.readMore::after, .serviceLink::after, .readMoreDark::after,
+.telBtn::after, .lineBtn::after, .mapBtn::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: var(--bc-platinum); background-size: 220% 100%; background-position: 140% 0;
+  opacity: 0; transition: opacity 0.3s ease, background-position 0.75s var(--bc-ease);
+}
+.readMore:hover::after, .serviceLink:hover::after, .readMoreDark:hover::after,
+.telBtn:hover::after, .lineBtn:hover::after, .mapBtn:hover::after { opacity: 0.5; background-position: -40% 0; }
+@media (prefers-reduced-motion: reduce) {
+  .readMore::after, .serviceLink::after, .readMoreDark::after,
+  .telBtn::after, .lineBtn::after, .mapBtn::after { display: none; }
+}
+
+/* 写真の上に敷くシネマティックなスクリム(文字の可読性と奥行きを同時に出す) */
+.scrim { position: relative; }
+.scrim::after { content: ""; position: absolute; inset: 0; background: var(--bc-scrim); pointer-events: none; }
+
 /* reusable halftone overlay — the signature texture on every photo */
 .halftone { position: relative; overflow: hidden; }
 .halftone::after {
@@ -30,7 +55,7 @@
   background-image: var(--bc-halftone);
   background-size: var(--bc-dot-gap) var(--bc-dot-gap);
   mix-blend-mode: multiply;
-  opacity: 0.55;
+  opacity: 0.18; /* 高級路線: 網点は“ほぼ見えない”レベルに抑える */
   pointer-events: none;
 }
 .halftone > img { width: 100%; height: 100%; object-fit: cover; }
@@ -117,8 +142,52 @@
   background: var(--bc-white);
   box-shadow: 0 -34px 60px rgba(0, 0, 0, 0.34);  /* せり上がる縁を強調 */
 }
-.heroBg { position: absolute; inset: 0; z-index: -2; }
+.heroBg { position: absolute; inset: 0; z-index: -2; overflow: hidden; }
 .heroBg img { width: 100%; height: 100%; object-fit: cover; }
+/* 背景写真をごくゆっくり寄せる(ケンバーンズ)。imgはParallaxControllerが
+   transformを使うので、競合しないよう親側をアニメーションさせる。 */
+/* スマホでは無効(常時の再合成を避け、WebGLと帯域を優先する) */
+@media (prefers-reduced-motion: no-preference) and (min-width: 701px) {
+  .heroBg { animation: bcKenBurns 26s ease-in-out infinite alternate; will-change: transform; }
+}
+@keyframes bcKenBurns {
+  from { transform: scale(1.02); }
+  to   { transform: scale(1.09); }
+}
+
+/* --- 高級路線: ヒーローの額装(極細フレーム) + ゆっくり流れる光 --- */
+/* 四辺の極細ライン。広告の“額装”のように内容を引き締める */
+.heroFrame { position: absolute; z-index: 1; pointer-events: none;
+  inset: calc(var(--bc-header-h) + clamp(12px, 2.2vw, 30px)) clamp(14px, 3vw, 42px) clamp(14px, 3vw, 42px);
+  border: 1px solid rgba(233, 240, 249, 0.16);
+}
+/* 四隅だけプラチナ調に光らせて“銘板感”を出す(太い発光にはしない) */
+.heroFrame::before, .heroFrame::after { content: ""; position: absolute; width: clamp(28px, 5vw, 66px); height: clamp(28px, 5vw, 66px); }
+.heroFrame::before { top: -1px; left: -1px; border-top: 1px solid rgba(226,238,252,0.85); border-left: 1px solid rgba(226,238,252,0.85); }
+.heroFrame::after { bottom: -1px; right: -1px; border-bottom: 1px solid rgba(226,238,252,0.85); border-right: 1px solid rgba(226,238,252,0.85); }
+/* ヒーロー隅の小さなメタ表記(高級ブランドの版面によくある要素) */
+.heroMeta { position: absolute; z-index: 2; pointer-events: none;
+  font-family: var(--bc-font-tagline); font-size: clamp(0.56rem, 1.1vw, 0.7rem);
+  font-weight: var(--bc-fw-medium); letter-spacing: 0.3em; text-transform: uppercase;
+  color: rgba(233, 240, 249, 0.62); text-shadow: 0 1px 10px rgba(0,0,0,0.6); }
+.heroMetaL { left: clamp(24px, 4.2vw, 62px); bottom: clamp(26px, 4.4vw, 64px); }
+.heroMetaR { right: clamp(24px, 4.2vw, 62px); bottom: clamp(26px, 4.4vw, 64px); }
+@media (max-width: 700px) { .heroMeta { display: none; } }
+/* 画面をゆっくり横切る非常に淡い光。強い発光ではなく“空気の層”として。
+   注意: background-position のアニメは全画面を毎フレーム再描画してWebGL(ガラス)の
+   初期化まで遅らせたため、transform(合成のみ)で動かす方式にしている。
+   さらに負荷を避けるためスマホでは無効。 */
+.heroSheen { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.heroSheen::before { content: ""; position: absolute; top: -10%; bottom: -10%; left: 0; width: 46%;
+  background: linear-gradient(104deg, transparent 0%, rgba(190, 216, 245, 0.10) 38%, rgba(226,240,255,0.17) 50%, rgba(190,216,245,0.10) 62%, transparent 100%);
+  transform: translate3d(-120%, 0, 0); will-change: transform; }
+@media (prefers-reduced-motion: no-preference) and (min-width: 701px) {
+  .heroSheen::before { animation: bcSheen 14s linear infinite; }
+}
+@keyframes bcSheen {
+  from { transform: translate3d(-120%, 0, 0); }
+  to   { transform: translate3d(320%, 0, 0); }
+}
 /* cinematic scrim: 上下を締めた縦グラデ + 周辺減光(ビネット)で、写真を
    映画的な暗めの背景に落とし込み、ロゴ/ワードマークをクリーンに浮かせる */
 .hero::before {
@@ -127,7 +196,8 @@
     radial-gradient(ellipse 74% 60% at 50% 45%, rgba(10,13,18,0) 0%, rgba(10,13,18,0.34) 60%, rgba(10,13,18,0.7) 100%),
     linear-gradient(180deg, rgba(10,13,18,0.66) 0%, rgba(10,13,18,0.14) 24%, rgba(10,13,18,0.22) 58%, rgba(10,13,18,0.82) 100%);
 }
-.heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem 0; text-align: center; }
+/* 下側は額装フレーム + 隅のメタ表記の分だけ空けて、ロックアップを衝突させない */
+.heroInner { display: grid; justify-items: center; gap: 1.2rem; padding: var(--bc-header-h) 1rem clamp(5rem, 9vw, 8.5rem); text-align: center; }
 
 /* --- ロゴビルド・イントロ(プロトタイプv2「精密組立版」): 1200x900ステージ --- */
 .logoZone { position: relative; width: min(96vw, 820px); }
@@ -299,7 +369,9 @@
   .heroWordmark { margin-top: clamp(-4.6rem, -2vw, -0.2rem); }
 }
 .wmAccent { color: var(--bc-blue-light); }
-.tagline { font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: var(--bc-on-dark); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); padding-left: var(--bc-ls-tagline); }
+/* タグライン: 上に極細のメタリック罫を置き、ワードマークと“銘板”として組む */
+.tagline { position: relative; margin-top: 0.55rem; padding-top: 1.25rem; font-family: var(--bc-font-tagline); font-weight: var(--bc-fw-medium); font-size: var(--bc-fs-small); letter-spacing: var(--bc-ls-tagline); text-transform: uppercase; color: rgba(244, 246, 249, 0.86); text-shadow: 0 1px 14px rgba(0, 0, 0, 0.6); padding-left: var(--bc-ls-tagline); }
+.tagline::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: clamp(90px, 16vw, 190px); height: 1px; background: var(--bc-rule); opacity: 0.75; }
 .heroInner[data-intro="play"] .heroWordmark { opacity: 0; animation: bcWordIn .7s var(--bc-ease) 6.2s both; }
 .heroInner[data-intro="play"] .tagline { opacity: 0; animation: bcWordIn .7s var(--bc-ease) 6.5s both; }
 /* reduced-motion / 2回目以降: 完成状態を短フェードで表示 */
@@ -334,12 +406,19 @@
 .conceptBand {
   position: relative;
   margin-top: -1px;
-  background: var(--bc-ink-soft);
+  background:
+    radial-gradient(ellipse 70% 120% at 50% 0%, rgba(49, 85, 124, 0.42) 0%, rgba(34, 42, 52, 0) 62%),
+    var(--bc-ink-soft);
   color: var(--bc-on-dark);
   text-align: center;
   padding: var(--bc-section-y) var(--bc-gutter);
+  overflow: hidden;
 }
-.conceptBand p { font-size: var(--bc-fs-lead); font-weight: var(--bc-fw-medium); line-height: 1.7; letter-spacing: 0.04em; }
+/* 上下に極細のメタリック罫を通し、ステートメントを“額装”する */
+.conceptBand::before, .conceptBand::after { content: ""; position: absolute; left: 50%; transform: translateX(-50%); width: min(560px, 62vw); height: 1px; background: var(--bc-rule); opacity: 0.55; }
+.conceptBand::before { top: clamp(2.4rem, 6vw, 5rem); }
+.conceptBand::after { bottom: clamp(2.4rem, 6vw, 5rem); }
+.conceptBand p { font-size: var(--bc-fs-lead); font-weight: var(--bc-fw-medium); line-height: 1.85; letter-spacing: 0.08em; }
 .cardsPhoto { height: clamp(400px, 54vw, 680px); }
 
 /* =====================  SHOWROOM ギャラリー(スティッキー・スタック)  ===================== */
@@ -363,9 +442,11 @@
 
 /* =====================  ABOUT  ===================== */
 .section { padding: var(--bc-section-y) var(--bc-gutter); }
-.sectionHead { text-align: center; margin-bottom: clamp(2rem, 5vw, 3.5rem); }
-.sectionHead h2 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h2); letter-spacing: 0.08em; line-height: var(--bc-lh-heading); color: var(--bc-ink); }
-.sectionHead span { display: block; margin-top: 0.7rem; font-size: var(--bc-fs-small); font-weight: var(--bc-fw-bold); letter-spacing: 0.2em; color: var(--bc-muted); }
+.sectionHead { text-align: center; margin-bottom: clamp(2.6rem, 6vw, 4.5rem); }
+.sectionHead h2 { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h2); letter-spacing: var(--bc-ls-head); line-height: var(--bc-lh-heading); color: var(--bc-ink); }
+/* 日本語サブラベル: 上に極細のメタリック罫を敷いて“銘板”のように見せる */
+.sectionHead span { display: block; margin-top: 1.15rem; padding-top: 1.15rem; position: relative; font-size: var(--bc-fs-small); font-weight: var(--bc-fw-medium); letter-spacing: var(--bc-ls-label); color: var(--bc-muted); }
+.sectionHead span::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: clamp(72px, 12vw, 132px); height: 1px; background: var(--bc-rule); }
 /* ABOUT: テキスト + グレーディング写真の2カラム(モバイルは縦積み) */
 .aboutGrid { max-width: 1100px; margin: 0 auto; display: grid; gap: clamp(2rem, 4vw, 3.5rem); align-items: stretch; }
 @media (min-width: 880px) { .aboutGrid { grid-template-columns: 1.05fr 1fr; } }
@@ -394,7 +475,14 @@
 .servicePhoto { position: absolute; inset: 0; z-index: 0; }
 .servicePhoto img { width: 100%; height: 100%; object-fit: cover; opacity: 0.38; }
 .servicePhoto::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18, 21, 25, 0.55), rgba(18, 21, 25, 0.28) 45%, rgba(18, 21, 25, 0.62)); }
-.serviceInner { position: relative; z-index: 1; max-width: 820px; margin: 0 auto; display: grid; justify-items: center; gap: 1.3rem; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45); }
+/* カーソル追従のごく淡いスポットライト(PC限定・SpotlightControllerが --mx/--my/--spot を更新)。
+   既定は --spot:0 なので、JS無効/スマホ/reduced-motion では一切表示されない。 */
+.servicePanel::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(circle 30vw at var(--mx, 50%) var(--my, 50%), rgba(150, 190, 240, 0.16) 0%, rgba(150, 190, 240, 0.06) 38%, transparent 68%);
+  opacity: var(--spot, 0); transition: opacity 0.5s var(--bc-ease);
+}
+.serviceInner { position: relative; z-index: 2; max-width: 820px; margin: 0 auto; display: grid; justify-items: center; gap: 1.3rem; text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45); }
 /* --- アイコンのみ(メダリオン装飾なし) --- */
 .serviceIcon { display: grid; place-items: center; }
 .serviceIcon svg { width: 96px; height: 96px; fill: none; stroke: var(--bc-on-dark); stroke-width: 4; }
@@ -417,16 +505,25 @@
 .pickupItem { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--bc-paper); }
 .pickupItem img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s var(--bc-ease); }
 .pickupItem:hover img { transform: scale(1.05); }
-.pickupCap { position: absolute; inset: auto 0 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 0.6rem; padding: 1.1rem 1.2rem; color: var(--bc-on-dark); background: linear-gradient(transparent, rgba(17, 17, 17, 0.82)); }
-.pickupName { display: flex; align-items: baseline; gap: 0.6rem; }
-.pickupName strong { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.2rem; letter-spacing: 0.04em; }
-.pickupName > span { font-size: 0.72rem; letter-spacing: 0.14em; color: var(--bc-blue-light); }
-.pickupPrice { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.3rem; letter-spacing: 0.01em; white-space: nowrap; color: var(--bc-on-dark); }
+.pickupCap { position: absolute; inset: auto 0 0; display: flex; align-items: flex-end; justify-content: space-between; gap: 0.6rem; padding: clamp(1.3rem, 2.6vw, 2rem) clamp(1.3rem, 2.4vw, 1.9rem); color: var(--bc-on-dark); background: var(--bc-scrim-soft); }
+/* キャプション上端に極細のメタリック罫を通して“プレート”のように見せる */
+.pickupCap::before { content: ""; position: absolute; top: 0; left: clamp(1.3rem, 2.4vw, 1.9rem); right: clamp(1.3rem, 2.4vw, 1.9rem); height: 1px; background: var(--bc-rule); opacity: 0.6; }
+/* 車名が折り返しても価格と衝突しないよう、タグは名前の下に積む(縦組み) */
+.pickupName { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; min-width: 0; }
+.pickupName strong { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: clamp(1.05rem, 1.7vw, 1.42rem); letter-spacing: 0.02em; line-height: 1.25; }
+/* 車種タグはブルーの細い枠のラベルにして情報の階層を作る */
+.pickupName > span { padding: 0.28em 0.7em; font-size: 0.62rem; letter-spacing: 0.18em; color: var(--bc-blue-light); border: 1px solid rgba(91, 155, 230, 0.5); white-space: nowrap; }
+.pickupPrice { flex: none; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: clamp(1.15rem, 1.9vw, 1.55rem); letter-spacing: 0.01em; white-space: nowrap; color: var(--bc-on-dark); }
 .pickupPrice small { font-size: 0.62rem; font-weight: var(--bc-fw-medium); color: var(--bc-on-dark-mut); }
 
 /* =====================  FLOW (ご利用の流れ)  ===================== */
 .flowGrid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(0.8rem, 2vw, 1.4rem); }
-.flowStep { position: relative; display: grid; align-content: start; gap: 0.55rem; padding: clamp(1.4rem, 2.6vw, 2rem) clamp(1.1rem, 2vw, 1.5rem); background: var(--bc-white); border: 1px solid var(--bc-line); border-top: 2px solid var(--bc-blue); }
+/* 高級路線: 上辺のベタ塗りラインをやめ、極細のメタリック罫 + 浅く広い影に */
+.flowStep { position: relative; display: grid; align-content: start; gap: 0.55rem; padding: clamp(1.7rem, 3vw, 2.4rem) clamp(1.3rem, 2.2vw, 1.8rem); background: var(--bc-white); border: 1px solid var(--bc-line); box-shadow: var(--bc-shadow-card); transition: transform 0.45s var(--bc-ease), box-shadow 0.45s var(--bc-ease); }
+.flowStep::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--bc-rule); }
+@media (hover: hover) {
+  .flowStep:hover { transform: translateY(-4px); box-shadow: var(--bc-shadow-hover); }
+}
 .flowNo { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: 2rem; line-height: 1; color: var(--bc-blue); }
 .flowEn { font-size: 0.68rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.2em; color: var(--bc-muted); }
 .flowStep h3 { font-size: 1.05rem; font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
@@ -457,7 +554,11 @@
 /* =====================  SHOP (店舗)  ===================== */
 .shop { background: var(--bc-paper); }
 .storeGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: clamp(1.2rem, 3vw, 2.2rem); max-width: var(--bc-maxw); margin: 0 auto; }
-.storeCard { background: var(--bc-white); border: 1px solid var(--bc-line); display: flex; flex-direction: column; }
+.storeCard { position: relative; background: var(--bc-white); border: 1px solid var(--bc-line); display: flex; flex-direction: column; box-shadow: var(--bc-shadow-card); transition: transform 0.45s var(--bc-ease), box-shadow 0.45s var(--bc-ease); }
+.storeCard::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--bc-rule); z-index: 2; }
+@media (hover: hover) {
+  .storeCard:hover { transform: translateY(-5px); box-shadow: var(--bc-shadow-hover); }
+}
 .storePhoto { aspect-ratio: 16 / 10; }
 /* 写真準備中プレースホルダー */
 .storeComingSoon { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem; background: var(--bc-panel-gray); background-image: var(--bc-halftone); background-size: var(--bc-dot-gap) var(--bc-dot-gap); color: var(--bc-on-dark); }
@@ -487,8 +588,8 @@
 .newsItem h3 { font-size: 1.02rem; font-weight: var(--bc-fw-bold); line-height: 1.6; }
 .newsFoot { display: flex; align-items: center; gap: 1.2rem; font-size: 0.78rem; color: var(--bc-muted); }
 .newsHeart { color: var(--bc-accent); }
-.readMore { display: block; width: fit-content; margin: clamp(2rem, 5vw, 3rem) auto 0; padding: 0.9rem 2.4rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); letter-spacing: 0.1em; color: var(--bc-blue); border: 1px solid var(--bc-blue); border-radius: var(--bc-radius-sm); transition: background 0.28s var(--bc-ease), color 0.28s var(--bc-ease); }
-.readMore:hover { background: var(--bc-blue); color: var(--bc-white); }
+.readMore { position: relative; overflow: hidden; display: block; width: fit-content; margin: clamp(2.4rem, 5vw, 3.6rem) auto 0; padding: 1.05rem 3.2rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); letter-spacing: 0.16em; color: var(--bc-blue); border: 1px solid var(--bc-blue); border-radius: var(--bc-radius-sm); transition: background 0.28s var(--bc-ease), color 0.28s var(--bc-ease), box-shadow 0.35s var(--bc-ease); }
+.readMore:hover { background: var(--bc-blue); color: var(--bc-white); box-shadow: 0 12px 30px rgba(31, 99, 182, 0.26); }
 
 /* =====================  FOOTER  ===================== */
 .footer { position: relative; background: var(--bc-ink-soft); color: var(--bc-on-dark); padding: clamp(3rem, 7vw, 5rem) var(--bc-gutter) 2rem; }
