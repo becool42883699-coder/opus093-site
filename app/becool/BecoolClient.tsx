@@ -190,6 +190,40 @@ export function SpotlightController() {
   return null;
 }
 
+/**
+ * トップページ用: ヘッダーをヒーロー上では透明、通り過ぎたら白下地に切り替える。
+ * data-scrolled を付け外しするだけで、見た目はすべてCSS側。
+ * JS無効時は data-overlay の透明状態のまま(ヒーローは暗いので明色文字で読める)。
+ */
+export function HeaderScrollController() {
+  useEffect(() => {
+    const header = document.querySelector<HTMLElement>('header[data-overlay="true"]');
+    if (!header) return;
+    let ticking = false;
+    const apply = () => {
+      ticking = false;
+      // ヒーロー(100svh)をほぼ抜けたら白下地へ
+      const past = window.scrollY > window.innerHeight * 0.82;
+      if (past) header.setAttribute("data-scrolled", "true");
+      else header.removeAttribute("data-scrolled");
+    };
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(apply);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+    apply();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      header.removeAttribute("data-scrolled");
+    };
+  }, []);
+  return null;
+}
+
 export function ToTopButton() {
   return (
     <button

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import styles from "./becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
-import { RevealController, ParallaxController, SpotlightController } from "./BecoolClient";
+import { RevealController, ParallaxController, SpotlightController, HeaderScrollController } from "./BecoolClient";
 import BecoolLogoIntro from "./BecoolLogoIntro";
 import HeroParticleLogo from "./HeroParticleLogo";
 import HeroGlassLogo from "./HeroGlassLogo";
@@ -394,7 +394,7 @@ export default function BecoolPage() {
   return (
     <div className={`becool ${styles.root}`}>
       <JsonLd data={becoolLd} />
-      <BecoolHeader />
+      <BecoolHeader overlay />
 
       <main id="top">
         {/* ---------- HERO ---------- */}
@@ -621,6 +621,7 @@ export default function BecoolPage() {
       <RevealController />
       <ParallaxController />
       <SpotlightController />
+      <HeaderScrollController />
     </div>
   );
 }

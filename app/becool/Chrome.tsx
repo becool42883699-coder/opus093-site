@@ -33,9 +33,10 @@ export function Wordmark({ className }: { className?: string }) {
   return <span className={className}>GARAGE <b>BeCool</b></span>;
 }
 
-export function BecoolHeader() {
+/** overlay: ヒーローに重ねる透明ヘッダーにする(トップページ用) */
+export function BecoolHeader({ overlay = false }: { overlay?: boolean } = {}) {
   return (
-    <header className={styles.header}>
+    <header className={styles.header} data-overlay={overlay ? "true" : undefined}>
       <Link className={styles.brand} href="/becool/" aria-label="GARAGE BeCool トップへ">
         <GbSymbol size={36} />
         <Wordmark className={styles.brandName} />
