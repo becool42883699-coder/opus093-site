@@ -534,7 +534,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- ABOUT ---------- */}
-        <section id="about" data-reveal className={`${styles.section} ${styles.surfacePaper} ${styles.reveal}`} aria-labelledby="about-h">
+        <section id="about" data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="about-h">
           <div className={styles.sectionHead}>
             <h2 id="about-h">ABOUT US</h2>
             <span>GARAGE BeCool について</span>
@@ -580,7 +580,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- SERVICES ---------- */}
-        <section id="service" data-reveal className={`${styles["bc-svc-section"]} ${styles.surfacePaper} ${styles.reveal}`} aria-labelledby="svc-h">
+        <section id="service" data-reveal className={`${styles["bc-svc-section"]} ${styles.surfaceDark} ${styles.reveal}`} aria-labelledby="svc-h">
           <div className={styles.sectionHead}>
             <h2 id="svc-h">SERVICE</h2>
             <span>サービス</span>
@@ -607,7 +607,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- PICK UP CAR ---------- */}
-        <section id="car" data-reveal className={`${styles.section} ${styles.surfacePaper} ${styles.reveal}`} aria-labelledby="car-h">
+        <section id="car" data-reveal className={`${styles.section} ${styles.surfaceDark} ${styles.reveal}`} aria-labelledby="car-h">
           <div className={styles.sectionHead}>
             <h2 id="car-h">PICK UP</h2>
             <span>販売車両</span>
@@ -666,7 +666,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- FAQ ---------- */}
-        <section id="faq" data-reveal className={`${styles.section} ${styles.surfacePaper} ${styles.reveal}`} aria-labelledby="faq-h">
+        <section id="faq" data-reveal className={`${styles.section} ${styles.surfaceDark} ${styles.reveal}`} aria-labelledby="faq-h">
           <div className={styles.sectionHead}>
             <h2 id="faq-h">FAQ</h2>
             <span>よくあるご質問</span>

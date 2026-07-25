@@ -13,7 +13,8 @@
 .becool {
   /* ---- Brand core (from the garage becool brand guide) --------------- */
   --bc-charcoal:     #4a4f55;   /* CHARCOAL GRAY — brand              */
-  --bc-blue:         #1f63b6;   /* COOL BLUE — brand accent           */
+  /* 実体は下の --bc-blue-fixed。暗い面では --bc-blue-light に差し替わる */
+  --bc-blue:         var(--bc-blue-fixed);
   --bc-blue-mid:     #31557c;   /* gradient mid stop                  */
   --bc-blue-light:   #5b9be6;   /* lighter blue for text on dark      */
   --bc-gradient:     linear-gradient(135deg, #4a4f55 0%, #31557c 55%, #1f63b6 100%);
@@ -33,13 +34,21 @@
      暗い面は下の「ダークランプ」から選ぶ。いずれも同じ色相(H≈215°)なので、
      どれを隣り合わせても色味が転ばない。 */
   --bc-white:        #ffffff;   /* page / header background            */
-  --bc-paper:        #f4f7fa;   /* off-white (ごく僅かに寒色)           */
-  --bc-ink:          #1b2129;   /* primary text (深いチャコールネイビー) */
-  --bc-ink-soft:     #222a34;   /* statement bands / footer            */
+  --bc-paper:        #f4f7fa;   /* off-white (写真タイルの下地等に使う)  */
+  --bc-ink-soft:     #222a34;   /* 暗い面(フッター/ステートメント帯/暗いセクション) */
   --bc-panel-black:  #0c1219;   /* full-bleed panel (深いネイビーブラック) */
   --bc-panel-gray:   #2c3742;   /* full-bleed panel (ネイビーチャコール) */
-  --bc-muted:        #5b6572;   /* sub text / captions                 */
-  --bc-line:         #e4e9ee;   /* hairline borders                    */
+
+  /* ---- 明地用の文字色。暗い面(.surfaceDark)の中では下の4つが on-dark 系へ
+     差し替わる。白いカードの中だけ `-fixed` を使って明地の値へ戻すので、
+     元の値は必ず `-fixed` 側に持たせておくこと（直接ハードコードしない）。 */
+  --bc-ink-fixed:    #1b2129;   /* primary text (深いチャコールネイビー) */
+  --bc-muted-fixed:  #5b6572;   /* sub text / captions                 */
+  --bc-line-fixed:   #e4e9ee;   /* hairline borders                    */
+  --bc-blue-fixed:   #1f63b6;   /* COOL BLUE                           */
+  --bc-ink:          var(--bc-ink-fixed);
+  --bc-muted:        var(--bc-muted-fixed);
+  --bc-line:         var(--bc-line-fixed);
   /* 旧: 独自の第3の明色(#e7ecf2)。面を2色に統一したため paper へ集約した。
      互換のため名前は残すが、新規に使わないこと。 */
   --bc-works-bg:     var(--bc-paper);

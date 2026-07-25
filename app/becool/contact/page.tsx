@@ -214,7 +214,7 @@ export default function BecoolContactPage() {
           </section>
 
           {/* ---------- LINE 導入 ---------- */}
-          <section id="line" className={`${styles.section} ${styles.surfacePaper}`} aria-labelledby="line-h">
+          <section id="line" className={`${styles.section} ${styles.surfaceDark}`} aria-labelledby="line-h">
             <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="line-h">LINE</h2>
               <span>LINEでできること</span>
@@ -275,7 +275,7 @@ export default function BecoolContactPage() {
           </section>
 
           {/* ---------- 店舗 ---------- */}
-          <section id="shops" className={`${styles.section} ${styles.surfacePaper}`} aria-labelledby="shop-h">
+          <section id="shops" className={`${styles.section} ${styles.surfaceDark}`} aria-labelledby="shop-h">
             <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="shop-h">SHOP</h2>
               <span>店舗のご案内</span>
