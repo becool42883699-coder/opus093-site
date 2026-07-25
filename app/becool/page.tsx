@@ -484,7 +484,7 @@ export default function BecoolPage() {
 
       <main id="top">
         {/* ---------- HERO ---------- */}
-        <section className={styles.hero} aria-label="ヒーロー">
+        <section data-hero className={styles.hero} aria-label="ヒーロー">
           <div className={styles.heroBg}>
             <img src={asset("/becool/img/hero-exterior.webp")} alt="GARAGE BeCool の店舗外観（雨上がりの夕暮れ）" data-parallax="0.05" />
           </div>
@@ -534,7 +534,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- ABOUT ---------- */}
-        <section id="about" data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="about-h">
+        <section id="about" data-reveal className={`${styles.section} ${styles.surfacePaper} ${styles.reveal}`} aria-labelledby="about-h">
           <div className={styles.sectionHead}>
             <h2 id="about-h">ABOUT US</h2>
             <span>GARAGE BeCool について</span>
@@ -563,7 +563,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- SHOWROOM (店内ギャラリー) ---------- */}
-        <section id="showroom" data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="showroom-h">
+        <section id="showroom" data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="showroom-h">
           <div className={styles.sectionHead}>
             <h2 id="showroom-h">SHOWROOM</h2>
             <span>店内のご案内</span>
@@ -580,7 +580,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- SERVICES ---------- */}
-        <section id="service" data-reveal className={`${styles["bc-svc-section"]} ${styles.reveal}`} aria-labelledby="svc-h">
+        <section id="service" data-reveal className={`${styles["bc-svc-section"]} ${styles.surfacePaper} ${styles.reveal}`} aria-labelledby="svc-h">
           <div className={styles.sectionHead}>
             <h2 id="svc-h">SERVICE</h2>
             <span>サービス</span>
@@ -589,7 +589,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- FLOW (ご利用の流れ) ---------- */}
-        <section id="flow" data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="flow-h">
+        <section id="flow" data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="flow-h">
           <div className={styles.sectionHead}>
             <h2 id="flow-h">FLOW</h2>
             <span>ご利用の流れ</span>
@@ -607,7 +607,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- PICK UP CAR ---------- */}
-        <section id="car" data-reveal className={`${styles.section} ${styles.works} ${styles.reveal}`} aria-labelledby="car-h">
+        <section id="car" data-reveal className={`${styles.section} ${styles.surfacePaper} ${styles.reveal}`} aria-labelledby="car-h">
           <div className={styles.sectionHead}>
             <h2 id="car-h">PICK UP</h2>
             <span>販売車両</span>
@@ -628,7 +628,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- SHOP ---------- */}
-        <section id="shop" data-reveal className={`${styles.section} ${styles.shop} ${styles.reveal}`} aria-labelledby="shop-h">
+        <section id="shop" data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="shop-h">
           <div className={styles.sectionHead}>
             <h2 id="shop-h">SHOP</h2>
             <span>店舗案内</span>
@@ -666,7 +666,7 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- FAQ ---------- */}
-        <section id="faq" data-reveal className={`${styles.section} ${styles.faq} ${styles.reveal}`} aria-labelledby="faq-h">
+        <section id="faq" data-reveal className={`${styles.section} ${styles.surfacePaper} ${styles.reveal}`} aria-labelledby="faq-h">
           <div className={styles.sectionHead}>
             <h2 id="faq-h">FAQ</h2>
             <span>よくあるご質問</span>
@@ -685,7 +685,7 @@ export default function BecoolPage() {
           </div>
         </section>
         {/* ---------- CLOSING BRAND MARK (フッター前) ---------- */}
-        <section data-reveal className={`${styles.brandOutro} ${styles.reveal}`} aria-label="ブランドマーク">
+        <section data-reveal className={`${styles.brandOutro} ${styles.surfaceWhite} ${styles.reveal}`} aria-label="ブランドマーク">
           <FooterParticleMark />
           <p className={styles.brandOutroWord}><span>GARAGE</span> <span className={styles.wmAccent}>BeCool</span></p>
           <p className={styles.brandOutroSub}>Used Car &amp; Car Life Support — since 1999</p>

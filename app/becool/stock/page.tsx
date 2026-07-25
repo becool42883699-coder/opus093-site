@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "../becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../../components/TrmSeo";
-import { RevealController } from "../BecoolClient";
+import { RevealController, HeaderScrollController } from "../BecoolClient";
 import { asset, LINE_URL, TEL_HREF, BecoolHeader, BecoolFooter, CtaBand, SubHero } from "../Chrome";
 
 export const metadata: Metadata = {
@@ -70,7 +70,7 @@ export default function StockPage() {
   return (
     <div className={`becool ${styles.root}`}>
       <JsonLd data={stockLd} />
-      <BecoolHeader />
+      <BecoolHeader overlay />
 
       <main>
         <SubHero
@@ -81,7 +81,7 @@ export default function StockPage() {
         />
 
         {/* ---------- 在庫一覧 ---------- */}
-        <section data-reveal className={`${styles.section} ${styles.reveal}`} aria-labelledby="stock-h">
+        <section data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="stock-h">
           <div className={styles.sectionHead}>
             <h2 id="stock-h">CAR STOCK</h2>
             <span>販売中の車両</span>
@@ -130,6 +130,7 @@ export default function StockPage() {
 
       <BecoolFooter />
       <RevealController />
+      <HeaderScrollController />
     </div>
   );
 }

@@ -33,19 +33,37 @@ export function Wordmark({ className }: { className?: string }) {
   return <span className={className}>GARAGE <b>BeCool</b></span>;
 }
 
-/** overlay: ヒーローに重ねる透明ヘッダーにする(トップページ用) */
+/* JS無効時の保険。透明ヘッダーは HeaderScrollController がスクロール量を見て
+   白下地へ戻す前提なので、JSが動かないと白い本文の上でも明色文字のままになり
+   ナビが読めなくなる(特にヒーローが短いサブページ)。noscript で常時白下地に
+   固定する。CSS Modules のクラス名はハッシュされるため、安定している
+   data-overlay 属性を起点に指定する。
+   透明化している側の規則は `.becool .header[data-overlay]:not([data-scrolled])`
+   相当で詳細度が高いため、[data-overlay] を重ねて確実に上回るようにしてある
+   (どちらも !important なので、勝敗は詳細度で決まる)。 */
+const NO_JS_HEADER_CSS = `
+.becool header[data-overlay][data-overlay="true"]:not([data-scrolled]){background:var(--bc-white)!important;border-bottom:1px solid var(--bc-line)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.becool header[data-overlay][data-overlay="true"]:not([data-scrolled]) nav a,.becool header[data-overlay][data-overlay="true"]:not([data-scrolled])>a>span{color:var(--bc-ink)!important;text-shadow:none!important}
+.becool header[data-overlay][data-overlay="true"]:not([data-scrolled])>a>span b{color:var(--bc-blue)!important}
+.becool header[data-overlay][data-overlay="true"]:not([data-scrolled]) button span{background:var(--bc-ink)!important}
+`;
+
+/** overlay: ヒーローに重ねる透明ヘッダーにする(全ページとも先頭は暗いヒーロー) */
 export function BecoolHeader({ overlay = false }: { overlay?: boolean } = {}) {
   return (
-    <header className={styles.header} data-overlay={overlay ? "true" : undefined}>
-      <Link className={styles.brand} href="/becool/" aria-label="GARAGE BeCool トップへ">
-        <GbSymbol size={36} />
-        <Wordmark className={styles.brandName} />
-      </Link>
-      <nav className={styles.navDesktop} aria-label="メインナビゲーション">
-        {NAV.map((n) => <Link key={n.href} href={n.href}>{n.label}</Link>)}
-      </nav>
-      <MobileMenu links={NAV} />
-    </header>
+    <>
+      {overlay ? <noscript><style>{NO_JS_HEADER_CSS}</style></noscript> : null}
+      <header className={styles.header} data-overlay={overlay ? "true" : undefined}>
+        <Link className={styles.brand} href="/becool/" aria-label="GARAGE BeCool トップへ">
+          <GbSymbol size={36} />
+          <Wordmark className={styles.brandName} />
+        </Link>
+        <nav className={styles.navDesktop} aria-label="メインナビゲーション">
+          {NAV.map((n) => <Link key={n.href} href={n.href}>{n.label}</Link>)}
+        </nav>
+        <MobileMenu links={NAV} />
+      </header>
+    </>
   );
 }
 
@@ -111,7 +129,7 @@ export function SubHero({ en, jp, lead, photo, alt }: {
   en: string; jp: string; lead?: string; photo: string; alt?: string;
 }) {
   return (
-    <div className={styles.subHero}>
+    <div data-hero className={styles.subHero}>
       <div className={`${styles.subHeroBg} ${styles.halftone}`} aria-hidden="true">
         <img src={asset(photo)} alt={alt ?? ""} />
       </div>

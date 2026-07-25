@@ -159,7 +159,7 @@ export default function BecoolContactPage() {
 
       <main id="top">
         {/* ---------- HERO ---------- */}
-        <section className={styles.contactHero} aria-label="お問い合わせ">
+        <section data-hero className={styles.contactHero} aria-label="お問い合わせ">
           <div className={styles.contactHeroBg} aria-hidden="true">
             <img src={asset("/becool/img/interior-06.webp")} alt="" data-parallax="0.05" />
           </div>
@@ -189,7 +189,7 @@ export default function BecoolContactPage() {
 
         <div className={styles.belowHero}>
           {/* ---------- 連絡手段 ---------- */}
-          <section className={styles.section} aria-labelledby="ch-h">
+          <section className={`${styles.section} ${styles.surfaceWhite}`} aria-labelledby="ch-h">
             <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="ch-h">HOW TO CONTACT</h2>
               <span>ご相談の方法</span>
@@ -214,7 +214,7 @@ export default function BecoolContactPage() {
           </section>
 
           {/* ---------- LINE 導入 ---------- */}
-          <section id="line" className={`${styles.section} ${styles.lineSection}`} aria-labelledby="line-h">
+          <section id="line" className={`${styles.section} ${styles.surfacePaper}`} aria-labelledby="line-h">
             <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="line-h">LINE</h2>
               <span>LINEでできること</span>
@@ -259,7 +259,7 @@ export default function BecoolContactPage() {
           </section>
 
           {/* ---------- よくある入口 ---------- */}
-          <section className={styles.section} aria-labelledby="case-h">
+          <section className={`${styles.section} ${styles.surfaceWhite}`} aria-labelledby="case-h">
             <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="case-h">SUCH AS</h2>
               <span>こんなご相談から</span>
@@ -275,7 +275,7 @@ export default function BecoolContactPage() {
           </section>
 
           {/* ---------- 店舗 ---------- */}
-          <section id="shops" className={`${styles.section} ${styles.shop}`} aria-labelledby="shop-h">
+          <section id="shops" className={`${styles.section} ${styles.surfacePaper}`} aria-labelledby="shop-h">
             <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="shop-h">SHOP</h2>
               <span>店舗のご案内</span>
@@ -313,7 +313,7 @@ export default function BecoolContactPage() {
           </section>
 
           {/* ---------- FAQ ---------- */}
-          <section className={`${styles.section} ${styles.faq}`} aria-labelledby="cfaq-h">
+          <section className={`${styles.section} ${styles.surfaceWhite}`} aria-labelledby="cfaq-h">
             <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
               <h2 id="cfaq-h">FAQ</h2>
               <span>お問い合わせの前に</span>
