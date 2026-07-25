@@ -6,7 +6,6 @@ import { RevealController, ParallaxController, HeaderScrollController } from "..
 import { asset, LINE_URL, TEL, TEL_HREF, BecoolHeader, BecoolFooter } from "../Chrome";
 import ContactPulse from "../ContactPulse";
 import OpenStatus from "../OpenStatus";
-import ContactComposer from "../ContactComposer";
 
 export const metadata: Metadata = {
   title: "お問い合わせ｜GARAGE BeCool｜北九州市小倉南区の中古車販売・車検・整備",
@@ -44,6 +43,37 @@ const CHANNELS = [
     external: false,
     icon: <path d="M32 58s-18-13-18-26a18 18 0 0 1 36 0c0 13-18 26-18 26Z M32 26a6 6 0 1 0 0 12 6 6 0 0 0 0-12Z" />,
   },
+];
+
+/* ---- LINEでできること -------------------------------------------------- */
+const LINE_CAN = [
+  {
+    t: "車検・整備の予約",
+    b: "ご希望の日時とお車をお送りください。空き状況を確認してお返事します。代車のご相談もこちらで。",
+    icon: <><path d="M12 18h40v34H12z" /><path d="M12 28h40M24 10v10M40 10v10" /><path d="M22 40l6 6 12-13" /></>,
+  },
+  {
+    t: "お車探しの相談",
+    b: "車種・年式・ご予算をお送りいただければ、店頭在庫と全国の流通在庫からお探しします。",
+    icon: <><circle cx="29" cy="29" r="17" /><path d="M41 41l12 12" /></>,
+  },
+  {
+    t: "写真で状態を相談",
+    b: "キズ・へこみ・警告灯など、気になる箇所を撮って送るだけ。電話では伝えにくいこともそのまま。",
+    icon: <><path d="M8 18h12l4-6h16l4 6h12v30H8z" /><circle cx="32" cy="32" r="10" /></>,
+  },
+  {
+    t: "買取・査定の相談",
+    b: "今のお車の情報をお送りいただければ、おおよその査定をご案内します。乗り換えのご相談もまとめて。",
+    icon: <><path d="M32 8v48" /><path d="M18 20h20a7 7 0 0 1 0 14H26a7 7 0 0 0 0 14h20" /></>,
+  },
+];
+
+/* ---- 追加から相談までの流れ -------------------------------------------- */
+const LINE_STEPS = [
+  { n: "01", t: "友だち追加", b: "下のボタンから、GARAGE BeCool の公式アカウントを友だち追加してください。" },
+  { n: "02", t: "メッセージを送る", b: "ご用件をそのまま送信。写真の添付もできます。かしこまった文面でなくて大丈夫です。" },
+  { n: "03", t: "スタッフが返信", b: "営業時間内に順次お返事します。ご予約はこのやりとりの中で確定します。" },
 ];
 
 /* ---- 相談しやすいように「よくある入口」を用意 --------------------------- */
@@ -181,17 +211,49 @@ export default function BecoolContactPage() {
             </ul>
           </section>
 
-          {/* ---------- 相談内容コンポーザー ---------- */}
-          <section id="compose" data-reveal className={`${styles.section} ${styles.composeSection} ${styles.reveal}`} aria-labelledby="cp-h">
+          {/* ---------- LINE 導入 ---------- */}
+          <section id="line" data-reveal className={`${styles.section} ${styles.lineSection} ${styles.reveal}`} aria-labelledby="line-h">
             <div className={styles.sectionHead}>
-              <h2 id="cp-h">MESSAGE</h2>
-              <span>相談内容をまとめる</span>
+              <h2 id="line-h">LINE</h2>
+              <span>LINEでできること</span>
             </div>
-            <p className={styles.composeLead}>
-              下で選んで書くと、そのまま送れる文面ができます。コピーしてLINEに貼り付けてください。
-              車検・整備のご予約も、この文面をLINEに送るだけで承ります。
+            <p className={styles.lineLead}>
+              友だち追加していただければ、<em>車検・整備のご予約</em>から、お車探し・買取査定のご相談まで
+              チャットで完結します。写真をそのまま送れるので、電話では伝えにくいこともスムーズです。
             </p>
-            <ContactComposer lineUrl={LINE_URL} tel={TEL} telHref={TEL_HREF} />
+
+            <ul className={styles.lineCanGrid}>
+              {LINE_CAN.map((c) => (
+                <li key={c.t} className={styles.lineCan}>
+                  <span className={styles.lineCanIcon} aria-hidden="true">
+                    <svg viewBox="0 0 64 64">{c.icon}</svg>
+                  </span>
+                  <h3>{c.t}</h3>
+                  <p>{c.b}</p>
+                </li>
+              ))}
+            </ul>
+
+            <ol className={styles.lineSteps}>
+              {LINE_STEPS.map((s) => (
+                <li key={s.n} className={styles.lineStep}>
+                  <span className={styles.lineStepNo} aria-hidden="true">{s.n}</span>
+                  <h3>{s.t}</h3>
+                  <p>{s.b}</p>
+                </li>
+              ))}
+            </ol>
+
+            <div className={styles.lineCta}>
+              <a className={styles.lineAddBtn} href={LINE_URL} target="_blank" rel="noopener noreferrer">
+                <span className={styles.lineAddMark} aria-hidden="true">LINE</span>
+                友だち追加する
+              </a>
+              <p className={styles.lineCtaNote}>
+                受付 10:00〜20:00／年中無休。営業時間外のメッセージには、翌営業時間に順次お返事します。
+                お急ぎの方は <a href={TEL_HREF}>{TEL}</a> へどうぞ。
+              </p>
+            </div>
           </section>
 
           {/* ---------- よくある入口 ---------- */}
