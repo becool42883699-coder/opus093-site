@@ -510,10 +510,36 @@
 .servicePanel p { color: var(--bc-on-dark-mut); font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); }
 
 /* =====================  WORKS  ===================== */
-/* 面(背景)は白と紙白の2色だけ。セクションごとに交互に敷く。
-   個別コンポーネントに背景を持たせない(第3の色が生えるため)。 */
+/* =====================================================================
+   セクションの面(背景)は 白 と 暗ネイビー の2つだけ。交互に敷く。
+   暗い面はフッター・ステートメント帯と同じ --bc-ink-soft なので、
+   ページのどこを切っても同じ2色しか出てこない。
+   個別コンポーネントに背景を持たせないこと(第3の色が生えるため)。
+   ===================================================================== */
 .surfaceWhite { background: var(--bc-white); }
-.surfacePaper { background: var(--bc-paper); }
+
+/* 暗い面。文字色はトークンを差し替えるだけで中身が丸ごと反転する。
+   個々の要素に色を指定して回らないので、後からセクションを足しても崩れない。 */
+.surfaceDark {
+  background: var(--bc-ink-soft);
+  color: var(--bc-on-dark);
+  --bc-ink:   var(--bc-on-dark);
+  --bc-muted: var(--bc-on-dark-mut);
+  --bc-blue:  var(--bc-blue-light);          /* 明地用の #1f63b6 は暗地で沈む */
+  --bc-line:  rgba(var(--bc-on-dark-rgb), 0.16);
+}
+/* 暗い面に載る「白いカード」の中だけ、明地用のトークンへ戻す。
+   (戻さないと白カードの上に白文字が乗って読めなくなる) */
+.surfaceDark :is(.flowStep, .menuCard, .caseItem, .channelCard, .lineCan,
+                 .storeCard, .stockCard, .bc-svc-card-light) {
+  --bc-ink:   var(--bc-ink-fixed);
+  --bc-muted: var(--bc-muted-fixed);
+  --bc-blue:  var(--bc-blue-fixed);
+  --bc-line:  var(--bc-line-fixed);
+  color: var(--bc-ink);
+}
+/* 写真タイルの下地。暗い面では明るい紙白だと読み込み前にチラつくので合わせる */
+.surfaceDark .workItem, .surfaceDark .pickupItem { background: var(--bc-panel-gray); }
 .worksGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(0.6rem, 1.6vw, 1.2rem); max-width: var(--bc-maxw); margin: 0 auto; }
 .workItem { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--bc-paper); }
 .workItem img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s var(--bc-ease); }

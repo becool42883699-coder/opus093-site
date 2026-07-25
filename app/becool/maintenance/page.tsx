@@ -139,7 +139,7 @@ export default function MaintenancePage() {
         </section>
 
         {/* ---------- 整備メニュー ---------- */}
-        <section data-reveal className={`${styles.section} ${styles.surfacePaper} ${styles.reveal}`} aria-labelledby="menu-h">
+        <section data-reveal className={`${styles.section} ${styles.surfaceDark} ${styles.reveal}`} aria-labelledby="menu-h">
           <div className={styles.sectionHead}>
             <h2 id="menu-h">MENU</h2>
             <span>整備メニュー</span>
@@ -179,7 +179,7 @@ export default function MaintenancePage() {
         </section>
 
         {/* ---------- 整備の流れ ---------- */}
-        <section data-reveal className={`${styles.section} ${styles.surfacePaper} ${styles.reveal}`} aria-labelledby="mflow-h">
+        <section data-reveal className={`${styles.section} ${styles.surfaceDark} ${styles.reveal}`} aria-labelledby="mflow-h">
           <div className={styles.sectionHead}>
             <h2 id="mflow-h">FLOW</h2>
             <span>整備・車検の流れ</span>
