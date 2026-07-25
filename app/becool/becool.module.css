@@ -99,15 +99,34 @@
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--bc-line);
+  transition: background 0.3s var(--bc-ease), border-color 0.3s var(--bc-ease);
 }
 /* T-REXのグローバル規則 header[class*="header"]{background:transparent!important}
-   に負けない様、becool 配下ではより高い詳細度+!important で白下地を強制する */
+   に負けない様、becool 配下ではより高い詳細度+!important で白下地を強制する。
+   (下層ページは常にこの白下地。トップだけ data-overlay で透明にする) */
 :global(.becool) .header {
   background: rgba(255, 255, 255, 0.96) !important;
   border-bottom-color: var(--bc-line) !important;
   backdrop-filter: blur(10px) !important;
   -webkit-backdrop-filter: blur(10px) !important;
 }
+/* --- トップページ: ヘッダーを透明にしてヒーローに重ねる ---
+   白い帯で画面上部を削らないので、ヒーロー写真が画面いっぱいに見える。
+   ヒーローを通り過ぎたら白下地に戻して可読性を確保する。 */
+:global(.becool) .header[data-overlay="true"]:not([data-scrolled="true"]) {
+  background: transparent !important;
+  border-bottom-color: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+/* 透明時は暗い写真の上に載るので、文字とロゴを明色にする */
+.header[data-overlay="true"]:not([data-scrolled="true"]) .brandName,
+.header[data-overlay="true"]:not([data-scrolled="true"]) .navDesktop a {
+  color: var(--bc-on-dark);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
+}
+.header[data-overlay="true"]:not([data-scrolled="true"]) .brandName b { color: var(--bc-blue-light); }
+.header[data-overlay="true"]:not([data-scrolled="true"]) .menuButton span { background: var(--bc-on-dark); }
 .brand { display: inline-flex; align-items: center; gap: 12px; }
 .brand svg { width: 34px; height: 34px; }
 .brandName { font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.2rem; letter-spacing: 0.01em; color: var(--bc-ink); }
