@@ -572,7 +572,7 @@
   .flowStep:hover { transform: translateY(-4px); box-shadow: var(--bc-shadow-hover); }
 }
 .flowNo { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: 2rem; line-height: 1; color: var(--bc-blue); }
-.flowEn { font-size: var(--bc-fs-label); font-weight: var(--bc-fw-bold); letter-spacing: var(--bc-ls-label); color: var(--bc-muted); }
+.flowEn { font-family: var(--bc-font-display); font-size: var(--bc-fs-label); font-weight: var(--bc-fw-bold); letter-spacing: var(--bc-ls-label); color: var(--bc-muted); }
 .flowStep h3 { font-size: var(--bc-fs-card-title); font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
 .flowStep p { font-size: var(--bc-fs-card-body); line-height: var(--bc-lh-card); color: var(--bc-muted); }
 /* ステップ間をつなぐ矢羽(デスクトップのみ) */
@@ -707,7 +707,7 @@
 .menuGrid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(0.9rem, 2vw, 1.5rem); }
 .menuCard { display: grid; justify-items: center; align-content: start; text-align: center; gap: 0.55rem; padding: clamp(1.6rem, 3vw, 2.4rem) clamp(1.2rem, 2.4vw, 1.8rem); background: var(--bc-white); border: 1px solid var(--bc-line); border-top: 2px solid var(--bc-blue); }
 .menuIcon svg { width: 56px; height: 56px; fill: none; stroke: var(--bc-blue); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.menuEn { font-size: var(--bc-fs-label); font-weight: var(--bc-fw-bold); letter-spacing: var(--bc-ls-label); color: var(--bc-muted); }
+.menuEn { font-family: var(--bc-font-display); font-size: var(--bc-fs-label); font-weight: var(--bc-fw-bold); letter-spacing: var(--bc-ls-label); color: var(--bc-muted); }
 .menuCard h3 { font-size: var(--bc-fs-card-title); font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
 .menuCard p { font-size: var(--bc-fs-card-body); line-height: var(--bc-lh-card); color: var(--bc-muted); text-align: left; }
 .menuNote { max-width: var(--bc-maxw-text); margin: clamp(1.8rem, 4vw, 2.6rem) auto 0; text-align: center; font-size: var(--bc-fs-card-body); line-height: var(--bc-lh-body); color: var(--bc-muted); }
