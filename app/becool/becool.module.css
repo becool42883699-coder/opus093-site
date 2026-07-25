@@ -209,6 +209,10 @@
 }
 .buildSvg { display: block; width: 100%; height: auto; overflow: visible; }
 
+/* --- ブランドロゴそのものを出す場合(キューブ + garage becool + SINCE 1999) --- */
+.logoZoneFull { width: min(88vw, 720px); }
+.fullLogo { display: block; width: 100%; height: auto; filter: drop-shadow(0 6px 26px rgba(0, 0, 0, 0.55)); }
+
 /* --- particle演出(Particle Object / GBマーク単体) --- */
 .logoZoneParticle { width: min(82vw, 440px); }
 .particleWrap { position: relative; width: 100%; aspect-ratio: 480 / 580; }
