@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "../becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../../components/TrmSeo";
-import { RevealController, HeaderScrollController } from "../BecoolClient";
+import { HeaderScrollController } from "../BecoolClient";
+import ScrollAnim from "../ScrollAnim";
 import { TEL, BecoolHeader, BecoolFooter, CtaBand, SubHero } from "../Chrome";
 
 export const metadata: Metadata = {
@@ -125,8 +126,8 @@ export default function MaintenancePage() {
         />
 
         {/* ---------- 導入 ---------- */}
-        <section data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-label="整備・車検について">
-          <div className={styles.aboutBody}>
+        <section className={`${styles.section} ${styles.surfaceWhite}`} aria-label="整備・車検について">
+          <div className={`${styles.aboutBody} ${styles.jsReveal}`} data-reveal="up">
             <p>
               GARAGE BeCool では、車検・法定点検から、オイル・タイヤ・バッテリー交換、
               警告灯や異音の診断まで、<em>国家資格を持つ整備士</em>が対応します。
@@ -139,12 +140,12 @@ export default function MaintenancePage() {
         </section>
 
         {/* ---------- 整備メニュー ---------- */}
-        <section data-reveal className={`${styles.section} ${styles.surfaceDark} ${styles.reveal}`} aria-labelledby="menu-h">
-          <div className={styles.sectionHead}>
+        <section className={`${styles.section} ${styles.surfaceDark}`} aria-labelledby="menu-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="menu-h">MENU</h2>
             <span>整備メニュー</span>
           </div>
-          <ul className={styles.menuGrid}>
+          <ul className={`${styles.menuGrid} ${styles.jsReveal}`} data-reveal="stagger">
             {MENUS.map((m) => (
               <li key={m.title} className={styles.menuCard}>
                 <span className={styles.menuIcon} aria-hidden="true">
@@ -156,18 +157,18 @@ export default function MaintenancePage() {
               </li>
             ))}
           </ul>
-          <p className={styles.menuNote}>
+          <p className={`${styles.menuNote} ${styles.jsReveal}`} data-reveal="up">
             料金は車種・作業内容により異なります。<b>お見積りは無料</b>ですので、まずはお気軽にお問い合わせください。
           </p>
         </section>
 
         {/* ---------- 選ばれる理由 ---------- */}
-        <section data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="point-h">
-          <div className={styles.sectionHead}>
+        <section className={`${styles.section} ${styles.surfaceWhite}`} aria-labelledby="point-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="point-h">POINT</h2>
             <span>選ばれる理由</span>
           </div>
-          <ol className={`${styles.flowGrid} ${styles.noArrows}`}>
+          <ol className={`${styles.flowGrid} ${styles.noArrows} ${styles.jsReveal}`} data-reveal="stagger">
             {POINTS.map((p) => (
               <li key={p.no} className={styles.flowStep}>
                 <span className={styles.flowNo} aria-hidden="true">{p.no}</span>
@@ -179,12 +180,12 @@ export default function MaintenancePage() {
         </section>
 
         {/* ---------- 整備の流れ ---------- */}
-        <section data-reveal className={`${styles.section} ${styles.surfaceDark} ${styles.reveal}`} aria-labelledby="mflow-h">
-          <div className={styles.sectionHead}>
+        <section className={`${styles.section} ${styles.surfaceDark}`} aria-labelledby="mflow-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="mflow-h">FLOW</h2>
             <span>整備・車検の流れ</span>
           </div>
-          <ol className={styles.flowGrid}>
+          <ol className={`${styles.flowGrid} ${styles.jsReveal}`} data-reveal="stagger">
             {FLOW.map((f) => (
               <li key={f.no} className={styles.flowStep}>
                 <span className={styles.flowNo} aria-hidden="true">{f.no}</span>
@@ -197,12 +198,12 @@ export default function MaintenancePage() {
         </section>
 
         {/* ---------- FAQ ---------- */}
-        <section data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="mfaq-h">
-          <div className={styles.sectionHead}>
+        <section className={`${styles.section} ${styles.surfaceWhite}`} aria-labelledby="mfaq-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="mfaq-h">FAQ</h2>
             <span>整備・車検のよくあるご質問</span>
           </div>
-          <div className={styles.faqList}>
+          <div className={`${styles.faqList} ${styles.jsReveal}`} data-reveal="stagger">
             {FAQS.map((f) => (
               <details key={f.q} className={styles.faqItem}>
                 <summary>
@@ -214,14 +215,14 @@ export default function MaintenancePage() {
               </details>
             ))}
           </div>
-          <Link className={styles.readMore} href="/becool/#faq">その他のご質問はこちら</Link>
+          <Link className={`${styles.readMore} ${styles.jsReveal}`} data-reveal="up" href="/becool/#faq">その他のご質問はこちら</Link>
         </section>
 
         <CtaBand lead="車検・整備のご予約は、お電話または公式LINEからどうぞ。" />
       </main>
 
       <BecoolFooter />
-      <RevealController />
+      <ScrollAnim />
       <HeaderScrollController />
     </div>
   );

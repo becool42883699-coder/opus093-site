@@ -70,19 +70,24 @@
 - 新規クラスは全て `bc-svc-` 接頭辞。白背景の日本語サブだけ `--bc-blue`（対白5.97:1）を
   使う（`--bc-blue-light` は対白2.89:1で不足するため明地では使わない）。
 
-### CONTACT ページの統一スクロール演出（確定）
+### 統一スクロール演出（確定・4ページとも適用済み）
 - トークンは `tokens.css` の `--anim-duration` / `--anim-duration-slow` / `--anim-ease` /
   `--anim-stagger` / `--anim-distance` の5つ。**演出の種類ごとに値を変えない**のが統一感の核。
   新しい演出を足す時も必ずこのトークン経由で書く。
-- `ScrollAnim.tsx` が IntersectionObserver(threshold 0.15 / rootMargin `0px 0px -10% 0px`)で
-  `[data-reveal]` に `.isInview` を一度だけ付与＋スクロール進捗バーを rAF で `scaleX` 更新。
+- **コントローラは `ScrollAnim.tsx` の1つだけ**（旧 `RevealController` は撤去・統合済み）。
+  IntersectionObserver で `[data-reveal]` を監視し、一度だけ `.isInview` と `.isIn` を付与、
+  ルートに `data-anim-ready` と `data-motion-ready` を立てる。
+  加えてスクロール進捗バーを rAF で `scaleX` 更新。4ページとも `<ScrollAnim />` を置く。
+  - `.isInview` … 統一演出（line/stagger/up/zoom）用
+  - `.isIn` … 写真マスク `[data-reveal-img]` 用（TOPの clip-path 演出がこれに依存）
 - 種類は `data-reveal="line|stagger|up|zoom"` の4つだけ。line=見出し(EN→下線scaleX→和文)、
   stagger=カード群(+アイコンは0.2s後に scale(0.8)→1)、up=フェードアップ、zoom=写真 scale(1.08)→1。
+  対象要素には `styles.jsReveal` クラスも必ず付ける（CSSが `.jsReveal[data-reveal=…]` で書かれている）。
+- 写真マスクだけは値なしの素の `data-reveal` を親セクションに付ける（`.isIn` を得るため）。
+  TOPの CONCEPT / SHOWROOM / SHOP の3つ。
 - no-JS安全の作り: 「アニメ前」の指定は全て `:global([data-anim-ready]) …:not(.isInview)` で
   ゲート。JS無効・初期化失敗・reduced-motion では属性が付かず `opacity:0` が残らない。
 - ヒーローは `100svh` のまま（`100dvh` はiOS SafariでURLバー開閉に追従して高さが動くため不採用）。
-- TOPページは旧来の `RevealController`（`data-motion-ready` + `.reveal` / `.isIn`）のまま。
-  **2系統が併存している**ので、どちらを触っているか毎回確認すること。
 
 ### 全ページ共通の統一ルール（確定・4ページとも適用済み）
 色味がページ・コンポーネントごとに散っていたのを、下の4点で固定した。
@@ -169,7 +174,7 @@
 
 6. **Next 16 で `next lint` コマンドが廃止**。→ `npm run lint`（`eslint .`）を使う。
 
-7. **reveal用CSSがカードの表示制御を詳細度で上書きする**
+7. **reveal用CSSがカードの表示制御を詳細度で上書きする**（現在は解消済み・考え方は有効）
    `:global([data-motion-ready]) .reveal.isIn .bc-svc-card { opacity: 1 }` が
    タブ側の `.bc-svc-panels .bc-svc-card { opacity: 0 }` に詳細度で勝ち、
    非選択のカード4枚が重なって表示された。
@@ -211,7 +216,14 @@
     ので気付きにくい）。→ ヒーローは4ページとも main の先頭・ヘッダーは fixed で
     場所を取らないので、**下端＝ヒーローの `offsetHeight`** で求める。
 
-14. **CSS Modules の規則は `!important` 同士だと詳細度で決まる**
+14. **IntersectionObserver の threshold は「面積比」なので、背の高い要素で発火しない**
+    統一演出のIOを `threshold: 0.15` のままにすると、ビューポートより遥かに高い
+    セクション（SHOWROOMのスティッキー・スタック等）は交差比が最大でも
+    `viewportH / elementH` にしかならず、閾値に届かず**永久に発火しない**。
+    → `threshold: 0` + `rootMargin: "0px 0px -12% 0px"` で「下端から12%の位置を
+    越えたら」という判定にする。要素の高さに依存しない。
+
+15. **CSS Modules の規則は `!important` 同士だと詳細度で決まる**
     JS無効時の保険に `noscript` で `header[data-overlay="true"]{…!important}` を
     当てたが、透明化側の `:global(.becool) .header[data-overlay]:not([data-scrolled])`
     の方が詳細度が高く、背景だけ効かなかった（文字色は効いたので気付きにくい）。

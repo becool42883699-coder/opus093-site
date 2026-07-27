@@ -1,7 +1,7 @@
 import Link from "next/link";
 import styles from "./becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../components/TrmSeo";
-import { RevealController, ParallaxController, SpotlightController, HeaderScrollController } from "./BecoolClient";
+import { ParallaxController, SpotlightController, HeaderScrollController } from "./BecoolClient";
 import BecoolLogoIntro from "./BecoolLogoIntro";
 import HeroParticleLogo from "./HeroParticleLogo";
 import HeroGlassLogo from "./HeroGlassLogo";
@@ -10,6 +10,7 @@ import ParticleScrollReveal from "./ParticleScrollReveal";
 import PeelReveal from "./PeelReveal";
 import { CUBE_MARK_D, CUBE_GARAGE_D, CUBE_BECOOL_D, CUBE_SINCE_D, CUBE_GRADS, SCRIPT_D, SCRIPT_GRAD } from "./brandLogo";
 import { asset, LINE_URL, SITE_URL, BecoolHeader, BecoolFooter } from "./Chrome";
+import ScrollAnim from "./ScrollAnim";
 
 /* ---- services (from the official business info) --------------------- */
 const SERVICES: {
@@ -100,7 +101,7 @@ function ServiceCardBody({ s }: { s: (typeof SERVICES)[number] }) {
 /** 案A: 4枚を並べる大型カード。切替UIを持たず常時すべて表示。 */
 function ServiceCardsA() {
   return (
-    <ul className={styles["bc-svc-grid"]}>
+    <ul className={`${styles["bc-svc-grid"]} ${styles.jsReveal}`} data-reveal="stagger">
       {SERVICES.map((s) => (
         <li key={s.title} className={`${styles["bc-svc-card"]} ${styles["bc-svc-card-dark"]}`}>
           <ServiceCardBody s={s} />
@@ -117,7 +118,7 @@ function ServiceCardsA() {
  */
 function ServiceCardsB() {
   return (
-    <div className={styles["bc-svc-tabs"]}>
+    <div className={`${styles["bc-svc-tabs"]} ${styles.jsReveal}`} data-reveal="up">
       {SERVICES.map((s, i) => (
         <input
           key={`r-${s.title}`}
@@ -518,7 +519,7 @@ export default function BecoolPage() {
         {/* ヒーローは sticky で固定し、以下のコンテンツが上に被さってせり上がる */}
         <div className={styles.belowHero}>
         {/* ---------- CONCEPT ---------- */}
-        <section data-reveal className={`${styles.concept} ${styles.reveal}`} aria-label="コンセプト">
+        <section data-reveal className={styles.concept} aria-label="コンセプト">
           <div className={`${styles.conceptPhoto} ${styles.halftone}`} data-reveal-img="center">
             <img src={asset("/becool/img/store-exterior.webp")} alt="GARAGE BeCool の店舗外観（夕景）" />
           </div>
@@ -534,13 +535,13 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- ABOUT ---------- */}
-        <section id="about" data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="about-h">
-          <div className={styles.sectionHead}>
+        <section id="about" className={`${styles.section} ${styles.surfaceWhite}`} aria-labelledby="about-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="about-h">ABOUT US</h2>
             <span>GARAGE BeCool について</span>
           </div>
           <div className={styles.aboutGrid}>
-            <div className={styles.aboutBody}>
+            <div className={`${styles.aboutBody} ${styles.jsReveal}`} data-reveal="up">
               <p>
                 GARAGE BeCool は<em>1999年創業</em>、福岡県北九州市小倉南区を中心とする地域密着型のカーショップです。
                 中古車の販売だけでなく、買取・車検・整備・メンテナンスまで一括で対応しています。
@@ -556,15 +557,15 @@ export default function BecoolPage() {
               </p>
             </div>
             {/* Peel: 設計図(ブループリント)から完成写真へ、ビュー到達時に斜めにめくって切替 */}
-            <figure className={styles.aboutMedia}>
+            <figure className={`${styles.aboutMedia} ${styles.jsReveal}`} data-reveal="up">
               <PeelReveal src={asset("/becool/img/store-nakayoshida.webp")} alt="GARAGE BeCool 中吉田店の外観（青空の下の店舗）" />
             </figure>
           </div>
         </section>
 
         {/* ---------- SHOWROOM (店内ギャラリー) ---------- */}
-        <section id="showroom" data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="showroom-h">
-          <div className={styles.sectionHead}>
+        <section id="showroom" data-reveal className={`${styles.section} ${styles.surfaceWhite}`} aria-labelledby="showroom-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="showroom-h">SHOWROOM</h2>
             <span>店内のご案内</span>
           </div>
@@ -576,12 +577,12 @@ export default function BecoolPage() {
               </figure>
             ))}
           </div>
-          <p className={styles.galleryNote}>ゆったりくつろげる店内で、車選びからアフターのご相談まで。お気軽にお立ち寄りください。</p>
+          <p className={`${styles.galleryNote} ${styles.jsReveal}`} data-reveal="up">ゆったりくつろげる店内で、車選びからアフターのご相談まで。お気軽にお立ち寄りください。</p>
         </section>
 
         {/* ---------- SERVICES ---------- */}
-        <section id="service" data-reveal className={`${styles["bc-svc-section"]} ${styles.surfaceDark} ${styles.reveal}`} aria-labelledby="svc-h">
-          <div className={styles.sectionHead}>
+        <section id="service" className={`${styles["bc-svc-section"]} ${styles.surfaceDark}`} aria-labelledby="svc-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="svc-h">SERVICE</h2>
             <span>サービス</span>
           </div>
@@ -589,12 +590,12 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- FLOW (ご利用の流れ) ---------- */}
-        <section id="flow" data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="flow-h">
-          <div className={styles.sectionHead}>
+        <section id="flow" className={`${styles.section} ${styles.surfaceWhite}`} aria-labelledby="flow-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="flow-h">FLOW</h2>
             <span>ご利用の流れ</span>
           </div>
-          <ol className={styles.flowGrid}>
+          <ol className={`${styles.flowGrid} ${styles.jsReveal}`} data-reveal="stagger">
             {FLOW.map((f) => (
               <li key={f.no} className={styles.flowStep}>
                 <span className={styles.flowNo} aria-hidden="true">{f.no}</span>
@@ -607,8 +608,8 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- PICK UP CAR ---------- */}
-        <section id="car" data-reveal className={`${styles.section} ${styles.surfaceDark} ${styles.reveal}`} aria-labelledby="car-h">
-          <div className={styles.sectionHead}>
+        <section id="car" className={`${styles.section} ${styles.surfaceDark}`} aria-labelledby="car-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="car-h">PICK UP</h2>
             <span>販売車両</span>
           </div>
@@ -624,16 +625,16 @@ export default function BecoolPage() {
               </li>
             ))}
           </ul>
-          <Link className={styles.readMore} href="/becool/stock/">+ 在庫一覧を見る</Link>
+          <Link className={`${styles.readMore} ${styles.jsReveal}`} data-reveal="up" href="/becool/stock/">+ 在庫一覧を見る</Link>
         </section>
 
         {/* ---------- SHOP ---------- */}
-        <section id="shop" data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="shop-h">
-          <div className={styles.sectionHead}>
+        <section id="shop" data-reveal className={`${styles.section} ${styles.surfaceWhite}`} aria-labelledby="shop-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="shop-h">SHOP</h2>
             <span>店舗案内</span>
           </div>
-          <div className={styles.storeGrid}>
+          <div className={`${styles.storeGrid} ${styles.jsReveal}`} data-reveal="stagger">
             {SHOPS.map((s) => (
               <article key={s.name} className={styles.storeCard}>
                 {s.comingSoon ? (
@@ -666,12 +667,12 @@ export default function BecoolPage() {
         </section>
 
         {/* ---------- FAQ ---------- */}
-        <section id="faq" data-reveal className={`${styles.section} ${styles.surfaceDark} ${styles.reveal}`} aria-labelledby="faq-h">
-          <div className={styles.sectionHead}>
+        <section id="faq" className={`${styles.section} ${styles.surfaceDark}`} aria-labelledby="faq-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="faq-h">FAQ</h2>
             <span>よくあるご質問</span>
           </div>
-          <div className={styles.faqList}>
+          <div className={`${styles.faqList} ${styles.jsReveal}`} data-reveal="stagger">
             {FAQS.map((f) => (
               <details key={f.q} className={styles.faqItem}>
                 <summary>
@@ -685,7 +686,7 @@ export default function BecoolPage() {
           </div>
         </section>
         {/* ---------- CLOSING BRAND MARK (フッター前) ---------- */}
-        <section data-reveal className={`${styles.brandOutro} ${styles.surfaceWhite} ${styles.reveal}`} aria-label="ブランドマーク">
+        <section className={`${styles.brandOutro} ${styles.surfaceWhite} ${styles.jsReveal}`} data-reveal="up" aria-label="ブランドマーク">
           <FooterParticleMark />
           <p className={styles.brandOutroWord}><span>GARAGE</span> <span className={styles.wmAccent}>BeCool</span></p>
           <p className={styles.brandOutroSub}>Used Car &amp; Car Life Support — since 1999</p>
@@ -695,7 +696,7 @@ export default function BecoolPage() {
 
       <BecoolFooter />
 
-      <RevealController />
+      <ScrollAnim />
       <ParallaxController />
       <SpotlightController />
       <HeaderScrollController />

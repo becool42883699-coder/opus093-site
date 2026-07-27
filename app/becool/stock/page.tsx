@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "../becool.module.css";
 import { JsonLd, SITE_URL as ROOT_URL } from "../../components/TrmSeo";
-import { RevealController, HeaderScrollController } from "../BecoolClient";
+import { HeaderScrollController } from "../BecoolClient";
+import ScrollAnim from "../ScrollAnim";
 import { asset, LINE_URL, TEL_HREF, BecoolHeader, BecoolFooter, CtaBand, SubHero } from "../Chrome";
 
 export const metadata: Metadata = {
@@ -81,12 +82,12 @@ export default function StockPage() {
         />
 
         {/* ---------- 在庫一覧 ---------- */}
-        <section data-reveal className={`${styles.section} ${styles.surfaceWhite} ${styles.reveal}`} aria-labelledby="stock-h">
-          <div className={styles.sectionHead}>
+        <section className={`${styles.section} ${styles.surfaceWhite}`} aria-labelledby="stock-h">
+          <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="stock-h">CAR STOCK</h2>
             <span>販売中の車両</span>
           </div>
-          <ul className={styles.stockGrid}>
+          <ul className={`${styles.stockGrid} ${styles.jsReveal}`} data-reveal="stagger">
             {STOCK.map((c) => (
               <li key={c.name} className={styles.stockCard}>
                 <div className={`${styles.stockPhoto} ${styles.halftone}`}>
@@ -105,14 +106,14 @@ export default function StockPage() {
               </li>
             ))}
           </ul>
-          <p className={styles.stockNote}>
+          <p className={`${styles.stockNote} ${styles.jsReveal}`} data-reveal="up">
             掲載中の車両は店頭で販売中のため、ご来店の際は事前に在庫状況をお問い合わせいただくと確実です。
           </p>
         </section>
 
         {/* ---------- オーダー検索 ---------- */}
-        <section data-reveal className={`${styles.orderBand} ${styles.reveal}`} aria-labelledby="order-h">
-          <div className={styles.orderInner}>
+        <section className={styles.orderBand} aria-labelledby="order-h">
+          <div className={`${styles.orderInner} ${styles.jsReveal}`} data-reveal="up">
             <h2 id="order-h">ORDER<span>お探しの車が見つからない方へ</span></h2>
             <p>
               店頭在庫にない車も、<em>全国のオークション・流通在庫</em>からお探しできます。
@@ -129,7 +130,7 @@ export default function StockPage() {
       </main>
 
       <BecoolFooter />
-      <RevealController />
+      <ScrollAnim />
       <HeaderScrollController />
     </div>
   );
