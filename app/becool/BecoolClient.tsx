@@ -52,41 +52,9 @@ export function MobileMenu({ links }: { links: { href: string; label: string }[]
   );
 }
 
-/**
- * スクロール表示演出。セクション([data-reveal])と写真マスク([data-reveal-img])を
- * 1つの IntersectionObserver で一度だけ表示。
- * no-JS安全: ルートに data-motion-ready を付けた時だけ「アニメ前(=非表示)」の
- * CSSが有効になる。JS無効/初期化失敗/reduced-motion では最初から表示のまま。
- */
-export function RevealController() {
-  useEffect(() => {
-    const root = document.documentElement;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // セクション([data-reveal])のみ監視。写真マスク([data-reveal-img])は
-    // clip で不可視のため IO が交差を検知できない → 親セクションの isIn で開く。
-    const nodes = Array.from(document.querySelectorAll<HTMLElement>("[data-reveal]"));
-    // reduced-motion / 対象なし: data-motion-ready を付けない → 常に表示
-    if (reduce || nodes.length === 0) return;
-    root.setAttribute("data-motion-ready", "");
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add(styles.isIn);
-            io.unobserve(e.target);
-          }
-        });
-      },
-      { threshold: 0.04, rootMargin: "0px 0px -4% 0px" },
-    );
-    nodes.forEach((n) => io.observe(n));
-    return () => {
-      io.disconnect();
-      root.removeAttribute("data-motion-ready");
-    };
-  }, []);
-  return null;
-}
+/* スクロール表示演出は ScrollAnim.tsx に一本化した(旧 RevealController は撤去)。
+   ScrollAnim が data-anim-ready / data-motion-ready の両方を立て、
+   .isInview(統一演出)と .isIn(写真マスク)の両方を付ける。 */
 
 /**
  * ごく弱い背景パララックス。対象は [data-parallax] を持つ既存の背景写真のみ。

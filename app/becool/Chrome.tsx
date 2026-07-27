@@ -70,7 +70,7 @@ export function BecoolHeader({ overlay = false }: { overlay?: boolean } = {}) {
 export function BecoolFooter() {
   return (
     <footer id="contact" className={styles.footer}>
-      <div data-reveal className={`${styles.footInner} ${styles.reveal}`}>
+      <div className={`${styles.footInner} ${styles.jsReveal}`} data-reveal="up">
         <span className={styles.footBrand}>
           <GbSymbol size={38} />
           <Wordmark className={styles.footWordmark} />
@@ -109,7 +109,7 @@ export function BecoolFooter() {
 export function CtaBand({ lead }: { lead: string }) {
   return (
     <section className={styles.ctaBand} aria-label="お問い合わせ">
-      <div data-reveal className={`${styles.ctaBandInner} ${styles.reveal}`}>
+      <div className={`${styles.ctaBandInner} ${styles.jsReveal}`} data-reveal="up">
         <p className={styles.ctaLead}>{lead}</p>
         <p className={styles.ctaTel}>
           <a href={TEL_HREF}>{TEL}</a>

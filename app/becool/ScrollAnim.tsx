@@ -1,16 +1,24 @@
 "use client";
 
 /**
- * CONTACT系ページの統一スクロール演出。
+ * 全ページ共通のスクロール演出コントローラ(旧 RevealController を統合)。
  *
- * - `.jsReveal`(= data-reveal を持つ要素)を1つの IntersectionObserver で監視し、
- *   交差したら `.isInview` を付けて以後は解除する(再スクロールで再発火しない)。
- * - no-JS安全: 「アニメ前(=非表示)」のCSSは :global([data-anim-ready]) で
- *   ゲートしてある。JS無効・初期化失敗・reduced-motion ではこの属性が付かず、
- *   opacity:0 が残らない。
+ * - `[data-reveal]` を1つの IntersectionObserver で監視し、交差したら
+ *   `.isInview` と `.isIn` を付けて以後は解除する(再スクロールで再発火しない)。
+ *   - `.isInview` … 統一演出(line/stagger/up/zoom)用
+ *   - `.isIn`     … 写真マスク([data-reveal-img])用。旧 RevealController が
+ *                    付けていたもので、TOPの clip-path 演出がこれに依存している。
+ *   属性も `data-anim-ready` と `data-motion-ready` の両方を立てる。
+ * - no-JS安全: 「アニメ前(=非表示)」のCSSは全て上の2属性でゲートしてある。
+ *   JS無効・初期化失敗・reduced-motion では属性が付かず opacity:0 が残らない。
  * - reduced-motion では監視自体を行わず、進捗バーも描画しない。
  * - スクロール進捗バーは scroll を rAF でスロットルし、scaleX のみ更新する
  *   (レイアウトを起こさない)。
+ *
+ * ※ threshold は 0 + rootMargin で判定する。「面積の15%」方式にすると、
+ *   ビューポートより遥かに高いセクション(SHOWROOMのスティッキー・スタック等)は
+ *   交差比が最大でも viewportH/elementH にしかならず、閾値に届かずに
+ *   永久に発火しない事故が起きる。
  */
 
 import { useEffect, useRef } from "react";
@@ -26,21 +34,23 @@ export default function ScrollAnim() {
     if (nodes.length === 0) return;
 
     root.setAttribute("data-anim-ready", "");
+    root.setAttribute("data-motion-ready", "");
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {
           if (!e.isIntersecting) return;
-          e.target.classList.add(styles.isInview);
+          e.target.classList.add(styles.isInview, styles.isIn);
           io.unobserve(e.target);
         });
       },
-      { threshold: 0.15, rootMargin: "0px 0px -10% 0px" },
+      { threshold: 0, rootMargin: "0px 0px -12% 0px" },
     );
     nodes.forEach((n) => io.observe(n));
 
     return () => {
       io.disconnect();
       root.removeAttribute("data-anim-ready");
+      root.removeAttribute("data-motion-ready");
     };
   }, []);
 
