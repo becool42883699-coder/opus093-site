@@ -12,7 +12,7 @@ export default function AboutRedirect() {
   return (
     <main style={{ minHeight: "70vh", display: "grid", placeItems: "center", textAlign: "center" }}>
       <p>会社案内は「会社概要」に統合されました。<br />
-        <Link href="/company" style={{ color: "#00aeea", textDecoration: "underline" }}>会社概要ページへ移動する</Link>
+        <Link href="/company" style={{ color: "#2f5a7d", textDecoration: "underline" }}>会社概要ページへ移動する</Link>
       </p>
     </main>
   );
