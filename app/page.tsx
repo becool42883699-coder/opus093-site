@@ -216,7 +216,7 @@ export default function Home() {
         </section>
         <section className="contentSection works" id="works" aria-labelledby="works-title">
           <div className="sectionIntro"><p>WORKS</p><h2 id="works-title">施工実績</h2><span data-reveal>一つひとつの仕事が、<br />私たちの誇りです。</span></div>
-          <div className="workGrid">{[['荷台換装・修理','大型ダンプ 荷台換装・修理','2024.05'],['車両陸送・軽運送','車両陸送・軽運送対応','2024.04'],['板金塗装','特殊車両 全塗装','2024.03'],['出張修理','建設機械 油圧部修理','2024.02']].map(([tag,title,date],i) => <article className={`workCard work${i+1}`} key={title}><div className="workScene"><span /><i /></div><div><small>{tag}</small><h3>{title}</h3><time>{date}</time><Link href="/contact" aria-label={`${title}の詳細`}><Arrow /></Link></div></article>)}</div>
+          <div className="workGrid">{[['荷台換装・修理','大型ダンプ 荷台換装・修理','2024.05','/works-photo-2.webp'],['車両陸送・軽運送','車両陸送・軽運送対応','2024.04','/works-photo-6.webp'],['板金塗装','特殊車両 全塗装','2024.03','/works-photo-4.webp'],['出張修理','建設機械 油圧部修理','2024.02','/works-photo-3.webp']].map(([tag,title,date,photo],i) => <article className={`workCard work${i+1}`} key={title}><div className="workScene"><Image src={photo} alt={title} width={870} height={653} sizes="(max-width: 767px) 72vw, 25vw" /></div><div><small>{tag}</small><h3>{title}</h3><time>{date}</time><Link href="/contact" aria-label={`${title}の詳細`}><Arrow /></Link></div></article>)}</div>
         </section>
         <section className="aboutSection" id="about" aria-labelledby="about-title">
           <div className="aboutCopy"><p className="sectionLabel">ABOUT</p><h2 id="about-title">T-REXについて</h2><p data-reveal>T-REX CO., LTD.は、現場の最前線を支えるプロフェッショナル集団です。お客様の課題に真摯に向き合い、スピード・品質・安全のすべてに妥協せず、信頼されるパートナーであり続けます。</p><Link className="outlineButton" href="/company">会社概要を見る <Arrow /></Link></div>
