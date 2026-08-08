@@ -17,6 +17,13 @@ export default function HeroSequence() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    /* モバイルは縦構図の別セット(/seq-m/)を使う。マウント時に一度だけ判定 */
+    const isMobile = window.matchMedia("(max-width: 767px)").matches;
+    canvas.width = isMobile ? 800 : 1440;
+    canvas.height = isMobile ? 1400 : 900;
+    const dir = isMobile ? "/seq-m/" : "/seq/";
+
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) return;
 
@@ -24,7 +31,7 @@ export default function HeroSequence() {
     const images: HTMLImageElement[] = [];
     for (let i = 0; i < FRAMES; i++) {
       const img = new Image();
-      img.src = `${base}/seq/${String(i).padStart(4, "0")}.webp`;
+      img.src = `${base}${dir}${String(i).padStart(4, "0")}.webp`;
       images.push(img);
     }
 
