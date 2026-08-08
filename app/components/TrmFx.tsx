@@ -19,11 +19,16 @@ import { useEffect, useLayoutEffect, useState } from "react";
 
 const LOADER_KEY = "trm-loader-shown";
 
+/* フェーズ1(ダークテック静的版): 全FXを一時停止。
+   フェーズ2以降でsui系仕様(top 80%統一・sticky+scrub)として再設計する */
+const FX_DISABLED = true;
+
 export default function TrmFx() {
   const [loaderPhase, setLoaderPhase] = useState<"hidden" | "shown" | "leaving">("hidden");
 
   /* ---- 1. 初回ローディング演出(セッション内1回のみ・約1.6秒) ---- */
   useLayoutEffect(() => {
+    if (FX_DISABLED) return;
     // Be Cool ルートは独自の世界観のため、T-REX共通FXを一切適用しない
     // (basePath付きの公開URL /xxx/becool/ にも対応するため includes で判定)
     if (window.location.pathname.includes("/becool")) return;
@@ -63,6 +68,7 @@ export default function TrmFx() {
     let cleanup = () => {};
 
     const setup = async () => {
+      if (FX_DISABLED) return;
       // Be Cool ルートは独自の世界観のため、T-REX共通FXを一切適用しない
       if (window.location.pathname.includes("/becool")) return;
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
