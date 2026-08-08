@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
+import HeroSequence from "./components/HeroSequence";
 
 const navItems = [
   ["トップ", "/"],
@@ -53,8 +54,105 @@ export default function Home() {
     return () => document.body.classList.remove("menu-open");
   }, [menuOpen]);
 
-  /* フェーズ1(静的版): Lenis/GSAPのスクロール演出は撤去。
-     フェーズ2で「top 80%統一リビール + Lenis」として再実装する */
+  /* フェーズ2: Lenis + top 80%統一リビール(sui系ブリーフ 6-2/6-3)
+     - pinは使わない(stickyはCSS側、GSAPはclip-path/transform/opacityのみ)
+     - リビール発火は全て start:"top 80%" に統一
+     - reduced-motion では Lenis を起動せず全て即時表示(6-5) */
+  useEffect(() => {
+    let cleanup = () => {};
+
+    const setup = async () => {
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (reduce) return;
+      const coarse = window.matchMedia("(pointer: coarse)").matches;
+
+      const [{ default: Lenis }, { gsap }, { ScrollTrigger }] = await Promise.all([
+        import("lenis"),
+        import("gsap"),
+        import("gsap/ScrollTrigger"),
+      ]);
+      gsap.registerPlugin(ScrollTrigger);
+
+      const lenis = coarse ? null : new Lenis({ duration: 1.15, wheelMultiplier: 0.88 });
+      const onLenisScroll = () => ScrollTrigger.update();
+      const raf = (time: number) => lenis?.raf(time * 1000);
+      if (lenis) {
+        lenis.on("scroll", onLenisScroll);
+        gsap.ticker.add(raf);
+        gsap.ticker.lagSmoothing(0);
+      }
+
+      const ctx = gsap.context(() => {
+        /* ヒーローコピー: ロード時リビール(ビューポート内のためtop 80%は即発火) */
+        gsap.from(".seqSticky .heroContent > *", {
+          yPercent: 24, opacity: 0, duration: 0.8, ease: "power3.out", stagger: 0.08,
+          scrollTrigger: { trigger: ".seqSticky", start: "top 80%", once: true },
+        });
+        gsap.from(".seqSticky .heroProof", {
+          opacity: 0, duration: 0.8, ease: "power3.out", delay: 0.5,
+          scrollTrigger: { trigger: ".seqSticky", start: "top 80%", once: true },
+        });
+        /* シーケンス進行の後半でコピーを退場させる(scrub) */
+        gsap.to(".seqSticky .heroContent", {
+          opacity: 0, yPercent: -6, ease: "none",
+          scrollTrigger: { trigger: ".seqZone", start: "22% top", end: "48% top", scrub: true },
+        });
+        gsap.to(".seqSticky .heroProof", {
+          opacity: 0, ease: "none",
+          scrollTrigger: { trigger: ".seqZone", start: "30% top", end: "52% top", scrub: true },
+        });
+
+        /* 見出し: 行マスクスライド(親のoverflow:hiddenはCSS側) */
+        gsap.utils.toArray<HTMLElement>(
+          ".sectionIntro h2, .aboutCopy h2, .companyHeading h2, .contactSection h2"
+        ).forEach((heading) => {
+          gsap.from(heading, {
+            yPercent: 110, duration: 0.8, ease: "power3.out",
+            scrollTrigger: { trigger: heading, start: "top 80%", once: true },
+          });
+        });
+
+        /* 汎用リビール */
+        gsap.utils.toArray<HTMLElement>("[data-reveal]").forEach((el) => {
+          gsap.from(el, {
+            yPercent: 12, opacity: 0, duration: 0.8, ease: "power3.out",
+            scrollTrigger: { trigger: el, start: "top 80%", once: true },
+          });
+        });
+
+        /* グリッド: stagger 0.06 */
+        [".serviceGrid", ".workGrid", ".aboutFeatures", ".businessScope"].forEach((sel) => {
+          const wrap = document.querySelector(sel);
+          if (!wrap) return;
+          gsap.from(Array.from(wrap.children), {
+            y: 32, opacity: 0, duration: 0.8, ease: "power3.out", stagger: 0.06,
+            scrollTrigger: { trigger: wrap, start: "top 80%", once: true },
+          });
+        });
+
+        /* 黒→白ワイプ(sticky + scrub。pinは使わない) */
+        gsap.fromTo(".wipePanel",
+          { clipPath: "inset(0% 0% 100% 0%)" },
+          {
+            clipPath: "inset(0% 0% 0% 0%)", ease: "none",
+            scrollTrigger: { trigger: ".wipeZone", start: "top top", end: "+=800", scrub: true },
+          });
+      });
+
+      ScrollTrigger.refresh();
+      cleanup = () => {
+        ctx.revert();
+        if (lenis) {
+          lenis.off("scroll", onLenisScroll);
+          lenis.destroy();
+          gsap.ticker.remove(raf);
+        }
+      };
+    };
+
+    setup();
+    return () => cleanup();
+  }, []);
 
   return (
     <>
@@ -70,43 +168,49 @@ export default function Home() {
       </header>
 
       <main id="top">
-        <section className="hero" aria-labelledby="hero-title">
-          <div className="heroContent">
-            <p className="eyebrow"><span /> NEVER STOP THE SITE</p>
-            <h1 id="hero-title">現場を止めない、<br /><em>圧倒的</em>な力。</h1>
-            <p className="brandHeadline">T-REX<br />CO., LTD.</p>
-            <p className="lead">技術と情熱で、お客様の「困った」に応える。<br />板金塗装・荷台換装・修理・出張修理まで、<br className="desktopBreak" />T-REXが確かな仕事で応えます。</p>
-            <div className="heroActions">
-              <Link className="primaryButton" href="/service">事業内容を見る <Arrow /></Link>
-              <Link className="secondaryButton" href="/contact">仕事を相談する <UiIcon name="chat-consultation" className="buttonIcon" /></Link>
+        <section className="seqZone" aria-labelledby="hero-title">
+          <HeroSequence />
+          <div className="seqSticky">
+            <div className="heroContent">
+              <p className="eyebrow"><span /> NEVER STOP THE SITE</p>
+              <h1 id="hero-title">現場を止めない、<br /><em>圧倒的</em>な力。</h1>
+              <p className="brandHeadline">T-REX<br />CO., LTD.</p>
+              <p className="lead">技術と情熱で、お客様の「困った」に応える。<br />板金塗装・荷台換装・修理・出張修理まで、<br className="desktopBreak" />T-REXが確かな仕事で応えます。</p>
+              <div className="heroActions">
+                <Link className="primaryButton" href="/service">事業内容を見る <Arrow /></Link>
+                <Link className="secondaryButton" href="/contact">仕事を相談する <UiIcon name="chat-consultation" className="buttonIcon" /></Link>
+              </div>
             </div>
-          </div>
 
-          <div className="heroProof" aria-label="T-REXの実績">
-            <dl className="stats">
-              <div><dt>9–18<small>時</small></dt><dd>営業時間</dd></div>
-              <div><dt>2025<small>年</small></dt><dd>1月設立</dd></div>
-              <div><dt>2<small>県</small></dt><dd>福岡・山口を中心に対応</dd></div>
-            </dl>
-            <ul className="chips">
-              <li><UiIcon name="location-pin" /> その他地域も応相談</li>
-              <li><UiIcon name="rapid-response-tools" /> 出張修理対応</li>
-              <li><UiIcon name="shield-quality" /> 持込修理可能</li>
-            </ul>
+            <div className="heroProof" aria-label="T-REXの実績">
+              <dl className="stats">
+                <div><dt>9–18<small>時</small></dt><dd>営業時間</dd></div>
+                <div><dt>2025<small>年</small></dt><dd>1月設立</dd></div>
+                <div><dt>2<small>県</small></dt><dd>福岡・山口を中心に対応</dd></div>
+              </dl>
+              <ul className="chips">
+                <li><UiIcon name="location-pin" /> その他地域も応相談</li>
+                <li><UiIcon name="rapid-response-tools" /> 出張修理対応</li>
+                <li><UiIcon name="shield-quality" /> 持込修理可能</li>
+              </ul>
+            </div>
+            <a className="scrollCue" href="#service"><span>SCROLL</span><i /></a>
           </div>
-          <a className="scrollCue" href="#service"><span>SCROLL</span><i /></a>
         </section>
 
         <section className="contentSection services" id="service" aria-labelledby="service-title">
-          <div className="sectionIntro"><p>SERVICE</p><h2 id="service-title">事業内容</h2><span>現場のあらゆるニーズに、<br />専門性とスピードで応える。</span></div>
+          <div className="sectionIntro"><p>SERVICE</p><h2 id="service-title">事業内容</h2><span data-reveal>現場のあらゆるニーズに、<br />専門性とスピードで応える。</span></div>
           <div className="serviceGrid" id="service-content">{[['01','板金塗装','美しく、使い出しの外観へ。損傷の修復もお任せください。','spray-gun'],['02','荷台換装・修理','用途に合わせた荷台の換装・修理で、作業効率と安全性を向上。','cargo-conversion'],['03','出張修理','現場まで駆けつけ、迅速に対応。ダウンタイムを最小限に。','rapid-response-tools'],['04','車両陸送・軽運送','車両や資材の陸送・軽運送に、安全かつ丁寧に対応します。','mobile-repair-truck']].map(([n,t,d,icon]) => <article className="serviceCard" key={n}><b>{n}</b><div className="serviceIcon"><UiIcon name={icon} /></div><h3>{t}</h3><p>{d}</p><Link href="/contact" aria-label={`${t}について相談する`}><Arrow /></Link></article>)}</div>
         </section>
+        <section className="wipeZone" aria-hidden="true">
+          <div className="wipePanel"><p className="wipeLabel">PROJECT FILE</p></div>
+        </section>
         <section className="contentSection works" id="works" aria-labelledby="works-title">
-          <div className="sectionIntro"><p>WORKS</p><h2 id="works-title">施工実績</h2><span>一つひとつの仕事が、<br />私たちの誇りです。</span></div>
+          <div className="sectionIntro"><p>WORKS</p><h2 id="works-title">施工実績</h2><span data-reveal>一つひとつの仕事が、<br />私たちの誇りです。</span></div>
           <div className="workGrid">{[['荷台換装・修理','大型ダンプ 荷台換装・修理','2024.05'],['車両陸送・軽運送','車両陸送・軽運送対応','2024.04'],['板金塗装','特殊車両 全塗装','2024.03'],['出張修理','建設機械 油圧部修理','2024.02']].map(([tag,title,date],i) => <article className={`workCard work${i+1}`} key={title}><div className="workScene"><span /><i /></div><div><small>{tag}</small><h3>{title}</h3><time>{date}</time><Link href="/contact" aria-label={`${title}の詳細`}><Arrow /></Link></div></article>)}</div>
         </section>
         <section className="aboutSection" id="about" aria-labelledby="about-title">
-          <div className="aboutCopy"><p className="sectionLabel">ABOUT</p><h2 id="about-title">T-REXについて</h2><p>T-REX CO., LTD.は、現場の最前線を支えるプロフェッショナル集団です。お客様の課題に真摯に向き合い、スピード・品質・安全のすべてに妥協せず、信頼されるパートナーであり続けます。</p><Link className="outlineButton" href="/company">会社概要を見る <Arrow /></Link></div>
+          <div className="aboutCopy"><p className="sectionLabel">ABOUT</p><h2 id="about-title">T-REXについて</h2><p data-reveal>T-REX CO., LTD.は、現場の最前線を支えるプロフェッショナル集団です。お客様の課題に真摯に向き合い、スピード・品質・安全のすべてに妥協せず、信頼されるパートナーであり続けます。</p><Link className="outlineButton" href="/company">会社概要を見る <Arrow /></Link></div>
           <div className="aboutScene" aria-hidden="true">
             <svg className="trm-lineArt" viewBox="0 0 800 560" preserveAspectRatio="xMidYMax slice" focusable="false">
               <path d="M0 470 H800" />
@@ -125,7 +229,7 @@ export default function Home() {
           <ul className="aboutFeatures"><li><UiIcon name="calendar-experience" /><b>2025年1月設立</b><span>現場に根ざしたサービスを提供</span></li><li><UiIcon name="location-pin" /><b>福岡・山口を中心に対応</b><span>その他地域も可能な限り対応</span></li><li><UiIcon name="clock-fast" /><b>出張修理可能</b><span>現場へ伺い迅速に対応</span></li><li><UiIcon name="shield-safety" /><b>持込修理可能</b><span>車両・機械の持ち込みに対応</span></li></ul>
         </section>
         <section className="companySection" id="company" aria-labelledby="company-title">
-          <div className="companyHeading"><p className="sectionLabel">COMPANY</p><h2 id="company-title">会社情報</h2><p>福岡県・山口県を中心に、建設・土木・運送の現場を支えます。</p></div>
+          <div className="companyHeading"><p className="sectionLabel">COMPANY</p><h2 id="company-title">会社情報</h2><p data-reveal>福岡県・山口県を中心に、建設・土木・運送の現場を支えます。</p></div>
           <dl className="companyProfile">
             <div><dt>代表者</dt><dd>中津留 龍也</dd></div>
             <div><dt>電話番号</dt><dd><a href="tel:09075315428">090-7531-5428</a></dd></div>
@@ -147,7 +251,7 @@ export default function Home() {
           <div className="mapPending" aria-label="Googleマップ設置予定"><UiIcon name="location-pin" /><div><strong>Google Map</strong><span>所在地情報を確認後、地図を表示します。</span></div></div>
         </section>
         <section className="contactSection" id="contact" aria-labelledby="contact-title">
-          <div className="contactIntro"><p className="sectionLabel">CONTACT</p><h2 id="contact-title">お問い合わせ</h2><span>現場のことなら、T-REXにご相談ください。</span><div className="phone"><small><UiIcon name="phone" /> お電話でのお問い合わせ</small><a href="tel:09075315428">090-7531-5428</a><span>営業時間 9:00〜18:00</span></div><a className="mailAddress" href="mailto:info@t-rex-works.com"><UiIcon name="mail" /> info@t-rex-works.com</a><p className="trm-areaNote">対応エリア: 福岡県(北九州市・福岡市ほか全域)/山口県(下関市ほか全域)。その他の地域もご相談ください。出張修理・持込修理どちらも対応します。</p></div>
+          <div className="contactIntro"><p className="sectionLabel">CONTACT</p><h2 id="contact-title">お問い合わせ</h2><span data-reveal>現場のことなら、T-REXにご相談ください。</span><div className="phone"><small><UiIcon name="phone" /> お電話でのお問い合わせ</small><a href="tel:09075315428">090-7531-5428</a><span>営業時間 9:00〜18:00</span></div><a className="mailAddress" href="mailto:info@t-rex-works.com"><UiIcon name="mail" /> info@t-rex-works.com</a><p className="trm-areaNote">対応エリア: 福岡県(北九州市・福岡市ほか全域)/山口県(下関市ほか全域)。その他の地域もご相談ください。出張修理・持込修理どちらも対応します。</p></div>
           <form className="contactForm" onSubmit={handleContactSubmit}>
             <label>お名前<span>必須</span><input name="name" autoComplete="name" required /></label>
             <label>会社名<input name="company" autoComplete="organization" /></label>
