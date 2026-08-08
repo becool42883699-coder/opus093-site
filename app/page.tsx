@@ -59,6 +59,9 @@ export default function Home() {
      - リビール発火は全て start:"top 80%" に統一
      - reduced-motion では Lenis を起動せず全て即時表示(6-5) */
   useEffect(() => {
+    /* StrictMode二重マウント・チャンクロード中のページ離脱でLenis/ScrollTriggerが
+       リークしないよう、await後は必ずキャンセル確認する(HeroSequenceと同パターン) */
+    let cancelled = false;
     let cleanup = () => {};
 
     const setup = async () => {
@@ -71,6 +74,7 @@ export default function Home() {
         import("gsap"),
         import("gsap/ScrollTrigger"),
       ]);
+      if (cancelled) return;
       gsap.registerPlugin(ScrollTrigger);
 
       const lenis = coarse ? null : new Lenis({ duration: 1.15, wheelMultiplier: 0.88 });
@@ -130,12 +134,13 @@ export default function Home() {
           });
         });
 
-        /* 黒→白ワイプ(sticky + scrub。pinは使わない) */
+        /* 黒→白ワイプ(sticky + scrub。pinは使わない)
+           endはトリガー相対にして、ゾーン高さのブレークポイント差異に自動追従させる */
         gsap.fromTo(".wipePanel",
           { clipPath: "inset(0% 0% 100% 0%)" },
           {
             clipPath: "inset(0% 0% 0% 0%)", ease: "none",
-            scrollTrigger: { trigger: ".wipeZone", start: "top top", end: "+=800", scrub: true },
+            scrollTrigger: { trigger: ".wipeZone", start: "top top", end: "bottom bottom", scrub: true },
           });
       });
 
@@ -148,10 +153,14 @@ export default function Home() {
           gsap.ticker.remove(raf);
         }
       };
+      if (cancelled) cleanup();
     };
 
     setup();
-    return () => cleanup();
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
   }, []);
 
   return (
@@ -167,7 +176,7 @@ export default function Home() {
         </button>
       </header>
 
-      <main id="top">
+      <main id="top" className="trexHome">
         <section className="seqZone" aria-labelledby="hero-title">
           <HeroSequence />
           <div className="seqSticky">
