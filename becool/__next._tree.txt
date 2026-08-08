@@ -1,4 +1,4 @@
-:HL["/opus093-site/_next/static/chunks/3ii8xr8mbqcru.css","style"]
+:HL["/opus093-site/_next/static/chunks/32gbadul2z02o.css","style"]
 :HL["/opus093-site/_next/static/chunks/401d30zzuulv6.css","style"]
 :HL["/opus093-site/_next/static/chunks/35phzbe_2i8hu.css","style"]
 :HL["/opus093-site/_next/static/chunks/2-nwq4297r1mb.css","style"]
@@ -12,4 +12,4 @@
 :HL["/opus093-site/becool/img/photo-alphard.webp","image"]
 :HL["/opus093-site/becool/img/icon-car-sales.png","image"]
 :HL["/opus093-site/becool/img/icon-inspection.png","image"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"YMnkFCztNLFSvgKPhdn0G"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"ed6nWmkemPKkrI6b9nRlQ"}
