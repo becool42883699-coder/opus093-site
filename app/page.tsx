@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import HeroSequence from "./components/HeroSequence";
 
 const navItems = [
   ["トップ", "/"],
@@ -88,22 +87,13 @@ export default function Home() {
 
       const ctx = gsap.context(() => {
         /* ヒーローコピー: ロード時リビール(ビューポート内のためtop 80%は即発火) */
-        gsap.from(".seqSticky .heroContent > *", {
+        gsap.from(".hero .heroContent > *", {
           yPercent: 24, opacity: 0, duration: 0.8, ease: "power3.out", stagger: 0.08,
-          scrollTrigger: { trigger: ".seqSticky", start: "top 80%", once: true },
+          scrollTrigger: { trigger: ".hero", start: "top 80%", once: true },
         });
-        gsap.from(".seqSticky .heroProof", {
+        gsap.from(".hero .heroProof", {
           opacity: 0, duration: 0.8, ease: "power3.out", delay: 0.5,
-          scrollTrigger: { trigger: ".seqSticky", start: "top 80%", once: true },
-        });
-        /* シーケンス進行の後半でコピーを退場させる(scrub) */
-        gsap.to(".seqSticky .heroContent", {
-          opacity: 0, yPercent: -6, ease: "none",
-          scrollTrigger: { trigger: ".seqZone", start: "22% top", end: "48% top", scrub: true },
-        });
-        gsap.to(".seqSticky .heroProof", {
-          opacity: 0, ease: "none",
-          scrollTrigger: { trigger: ".seqZone", start: "30% top", end: "52% top", scrub: true },
+          scrollTrigger: { trigger: ".hero", start: "top 80%", once: true },
         });
 
         /* 見出し: 行マスクスライド(親のoverflow:hiddenはCSS側) */
@@ -177,34 +167,31 @@ export default function Home() {
       </header>
 
       <main id="top" className="trexHome">
-        <section className="seqZone" aria-labelledby="hero-title">
-          <HeroSequence />
-          <div className="seqSticky">
-            <div className="heroContent">
-              <p className="eyebrow"><span /> NEVER STOP THE SITE</p>
-              <h1 id="hero-title">現場を止めない、<br /><em>圧倒的</em>な力。</h1>
-              <p className="brandHeadline">T-REX<br />CO., LTD.</p>
-              <p className="lead">技術と情熱で、お客様の「困った」に応える。<br />板金塗装・荷台換装・修理・出張修理まで、<br className="desktopBreak" />T-REXが確かな仕事で応えます。</p>
-              <div className="heroActions">
-                <Link className="primaryButton" href="/service">事業内容を見る <Arrow /></Link>
-                <Link className="secondaryButton" href="/contact">仕事を相談する <UiIcon name="chat-consultation" className="buttonIcon" /></Link>
-              </div>
+        <section className="hero" aria-labelledby="hero-title">
+          <div className="heroContent">
+            <p className="eyebrow"><span /> NEVER STOP THE SITE</p>
+            <h1 id="hero-title">現場を止めない、<br /><em>圧倒的</em>な力。</h1>
+            <p className="brandHeadline">T-REX<br />CO., LTD.</p>
+            <p className="lead">技術と情熱で、お客様の「困った」に応える。<br />板金塗装・荷台換装・修理・出張修理まで、<br className="desktopBreak" />T-REXが確かな仕事で応えます。</p>
+            <div className="heroActions">
+              <Link className="primaryButton" href="/service">事業内容を見る <Arrow /></Link>
+              <Link className="secondaryButton" href="/contact">仕事を相談する <UiIcon name="chat-consultation" className="buttonIcon" /></Link>
             </div>
-
-            <div className="heroProof" aria-label="T-REXの実績">
-              <dl className="stats">
-                <div><dt>9–18<small>時</small></dt><dd>営業時間</dd></div>
-                <div><dt>2025<small>年</small></dt><dd>1月設立</dd></div>
-                <div><dt>2<small>県</small></dt><dd>福岡・山口を中心に対応</dd></div>
-              </dl>
-              <ul className="chips">
-                <li><UiIcon name="location-pin" /> その他地域も応相談</li>
-                <li><UiIcon name="rapid-response-tools" /> 出張修理対応</li>
-                <li><UiIcon name="shield-quality" /> 持込修理可能</li>
-              </ul>
-            </div>
-            <a className="scrollCue" href="#service"><span>SCROLL</span><i /></a>
           </div>
+
+          <div className="heroProof" aria-label="T-REXの実績">
+            <dl className="stats">
+              <div><dt>9–18<small>時</small></dt><dd>営業時間</dd></div>
+              <div><dt>2025<small>年</small></dt><dd>1月設立</dd></div>
+              <div><dt>2<small>県</small></dt><dd>福岡・山口を中心に対応</dd></div>
+            </dl>
+            <ul className="chips">
+              <li><UiIcon name="location-pin" /> その他地域も応相談</li>
+              <li><UiIcon name="rapid-response-tools" /> 出張修理対応</li>
+              <li><UiIcon name="shield-quality" /> 持込修理可能</li>
+            </ul>
+          </div>
+          <a className="scrollCue" href="#service"><span>SCROLL</span><i /></a>
         </section>
 
         <section className="contentSection services" id="service" aria-labelledby="service-title">
