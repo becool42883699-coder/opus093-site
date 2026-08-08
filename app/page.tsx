@@ -168,6 +168,7 @@ export default function Home() {
 
       <main id="top" className="trexHome">
         <section className="hero" aria-labelledby="hero-title">
+          <i className="heroScan" aria-hidden="true" />
           <div className="heroContent">
             <p className="eyebrow"><span /> NEVER STOP THE SITE</p>
             <h1 id="hero-title">現場を止めない、<br /><em>圧倒的</em>な力。</h1>
