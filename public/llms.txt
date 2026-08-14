@@ -10,10 +10,10 @@
 
 ## ページ一覧
 
-- [トップ](https://becool42883699-coder.github.io/opus093-site/): 事業内容・実績・会社情報・問い合わせの総合案内
-- [事業案内](https://becool42883699-coder.github.io/opus093-site/service/): 板金塗装/荷台修理・架装/出張修理/事故対応・保険修理/メンテナンス・点検/車両陸送・軽運送の6事業
-- [施工実績](https://becool42883699-coder.github.io/opus093-site/works/): 大型ダンプ荷台換装、特殊車両全塗装、建設機械油圧部修理などの事例
-- [会社概要](https://becool42883699-coder.github.io/opus093-site/company/): 理念(現場を止めない)・仕事の基準・会社情報・代表あいさつ
-- [採用情報](https://becool42883699-coder.github.io/opus093-site/recruit/): 管理/作業・鈑金塗装・出張サービス・事務サポート職を募集
-- [お問い合わせ](https://becool42883699-coder.github.io/opus093-site/contact/): 電話・メールフォーム・よくある質問
-- [GARAGE BeCool](https://becool42883699-coder.github.io/opus093-site/becool/): 福岡県北九州市小倉南区の中古車販売・買取・車検・整備店(有限会社ビークール/沼店・中吉田店)
+- [トップ](https://opus093-site.pages.dev/): 事業内容・実績・会社情報・問い合わせの総合案内
+- [事業案内](https://opus093-site.pages.dev/service/): 板金塗装/荷台修理・架装/出張修理/事故対応・保険修理/メンテナンス・点検/車両陸送・軽運送の6事業
+- [施工実績](https://opus093-site.pages.dev/works/): 大型ダンプ荷台換装、特殊車両全塗装、建設機械油圧部修理などの事例
+- [会社概要](https://opus093-site.pages.dev/company/): 理念(現場を止めない)・仕事の基準・会社情報・代表あいさつ
+- [採用情報](https://opus093-site.pages.dev/recruit/): 管理/作業・鈑金塗装・出張サービス・事務サポート職を募集
+- [お問い合わせ](https://opus093-site.pages.dev/contact/): 電話・メールフォーム・よくある質問
+- [GARAGE BeCool](https://opus093-site.pages.dev/becool/): 福岡県北九州市小倉南区の中古車販売・買取・車検・整備店(有限会社ビークール/沼店・中吉田店)

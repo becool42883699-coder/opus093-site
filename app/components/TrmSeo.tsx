@@ -3,7 +3,7 @@
  * SITE_URL を独自ドメインに変えれば canonical/OGP/構造化データが一括で切り替わる
  */
 
-export const SITE_URL = "https://becool42883699-coder.github.io/opus093-site";
+export const SITE_URL = "https://opus093-site.pages.dev";
 
 export const BIZ = {
   name: "T-REX CO., LTD.",
