@@ -9,7 +9,7 @@
       "binding": "META",
       // ★ デプロイ前に `npx wrangler kv namespace create META` で発行された id に置き換える
       //   (ローカル開発・テストはこのままで動きます)
-      "id": "00000000000000000000000000000000"
+      "id": "1164a36228ed4551ba8a12265d9cc49c"
     }
   ],
   "r2_buckets": [
@@ -23,4 +23,6 @@
     "enabled": true
   }
 }
+
+
 
