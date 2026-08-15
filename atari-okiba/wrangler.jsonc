@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "atari-okiba",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-01",
+  "kv_namespaces": [
+    {
+      "binding": "META",
+      // ★ デプロイ前に `npx wrangler kv namespace create META` で発行された id に置き換える
+      //   (ローカル開発・テストはこのままで動きます)
+      "id": "00000000000000000000000000000000"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      // ★ デプロイ前に `npx wrangler r2 bucket create atari-okiba-files` でバケットを作成する
+      "bucket_name": "atari-okiba-files"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

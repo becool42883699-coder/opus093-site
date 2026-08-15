@@ -1,0 +1,98 @@
+name: あたり置き場をデプロイ
+
+# GitHubの画面から手動で実行します(Actions タブ → このワークフロー → Run workflow)。
+#
+# 必要なのは1つだけ:
+#   CLOUDFLARE_API_TOKEN … Cloudflareで発行したAPIトークン
+#
+# 任意(未設定でも動きます):
+#   CLOUDFLARE_ACCOUNT_ID … 複数アカウントを持っている場合のみ必要
+#   ATARI_ADMIN_TOKEN … 管理画面の鍵。未設定なら自動生成して実行結果に表示します
+#                        (公開リポジトリでは鍵が他人に見えるため、登録が必須になります)
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atari-okiba
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: atari-okiba/package-lock.json
+
+      - name: APIトークンが登録されているか確認
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "✘ CLOUDFLARE_API_TOKEN が未登録です。"
+            echo "  1. https://dash.cloudflare.com/profile/api-tokens で「Edit Cloudflare Workers」テンプレートから作成"
+            echo "     (権限に Workers R2 Storage: Edit と Workers KV Storage: Edit も追加してください)"
+            echo "  2. このリポジトリの Settings → Secrets and variables → Actions → New repository secret"
+            echo "     名前を CLOUDFLARE_API_TOKEN にして貼り付け"
+            exit 1
+          fi
+
+      - name: 部品を入れる
+        run: npm ci
+
+      - name: 型チェックとテスト
+        run: npm run check
+
+      - name: R2バケットとKVネームスペースを用意する
+        run: sh scripts/provision.sh
+
+      - name: 管理画面の鍵を設定する
+        env:
+          PROVIDED_TOKEN: ${{ secrets.ATARI_ADMIN_TOKEN }}
+          IS_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          if [ -n "$PROVIDED_TOKEN" ]; then
+            TOKEN="$PROVIDED_TOKEN"
+          else
+            # 未登録なら自動生成する。ただし公開リポジトリでは実行結果が誰でも見られるので拒否する
+            if [ "$IS_PRIVATE" != "true" ]; then
+              echo "✘ このリポジトリは公開設定のため、鍵を実行結果に表示できません。"
+              echo "  Settings → Secrets and variables → Actions で ATARI_ADMIN_TOKEN を登録してから再実行してください。"
+              exit 1
+            fi
+            TOKEN=$(node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))")
+            echo "::add-mask::$TOKEN"
+            {
+              echo "### 管理画面の鍵（初回のみ表示。今すぐ控えてください）"
+              echo ''
+              echo '```'
+              echo "$TOKEN"
+              echo '```'
+              echo ''
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          printf '%s' "$TOKEN" | npx wrangler secret put ADMIN_TOKEN
+
+      - name: デプロイ
+        run: npx wrangler deploy 2>&1 | tee deploy.log
+
+      - name: 公開URLを表示する
+        run: |
+          url=$(grep -o 'https://[a-z0-9.-]*\.workers\.dev' deploy.log | head -n 1)
+          {
+            echo "### あたり置き場をデプロイしました"
+            echo ""
+            if [ -n "$url" ]; then
+              echo "- 管理画面: ${url}/admin"
+              echo "- 確認用URL: ${url}/p/<スラッグ>/"
+            else
+              echo "URLはデプロイのログを確認してください。"
+            fi
+            echo ""
+            echo "管理画面には ATARI_ADMIN_TOKEN に登録した文字列でログインします。"
+          } >> "$GITHUB_STEP_SUMMARY"
