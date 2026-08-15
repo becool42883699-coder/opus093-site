@@ -4,12 +4,15 @@
 # 前提: カレントディレクトリが atari-okiba/ で、wrangler が認証済みであること。
 set -eu
 
+
 BUCKET="atari-okiba-files"
 KV_BINDING="META"
 CONFIG="wrangler.jsonc"
 PLACEHOLDER="00000000000000000000000000000000"
 
+
 say() { printf '%s\n' "$1"; }
+
 
 # --- R2バケット -------------------------------------------------------------
 say "▶ R2バケット($BUCKET)を確認しています…"
@@ -31,17 +34,20 @@ else
   fi
 fi
 
+
 # --- KVネームスペース -------------------------------------------------------
 say "▶ KVネームスペース($KV_BINDING)を確認しています…"
+
 
 # 既存のネームスペースを探す。タイトルは "<worker名>-<binding>" 形式で作られる。
 KV_ID=$(npx wrangler kv namespace list 2>/dev/null \
   | tr -d ' \n' \
   | sed 's/},{/}\n{/g' \
-  | grep -i "atari-okiba-$KV_BINDING" \
+  | grep -i "$KV_BINDING" \
   | grep -o '"id":"[0-9a-f]\{32\}"' \
   | head -n 1 \
   | cut -d'"' -f4) || true
+
 
 if [ -n "${KV_ID:-}" ]; then
   say "  既にあります(id: $KV_ID)。作成をスキップしました。"
@@ -63,6 +69,7 @@ else
   fi
   say "  作成しました(id: $KV_ID)。"
 fi
+
 
 # --- wrangler.jsonc に反映 --------------------------------------------------
 if grep -q "$PLACEHOLDER" "$CONFIG"; then
