@@ -1,0 +1,4 @@
+# ローカル開発用のシークレット。このファイルを .dev.vars という名前でコピーして使う
+#   cp .dev.vars.example .dev.vars
+# 本番は `npx wrangler secret put ADMIN_TOKEN` で設定する(このファイルはコミットしない)
+ADMIN_TOKEN=change-me-to-a-long-random-string
