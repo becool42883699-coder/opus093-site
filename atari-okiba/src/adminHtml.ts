@@ -59,6 +59,20 @@ button.ghost { background: #fff; color: #1c1917; border-color: #d6d3d1; }
   <p class="sub">HTML一式をフォルダごとドロップすると、確認用URLを発行します</p>
 </header>
 <main>
+  <section class="card" id="login-card">
+    <h2>ログイン</h2>
+    <form id="login-form" autocomplete="on">
+      <div class="form-row">
+        <label>管理トークン(ADMIN_TOKEN)
+          <input id="token-input" type="password" name="password" autocomplete="current-password" autocapitalize="off" spellcheck="false">
+        </label>
+        <button id="login-btn" type="submit">ログイン</button>
+      </div>
+    </form>
+    <p class="hint">トークンはこのページを開いている間だけメモリに保持し、ブラウザには保存しません(再読み込みで再入力が必要です)。ブラウザのパスワード保存機能は利用できます。</p>
+    <div id="login-msg" class="msg"></div>
+  </section>
+  <div id="app" hidden>
   <section class="card">
     <h2>新規案件</h2>
     <div class="form-row">
@@ -77,6 +91,7 @@ button.ghost { background: #fff; color: #1c1917; border-color: #d6d3d1; }
   </section>
   <div id="global-msg" class="msg"></div>
   <section id="projects"></section>
+  </div>
 </main>
 <script nonce="__CSP_NONCE__">
 'use strict';
@@ -98,8 +113,19 @@ button.ghost { background: #fff; color: #1c1917; border-color: #d6d3d1; }
     target.className = isError ? 'msg error' : 'msg';
   }
 
+  // 管理トークンはこのクロージャ内だけに保持し、ブラウザの永続ストレージやCookieには
+  // 一切保存しない(同一オリジンで配信するクライアント成果物のスクリプトから
+  // 読めてしまうため)。ページを再読み込みすると再入力が必要になる。
+  var adminToken = '';
+
+  function authHeaders(extra) {
+    var h = { 'Authorization': 'Bearer ' + adminToken, 'X-Atari-Admin': '1' };
+    if (extra) { for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) h[k] = extra[k]; } }
+    return h;
+  }
+
   function api(method, path, body) {
-    var opts = { method: method, headers: { 'X-Atari-Admin': '1' } };
+    var opts = { method: method, headers: authHeaders() };
     if (body !== undefined) {
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(body);
@@ -117,7 +143,7 @@ button.ghost { background: #fff; color: #1c1917; border-color: #d6d3d1; }
   }
 
   function putFile(path, file) {
-    return fetch(path, { method: 'PUT', headers: { 'X-Atari-Admin': '1' }, body: file }).then(function (res) {
+    return fetch(path, { method: 'PUT', headers: authHeaders(), body: file }).then(function (res) {
       if (res.ok) return;
       return res.text().then(function (t) {
         var msg = 'HTTP ' + res.status;
@@ -409,7 +435,32 @@ button.ghost { background: #fff; color: #1c1917; border-color: #d6d3d1; }
   window.addEventListener('dragover', function (e) { e.preventDefault(); });
   window.addEventListener('drop', function (e) { e.preventDefault(); });
 
-  loadProjects();
+  $('login-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var input = $('token-input');
+    var msg = $('login-msg');
+    var token = input.value;
+    if (token === '') {
+      setMsg(msg, '管理トークンを入力してください。', true);
+      return;
+    }
+    adminToken = token;
+    setMsg(msg, '確認中…');
+    // 一覧取得が通ればトークンは正しい
+    api('GET', '/api/projects').then(function () {
+      // 入力欄からトークンを消す(DOM上に残さない)。保持はクロージャ変数のみ
+      input.value = '';
+      setMsg(msg, '');
+      $('login-card').hidden = true;
+      $('app').hidden = false;
+      return loadProjects();
+    }).catch(function (err) {
+      adminToken = '';
+      setMsg(msg, 'ログインできませんでした: ' + err.message, true);
+    });
+  });
+
+  $('token-input').focus();
 })();
 </script>
 </body>

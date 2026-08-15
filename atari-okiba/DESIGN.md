@@ -77,8 +77,8 @@ sites/<slug>/v<n>/<相対パス>
 | メソッド | パス | 認証 | 動作 |
 |---|---|---|---|
 | GET | `/` | なし | `/admin` へ302 |
-| GET | `/admin` | ADMIN_TOKEN (Basic) | 管理画面HTML(nonce付きCSP、no-store) |
-| GET | `/api/projects` | ADMIN_TOKEN | 案件一覧(メタ情報のみ、認証情報は含めない) |
+| GET | `/admin` | なし(秘密なし) | 管理画面のログインシェル(nonce付きCSP、no-store) |
+| GET | `/api/projects` | Bearer | 案件一覧(メタ情報のみ、認証情報は含めない) |
 | POST | `/api/projects` | ADMIN_TOKEN + CSRFヘッダ | 案件作成 {slug, name, password?} |
 | PATCH | `/api/projects/:slug` | 同上 | 表示名・閲覧パスワード変更 |
 | POST | `/api/projects/:slug/versions` | 同上 | 新バージョン採番 → {version} |
@@ -88,9 +88,9 @@ sites/<slug>/v<n>/<相対パス>
 | GET/HEAD | `/p/:slug/<path>` | 閲覧パスワード(あれば) | 最新版のファイル配信 |
 | GET/HEAD | `/p/:slug/v/:n/<path>` | 同上 | 確定済み版nのファイル配信 |
 
-`/api` の認証は `Authorization: Bearer <ADMIN_TOKEN>`(curl・スクリプト用)または Basic
-(パスワード=ADMIN_TOKEN、ブラウザ管理画面用)。Basic経由は上記オリジン隔離により `/admin`
-由来Refererを必須とする。「CSRFヘッダ」= 書き込み系(GET以外)に必要な `X-Atari-Admin: 1`。
+`/api` の認証は `Authorization: Bearer <ADMIN_TOKEN>` のみ(Basic認証は受け付けない)。
+「CSRFヘッダ」= 書き込み系(GET以外)に必要な `X-Atari-Admin: 1`。
+`/admin` は秘密を含まない静的シェルのため認証なしで配信する(データは `/api` 経由)。
 
 配信の詳細仕様:
 - パスが `/` で終わる(または空)なら `index.html` を補完。
@@ -106,32 +106,35 @@ sites/<slug>/v<n>/<相対パス>
 ## 認証フロー
 
 ### 管理側 (/admin, /api)
+
+**設計の中心にある制約**: 本Workerは単一オリジン(workers.dev の1ホスト)で「管理画面/API」と
+「クライアント成果物の配信(`/p`)」を兼ねる。成果物には第三者が書いたHTML/JSが含まれうるため、
+**ブラウザが自動送信する資格情報(Basic認証・Cookie)を管理APIに使ってはならない**。
+使うと、成果物内のスクリプトが同一オリジンから管理APIを呼び、管理権限を奪える。
+Referer や独自ヘッダによる「出所の判定」は防御にならない — 同一オリジンのスクリプトは
+`history.pushState({}, '', '/admin')` で `document.URL` を書き換えてRefererを偽装でき、
+独自ヘッダも自由に付けられ、Origin/Sec-Fetch-Site も `/admin` と `/p` を区別しない。
+
 1. `ADMIN_TOKEN` は `wrangler secret put ADMIN_TOKEN` で設定(コード・設定ファイルに書かない)。
    未設定時は500でセットアップ手順を案内(認証素通りにはしない)。
-2. `/admin` はBasic認証: ユーザー名は任意(慣例で `admin`)、パスワードにADMIN_TOKEN。
-   ブラウザは同一オリジンのfetchに認証情報を自動付与するため、管理画面JSはトークンを
-   保持しない(localStorage等に保存しない)。
-3. `/api` はBasic(パスワード=トークン)と `Authorization: Bearer <トークン>` の両対応
-   (curl・テスト用)。
+2. **`/api` は `Authorization: Bearer <ADMIN_TOKEN>` のみを受け付ける**(Basic認証は受け付けない)。
+   Bearerはブラウザが自動送信しないため、トークンを知らない成果物スクリプトからは呼べない。
+   401時に `WWW-Authenticate` を返さない(ダイアログを出しても渡す先がないため)。
+3. **`/admin` は秘密を含まない静的シェル**を認証なしで配信する。案件データはログイン後に
+   `/api` から取得するので、シェルが読まれても情報は漏れない。ログインフォームに
+   ADMIN_TOKENを入力すると、管理画面JSが**クロージャ変数としてメモリにのみ保持**し、
+   以降のAPI呼び出しに `Authorization: Bearer` で明示的に付与する。
+   localStorage・sessionStorage・Cookieには保存しない(同一オリジンの成果物から読めるため)。
+   入力欄の値はログイン成功後に即クリアし、DOM上にも残さない。ページ再読み込みで再入力が必要
+   (ブラウザのパスワード保存機能で1クリック補完できる)。
 4. トークン比較は SHA-256 digest 同士の `timingSafeEqual`(長さ差も含め定数時間)。
-5. **CSRF/オリジン隔離(多層防御)**:
-   - **Referer検証(主防御)**: Basic認証で来た `/api` リクエストは、Refererが同一オリジンの
-     `/admin` であることを必須にする。Bearer認証(curl・スクリプト)はブラウザが自動送信しない=
-     CSRFにならないため検証しない。これにより、配信ページ(`/p` の成果物HTML/SVG)から
-     ブラウザのキャッシュ済みBasic資格を悪用して管理APIを叩く経路を、読み取り・書き込みとも
-     遮断する。Refererはforbidden headerでページ側JSから詐称できず、攻撃者は自分のURL
-     (`/p/...`)以外のRefererを送れない(`no-referrer` metaで空にしても、空は拒否)。
-     この検証を成立させるため `/admin` のReferrer-Policyは `same-origin`(同一オリジンへは
-     フルパスRefererを送り、クロスオリジンへは送らない)。
-   - **独自ヘッダ(副防御)**: 書き込み系(/apiのGET以外)は `X-Atari-Admin: 1` を必須にする。
-     独自ヘッダ付きクロスオリジンリクエストはCORSプリフライトが必要で、本WorkerはCORSを
-     一切許可しない(プリフライトに応答しない)。
-   - **残余リスク**: 同一オリジンでスクリプトが実行される時点でそのオリジンの権限は原理的に
-     奪われうる(Web の同一オリジン原則)。本ツールはworkers.dev単一ドメインで管理と配信を
-     兼ねるため完全なオリジン分離はできない。上記Referer検証で「配信ページから管理APIを
-     叩く」現実的経路は塞いでいるが、より厳格にするなら配信を別ドメイン/サブドメインに分離する
-     (独自ドメイン導入時の将来課題)。なお `/admin` が返すHTMLは動的データを含まない静的シェル
-     (案件一覧はログイン後に別APIで取得)なので、シェル自体が漏れても実害は小さい。
+5. **多層防御**: 書き込み系(/apiのGET以外)は `X-Atari-Admin: 1` を必須にする。Bearer専用に
+   したことでCSRFは構造的に成立しないが、将来Cookie等の自動送信資格を導入した場合の保険。
+   CORSは一切許可しない(プリフライトに応答しない)。
+6. **残余リスク**: 成果物スクリプトが `/admin` のシェルを開いて偽ログイン画面を装う
+   フィッシングは、単一オリジンである限り理論上可能(成果物プレビューは
+   `rel="noopener"` の別タブで開くため、管理画面側のハンドルは渡らない)。
+   完全な分離が必要になったら、独自ドメイン導入時に配信を別サブドメインへ移すのが本筋。
 6. 管理画面HTMLはリクエストごとのnonce付きCSP(`script-src 'nonce-…'`)、
    `X-Frame-Options: DENY`、`Referrer-Policy: no-referrer`、`Cache-Control: no-store`。
 

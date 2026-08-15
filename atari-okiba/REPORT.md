@@ -8,7 +8,7 @@
 | # | 決めたこと | 理由 |
 |---|---|---|
 | 1 | 置き場所はリポジトリ内の `atari-okiba/` サブディレクトリ | 既存のNext.jsサイト(becool)を壊さない自己完結構成にするため |
-| 2 | 管理画面の認証は「Basic認証(ユーザー名任意/パスワード=ADMIN_TOKEN)」 | ブラウザが同一オリジンfetchに認証を自動付与するため、JS側でトークンを保存せずに済む(localStorage漏えいリスクの排除)。curl/テスト用に `Authorization: Bearer` も併用可 |
+| 2 | 管理APIの認証は `Authorization: Bearer <ADMIN_TOKEN>` 専用。管理画面はログインフォームでトークンを受け取り、JSのクロージャ内(メモリ)にのみ保持 | 単一オリジンで管理画面とクライアント成果物配信を兼ねるため、ブラウザが自動送信する資格情報(Basic/Cookie)を管理APIに使うと成果物のJSに管理権限を奪われる。Bearerは自動送信されないため構造的に安全。トークンはブラウザに保存しない(再読み込み時は再入力、パスワード保存機能で補完可) |
 | 3 | スラッグは `^[a-z0-9][a-z0-9-]{0,62}$` に制限 | URL・R2キー・レスポンスヘッダ(realm)に安全に埋め込むため |
 | 4 | 閲覧パスワードはsalt付きSHA-256で保存(PBKDF2等は不使用) | Basic認証は全アセットのリクエストごとに検証が走るため、無料枠のCPU制限(10ms/リクエスト)と両立させる割り切り。確認用URLの簡易保護という用途に見合う強度 |
 | 5 | 確定済みバージョンは変更不可(追記・再finalize不可) | 「過去版がそのまま残る」ことを構造的に保証するため |
@@ -29,20 +29,28 @@
 | ゲート | 結果 | 内容 |
 |---|---|---|
 | 1. `tsc --noEmit` ゼロエラー | ✅ PASS | 型エラー0件 |
-| 2. vitest(@cloudflare/vitest-pool-workers)で完了条件を自動テスト | ✅ PASS | 47テスト全パス。実workerd上でWorker全体(SELF)を叩き、完了条件1〜5+セキュリティ要件を網羅 |
-| 3. security-reviewerの指摘ゼロまで修正(最低2周) | ✅ 2周実施 | 1周目: 8件検出→検証で7件(should-fix 4/accepted-risk 3)。should-fix 4件+低コストのaccepted-risk 1件を修正。2周目で解消と回帰を検証 |
-| 4. qa-testerがwrangler dev実機で完了条件を再現(Playwright) | ✅ 実施 | wrangler dev + curl で完了条件1〜5、Playwrightで管理画面実操作とスマホ幅表示を確認 |
-| 5. スマホ幅(375px)の閲覧側表示確認 | ✅ 実施 | 375×667で配信ページ・401ページを確認、横スクロールなし |
+| 2. vitest(@cloudflare/vitest-pool-workers)で完了条件を自動テスト | ✅ PASS | 45テスト全パス。実workerd上でWorker全体(SELF)を叩き、完了条件1〜5+セキュリティ要件を網羅 |
+| 3. security-reviewerの指摘ゼロまで修正(最低2周) | ✅ 2周実施 | 1周目: 8件検出→検証で7件confirmed。should-fix 4件+accepted-risk 1件を修正。2周目: 修正5件すべて解消(5/5)を確認し、**新たにmust-fix 1件を検出→認証方式を再設計して修正**。残る指摘はaccepted-risk 2件のみ |
+| 4. qa-testerがwrangler dev実機で完了条件を再現(Playwright) | ✅ PASS | wrangler dev + curl で完了条件1〜5すべてPASS。Playwrightで管理画面のログイン〜案件作成〜フォルダアップロード〜配信を実操作(クリーン状態で18/18 PASS) |
+| 5. スマホ幅(375px)の閲覧側表示確認 | ✅ PASS | 375×667で配信ページ・401ページ・管理画面・ログイン画面を確認、いずれも横スクロールなし(scrollWidth=375) |
 
 ### セキュリティレビューで修正した項目(1周目 should-fix)
 
 | ID | 指摘 | 対応 |
 |---|---|---|
 | F1 | `fetch`ハンドラの`try`内が`await`なしで非同期例外を捕捉できず、500ページがデッドコード化 | 各ハンドラ呼び出しを`return await`に変更 |
-| F2 | `/p`配信の成果物HTML/SVGが同一オリジンで実行され、Basic資格の自動再送で管理APIを乗っ取れる | Basic認証経由の`/api`に`/admin`由来Referer検証を追加(Bearerは対象外)。`/admin`のReferrer-Policyを`same-origin`に |
+| F2 | `/p`配信の成果物HTML/SVGが同一オリジンで実行され、Basic資格の自動再送で管理APIを乗っ取れる | 当初はReferer検証で対処→**2周目でバイパスが判明したため認証方式ごと再設計**(下記M1) |
 | F3 | relパス長がUTF-16文字数基準でR2キーの1024バイト上限と不整合(未認証URLでR2例外を誘発可) | UTF-8バイト長(900B上限)で判定 |
 | F4 | 版URL名前空間`v/`をサイトコンテンツがシャドーイング | アップロード時に先頭`v`セグメントを400拒否 |
 | F7 | Content-Lengthなしのチャンク転送がサイズ検査前に全量をメモリバッファ | Content-Length必須化(無ければ411)、バッファ経路を削除 |
+
+### 2周目で検出したmust-fixと対応(最も重要な修正)
+
+| ID | 指摘 | 対応 |
+|---|---|---|
+| M1 | 1周目対応で入れたReferer検証は**バイパス可能**。成果物ページのJSが `history.pushState({}, '', '/admin')` で`document.URL`を書き換えると、以降のfetchのRefererが`/admin`になり検証を通過する。Origin/Sec-Fetch-Siteも同一オリジン内では`/admin`と`/p`を区別できず、独自ヘッダも同一オリジンからは自由に付けられるため、当該経路の防御はすべて無効だった | **認証方式を再設計**: `/api`は`Authorization: Bearer`専用にしBasicを一切受け付けない。管理画面はログインフォームでトークンを受け取り、JSのクロージャ内(メモリ)にのみ保持(localStorage/sessionStorage/Cookieに保存しない、入力欄も即クリア)。ブラウザはBearerを自動送信しないため、トークンを知らない成果物スクリプトは管理APIを呼べない。`/admin`は秘密を含まない静的シェルになり、読まれても情報が漏れない |
+
+M1の修正は**実ブラウザで攻撃を再現して遮断を確認**しています(成果物ページから`pushState`でパスを`/admin`に偽装した上で`/api/projects`を呼び、401が返ることをPlaywrightで検証)。
 
 ### accepted-risk として据え置いた項目(理由はDESIGN.mdの制約表に記載)
 

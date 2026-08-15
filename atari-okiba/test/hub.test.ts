@@ -96,13 +96,13 @@ describe("完了条件1: 案件を作成できる", () => {
     expect(res.status).toBe(401);
   });
 
-  it("Basic認証(パスワード=ADMIN_TOKEN)+ /admin由来のRefererで通る", async () => {
-    // ブラウザの管理画面(/admin)からのfetchを模す。Basic認証はReferer検証を伴う
-    // (Referer検証の網羅は「Basic認証経由のオリジン隔離」describeを参照)
+  it("管理APIはBasic認証を受け付けない(ブラウザ自動送信の資格情報を使わせない)", async () => {
     const res = await SELF.fetch(`${BASE}/api/projects`, {
-      headers: { Authorization: basicAuth("admin", TOKEN), Referer: `${BASE}/admin` },
+      headers: { Authorization: basicAuth("admin", TOKEN) },
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(401);
+    // 認証ダイアログを出さないためWWW-Authenticateも返さない
+    expect(res.headers.get("www-authenticate")).toBeNull();
   });
 
   it("誤ったトークンは401", async () => {
@@ -418,20 +418,15 @@ describe("セキュリティ: パストラバーサル", () => {
 });
 
 describe("セキュリティ: 管理画面と管理API", () => {
-  it("/admin は認証なしで401、認証ありで200のHTML(CSP付き)", async () => {
-    const noAuth = await SELF.fetch(`${BASE}/admin`);
-    expect(noAuth.status).toBe(401);
-    expect(noAuth.headers.get("www-authenticate")).toContain("Basic");
-
-    const ok = await SELF.fetch(`${BASE}/admin`, { headers: { Authorization: basicAuth("admin", TOKEN) } });
-    expect(ok.status).toBe(200);
-    const html = await ok.text();
+  it("/admin はログインシェルを返し、nonceが実値に置換されている", async () => {
+    const res = await SELF.fetch(`${BASE}/admin`);
+    expect(res.status).toBe(200);
+    const html = await res.text();
     expect(html).toContain("あたり置き場");
-    expect(html).not.toContain("__CSP_NONCE__"); // nonceが実値に置換されている
-    const csp = ok.headers.get("content-security-policy") ?? "";
-    expect(csp).toContain("script-src 'nonce-");
-    expect(ok.headers.get("cache-control")).toBe("no-store");
-    expect(ok.headers.get("x-frame-options")).toBe("DENY");
+    expect(html).not.toContain("__CSP_NONCE__");
+    // リクエストごとに異なるnonceであること
+    const other = await SELF.fetch(`${BASE}/admin`);
+    expect(other.headers.get("content-security-policy")).not.toBe(res.headers.get("content-security-policy"));
   });
 
   it("トップは /admin へリダイレクト", async () => {
@@ -467,45 +462,56 @@ describe("セキュリティ: 管理画面と管理API", () => {
   });
 });
 
-describe("セキュリティ: Basic認証経由のオリジン隔離(CSRF/XSS)", () => {
-  it("Bearer認証はReferer検証を課されない(curl・テスト用)", async () => {
-    const res = await SELF.fetch(`${BASE}/api/projects`, {
-      headers: { Authorization: `Bearer ${TOKEN}` },
-    });
-    expect(res.status).toBe(200);
+describe("セキュリティ: 同一オリジンの成果物からの管理API乗っ取り防止", () => {
+  // 単一オリジンで管理画面と成果物配信を兼ねるため、ブラウザが自動送信する資格情報
+  // (Basic/Cookie)を管理APIに使わない。Bearer専用にすることで、成果物スクリプトは
+  // トークンを入手できず管理APIを呼べない(Referer検証は pushState で偽装可能なため使わない)。
+  it("Bearer認証のみ受け付ける", async () => {
+    const ok = await SELF.fetch(`${BASE}/api/projects`, { headers: { Authorization: `Bearer ${TOKEN}` } });
+    expect(ok.status).toBe(200);
   });
 
-  it("Basic認証 + /admin由来のRefererは許可される", async () => {
-    const res = await SELF.fetch(`${BASE}/api/projects`, {
+  it("Basic認証は/admin由来のRefererを偽装しても拒否される(pushStateバイパス対策)", async () => {
+    // 悪意ある /p ページが history.pushState('/admin') でRefererを偽装した状況を模す
+    const spoofed = await SELF.fetch(`${BASE}/api/projects`, {
       headers: { Authorization: basicAuth("admin", TOKEN), Referer: `${BASE}/admin` },
     });
+    expect(spoofed.status).toBe(401);
+
+    const write = await SELF.fetch(`${BASE}/api/projects`, {
+      method: "POST",
+      headers: {
+        Authorization: basicAuth("admin", TOKEN),
+        Referer: `${BASE}/admin`,
+        "X-Atari-Admin": "1",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ slug: "hijacked" }),
+    });
+    expect(write.status).toBe(401);
+    // 案件が作られていないこと
+    const list = await SELF.fetch(`${BASE}/api/projects`, { headers: adminHeaders() });
+    const body = (await list.json()) as { projects: Array<{ slug: string }> };
+    expect(body.projects.map((p) => p.slug)).not.toContain("hijacked");
+  });
+
+  it("/admin は秘密を含まない静的シェルを返す(トークンが漏れない)", async () => {
+    const res = await SELF.fetch(`${BASE}/admin`);
     expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(html).not.toContain(TOKEN);
+    expect(html).toContain("ログイン");
+    // トークンをブラウザに保存しない(成果物スクリプトから読めるため)
+    expect(html).not.toContain("localStorage");
+    expect(html).not.toContain("sessionStorage");
   });
 
-  it("Basic認証 + 配信ページ(/p)由来のRefererは403(成果物HTMLからの管理API乗っ取りを遮断)", async () => {
-    const res = await SELF.fetch(`${BASE}/api/projects`, {
-      headers: { Authorization: basicAuth("admin", TOKEN), Referer: `${BASE}/p/some-slug/` },
-    });
-    expect(res.status).toBe(403);
-  });
-
-  it("Basic認証 + Refererなしは403(no-refererで詐称する経路も遮断)", async () => {
-    const res = await SELF.fetch(`${BASE}/api/projects`, {
-      headers: { Authorization: basicAuth("admin", TOKEN) },
-    });
-    expect(res.status).toBe(403);
-  });
-
-  it("Basic認証 + 別オリジンのRefererは403", async () => {
-    const res = await SELF.fetch(`${BASE}/api/projects`, {
-      headers: { Authorization: basicAuth("admin", TOKEN), Referer: "https://evil.example/admin" },
-    });
-    expect(res.status).toBe(403);
-  });
-
-  it("/admin レスポンスのReferrer-Policyはsame-origin(管理画面のRefererが/apiへ届く)", async () => {
-    const res = await SELF.fetch(`${BASE}/admin`, { headers: { Authorization: basicAuth("admin", TOKEN) } });
-    expect(res.headers.get("referrer-policy")).toBe("same-origin");
+  it("/admin レスポンスはno-referrer・DENY・nonce付きCSP", async () => {
+    const res = await SELF.fetch(`${BASE}/admin`);
+    expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(res.headers.get("x-frame-options")).toBe("DENY");
+    expect(res.headers.get("content-security-policy") ?? "").toContain("script-src 'nonce-");
+    expect(res.headers.get("cache-control")).toBe("no-store");
   });
 });
 

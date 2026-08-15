@@ -297,57 +297,40 @@ async function readJson(request: Request): Promise<Record<string, unknown> | nul
 // 管理側の認証
 // ---------------------------------------------------------------------------
 
-type AdminAuth = { ok: false } | { ok: true; scheme: "basic" | "bearer" };
-
-async function authorizeAdmin(request: Request, env: Env): Promise<AdminAuth> {
+/**
+ * 管理APIの認証は Bearer トークンのみを受け付ける(Basic認証は受け付けない)。
+ *
+ * 理由(重要): 本Workerは単一オリジンで「管理画面/API」と「クライアント成果物の配信(/p)」を
+ * 兼ねる。Basic認証やCookieのようにブラウザが自動送信する資格情報を管理APIに使うと、
+ * 成果物に含まれるスクリプトが同一オリジンから管理APIを呼べてしまい、管理権限を奪える。
+ * Referer や独自ヘッダによる出所判定は防御にならない(同一オリジンのスクリプトは
+ * history.pushState で document.URL を /admin に書き換えられ、独自ヘッダも自由に付けられる)。
+ * Bearer はブラウザが自動送信しないため、トークンを知らない成果物スクリプトからは呼べない。
+ * 管理画面はトークンを入力させ、JSのクロージャ内(localStorage/Cookieに置かない)で保持する。
+ */
+async function isAdminAuthorized(request: Request, env: Env): Promise<boolean> {
   const token = env.ADMIN_TOKEN;
-  if (!token) return { ok: false };
+  if (!token) return false;
   const header = request.headers.get("authorization");
-  if (!header) return { ok: false };
+  if (!header) return false;
   const bearer = header.match(/^Bearer\s+(.+)$/i);
-  if (bearer) {
-    return (await timingSafeEqualStr(bearer[1].trim(), token)) ? { ok: true, scheme: "bearer" } : { ok: false };
-  }
-  const basic = decodeBasicAuth(header);
-  if (basic) {
-    return (await timingSafeEqualStr(basic.pass, token)) ? { ok: true, scheme: "basic" } : { ok: false };
-  }
-  return { ok: false };
+  if (!bearer) return false;
+  return timingSafeEqualStr(bearer[1].trim(), token);
 }
 
 /**
- * リクエストの Referer が同一オリジンの /admin である場合に true。
- * Basic認証(ブラウザが同一オリジンへ資格を自動再送する)経由の書き込みで、
- * 配信ページ(/p)由来のCSRF/同一オリジンXSS悪用を弾くために使う。
- * Referer は forbidden header でありページ側JSから詐称できないため、
- * 攻撃者は自分のURL(/p/...)以外の Referer を送れない。
+ * 管理APIの401。ブラウザの認証ダイアログを出さないよう WWW-Authenticate: Basic は付けない
+ * (Basicを受け付けないので、ダイアログを出しても資格情報を渡す先がない)。
  */
-function refererIsAdmin(request: Request, url: URL): boolean {
-  const referer = request.headers.get("referer");
-  if (!referer) return false;
-  try {
-    const r = new URL(referer);
-    return r.origin === url.origin && (r.pathname === "/admin" || r.pathname.startsWith("/admin/"));
-  } catch {
-    return false;
-  }
-}
-
-function adminAuthRequired(asJson: boolean): Response {
-  const headers = new Headers({
-    "WWW-Authenticate": 'Basic realm="atari-okiba-admin", charset="UTF-8"',
-    "Cache-Control": "no-store",
-    "X-Content-Type-Options": "nosniff",
+function adminAuthRequired(): Response {
+  return new Response(JSON.stringify({ error: "管理トークンが正しくありません。" }), {
+    status: 401,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
-  if (asJson) {
-    headers.set("Content-Type", "application/json; charset=utf-8");
-    return new Response(JSON.stringify({ error: "認証が必要です。" }), { status: 401, headers });
-  }
-  headers.set("Content-Type", "text/html; charset=utf-8");
-  return new Response(
-    pageHtml("認証が必要です", "ユーザー名は admin(任意)、パスワードに ADMIN_TOKEN を入力してください。"),
-    { status: 401, headers },
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -365,8 +348,8 @@ async function handleAdminPage(request: Request, env: Env): Promise<Response> {
       "ADMIN_TOKEN が未設定です。ターミナルで npx wrangler secret put ADMIN_TOKEN を実行して設定してください。",
     );
   }
-  if (!(await authorizeAdmin(request, env)).ok) return adminAuthRequired(false);
-
+  // このHTMLは秘密を一切含まない静的シェル(案件データはログイン後に /api から取得する)。
+  // 認証はトークン入力後の /api 呼び出しで行うため、シェル自体は認証なしで配信してよい。
   const nonce = crypto.randomUUID();
   const html = ADMIN_HTML.replaceAll("__CSP_NONCE__", nonce);
   return new Response(request.method === "HEAD" ? null : html, {
@@ -376,9 +359,7 @@ async function handleAdminPage(request: Request, env: Env): Promise<Response> {
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
-      // 同一オリジンには /admin パスの Referer を送り、/api 側の Referer 検証を成立させる
-      // (クロスオリジンには送らない)
-      "Referrer-Policy": "same-origin",
+      "Referrer-Policy": "no-referrer",
       "Content-Security-Policy":
         `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; ` +
         "connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
@@ -394,20 +375,11 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
   if (!env.ADMIN_TOKEN) {
     return apiError(500, "ADMIN_TOKEN が未設定です。npx wrangler secret put ADMIN_TOKEN で設定してください。");
   }
-  const auth = await authorizeAdmin(request, env);
-  if (!auth.ok) return adminAuthRequired(true);
-
-  // オリジン隔離: Basic認証はブラウザが同一オリジンリクエストへ資格を自動再送するため、
-  // 配信ページ(/p の成果物HTML/SVG)からの管理API乗っ取りを防ぐ。管理画面(/admin)由来の
-  // リクエストのみ許可する。Bearer認証(curl・スクリプト)はブラウザ自動送信の対象外で
-  // CSRFにならないため、この検証を課さない。
-  if (auth.scheme === "basic" && !refererIsAdmin(request, url)) {
-    return apiError(403, "管理画面(/admin)以外からのリクエストは受け付けられません。");
-  }
+  if (!(await isAdminAuthorized(request, env))) return adminAuthRequired();
 
   const method = request.method;
-  // CSRF対策(多層防御): 書き込み系は独自ヘッダを必須にする(クロスオリジンからは
-  // CORSプリフライトなしに独自ヘッダを付けられず、本WorkerはCORSを許可しない)
+  // 多層防御: 書き込み系は独自ヘッダを必須にする。Bearer専用認証によりCSRFは構造的に
+  // 成立しないが、将来Cookie等の自動送信資格を導入した場合の保険として残す。
   if (method !== "GET" && method !== "HEAD" && request.headers.get("x-atari-admin") !== "1") {
     return apiError(403, "不正なリクエストです(X-Atari-Admin: 1 ヘッダが必要です)。");
   }
