@@ -132,6 +132,79 @@ describe("完了条件1: 案件を作成できる", () => {
   });
 });
 
+describe("案件の削除", () => {
+  async function del(slug: string, confirm?: string): Promise<Response> {
+    const q = confirm === undefined ? "" : `?confirm=${encodeURIComponent(confirm)}`;
+    return SELF.fetch(`${BASE}/api/projects/${slug}${q}`, { method: "DELETE", headers: adminHeaders() });
+  }
+
+  it("削除すると案件・ファイル・URLがすべて消える", async () => {
+    await createProject("del-a");
+    await uploadVersion("del-a", { "index.html": "v1", "css/a.css": "x" });
+    await uploadVersion("del-a", { "index.html": "v2" });
+    expect((await SELF.fetch(`${BASE}/p/del-a/`)).status).toBe(200);
+
+    const res = await del("del-a", "del-a");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; deletedFiles: number };
+    expect(body.ok).toBe(true);
+    expect(body.deletedFiles).toBe(3); // v1の2ファイル + v2の1ファイル
+
+    // 配信も過去版も消えている
+    expect((await SELF.fetch(`${BASE}/p/del-a/`)).status).toBe(404);
+    expect((await SELF.fetch(`${BASE}/p/del-a/v/1/`)).status).toBe(404);
+    expect((await SELF.fetch(`${BASE}/p/del-a/css/a.css`)).status).toBe(404);
+
+    // 一覧からも消えている
+    const list = await SELF.fetch(`${BASE}/api/projects`, { headers: adminHeaders() });
+    const listBody = (await list.json()) as { projects: Array<{ slug: string }> };
+    expect(listBody.projects.map((p) => p.slug)).not.toContain("del-a");
+  });
+
+  it("confirmパラメータがないと削除されない(誤操作防止)", async () => {
+    await createProject("del-confirm");
+    await uploadVersion("del-confirm", { "index.html": "keep me" });
+
+    expect((await del("del-confirm")).status).toBe(400);
+    expect((await del("del-confirm", "wrong-slug")).status).toBe(400);
+    // 案件は無事
+    expect((await SELF.fetch(`${BASE}/p/del-confirm/`)).status).toBe(200);
+  });
+
+  it("存在しない案件の削除は404、認証なしは401", async () => {
+    expect((await del("no-such-project", "no-such-project")).status).toBe(404);
+    const noAuth = await SELF.fetch(`${BASE}/api/projects/x?confirm=x`, {
+      method: "DELETE",
+      headers: { "X-Atari-Admin": "1" },
+    });
+    expect(noAuth.status).toBe(401);
+  });
+
+  it("削除後は同じスラッグを作り直せる(バージョンはv1から)", async () => {
+    await createProject("del-reuse");
+    await uploadVersion("del-reuse", { "index.html": "old project" });
+    expect((await del("del-reuse", "del-reuse")).status).toBe(200);
+
+    expect((await createProject("del-reuse")).status).toBe(201);
+    const v = await uploadVersion("del-reuse", { "index.html": "new project" });
+    expect(v).toBe(1);
+    const res = await SELF.fetch(`${BASE}/p/del-reuse/`);
+    expect(await res.text()).toContain("new project");
+  });
+
+  it("削除は他の案件に影響しない(プレフィックスの取り違えがない)", async () => {
+    await createProject("del-x");
+    await createProject("del-x-longer");
+    await uploadVersion("del-x", { "index.html": "x" });
+    await uploadVersion("del-x-longer", { "index.html": "longer survives" });
+
+    expect((await del("del-x", "del-x")).status).toBe(200);
+    const survivor = await SELF.fetch(`${BASE}/p/del-x-longer/`);
+    expect(survivor.status).toBe(200);
+    expect(await survivor.text()).toContain("longer survives");
+  });
+});
+
 describe("完了条件2: v1をアップロードすると /p/<slug>/ で表示される", () => {
   it("index.htmlが配信され、CSSも正しいContent-Typeで配信される", async () => {
     await createProject("cond2-a");
@@ -504,6 +577,32 @@ describe("セキュリティ: 同一オリジンの成果物からの管理API�
     // トークンをブラウザに保存しない(成果物スクリプトから読めるため)
     expect(html).not.toContain("localStorage");
     expect(html).not.toContain("sessionStorage");
+  });
+
+  it("管理画面のインラインスクリプトが壊れていない(文字列リテラルが改行で分断されていない)", async () => {
+    // テンプレートリテラル内に \n などのエスケープを書くと、出力HTMLのJS文字列が
+    // 改行で分断されて構文エラーになり、管理画面のJSが丸ごと停止する。
+    // (その状態ではログインフォームがネイティブ送信され、トークンがURLに載る)
+    const res = await SELF.fetch(`${BASE}/admin`);
+    const html = await res.text();
+    const script = html.slice(html.indexOf("<script"), html.indexOf("</script>"));
+    const offenders: string[] = [];
+    for (const line of script.split("\n")) {
+      // 行内のエスケープされていないシングルクォートが奇数個 = 文字列が行内で閉じていない
+      const quotes = (line.match(/(?<!\\)'/g) ?? []).length;
+      if (quotes % 2 !== 0) offenders.push(line.trim());
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("ログインフォームはGET送信でトークンをURLに載せない", async () => {
+    const res = await SELF.fetch(`${BASE}/admin`);
+    const html = await res.text();
+    // トークン入力欄にname属性を持たせない。JSが壊れてネイティブ送信されても
+    // クエリ文字列に値が乗らない(履歴・Referer・ログへの漏えいを防ぐ)
+    const input = html.slice(html.indexOf('id="token-input"'));
+    expect(input.slice(0, input.indexOf(">"))).not.toContain("name=");
+    expect(html).not.toMatch(/<form[^>]*action=/i);
   });
 
   it("/admin レスポンスはno-referrer・DENY・nonce付きCSP", async () => {

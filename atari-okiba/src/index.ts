@@ -393,6 +393,7 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
   }
   if (segs.length === 3 && segs[1] === "projects") {
     if (method === "PATCH") return updateProject(request, env, segs[2]);
+    if (method === "DELETE") return deleteProject(request, env, url, segs[2]);
     return apiError(405, "許可されていないメソッドです。");
   }
   if (segs.length === 4 && segs[1] === "projects" && segs[3] === "versions") {
@@ -487,6 +488,45 @@ async function updateProject(request: Request, env: Env, slug: string): Promise<
   }
   await saveProject(env, meta);
   return json(200, summarize(meta));
+}
+
+/**
+ * 案件を削除する(全バージョンのファイル + メタ情報)。取り消しはできない。
+ * 誤操作防止のため、URLに ?confirm=<slug> を付けたリクエストのみ受け付ける。
+ * KVを先に消すと配信は即座に404になるが、R2の削除が途中で失敗すると孤児オブジェクトが
+ * 残るため、R2 → KV の順で消し、途中失敗時は案件が残る(=再実行できる)ようにする。
+ */
+async function deleteProject(request: Request, env: Env, url: URL, slug: string): Promise<Response> {
+  if (!SLUG_RE.test(slug)) return apiError(404, "案件が存在しません。");
+  const meta = await loadProject(env, slug);
+  if (!meta) return apiError(404, "案件が存在しません。");
+  if (url.searchParams.get("confirm") !== slug) {
+    return apiError(400, "確認のため ?confirm=<スラッグ> が必要です。");
+  }
+
+  const prefix = `sites/${slug}/`;
+  let deleted = 0;
+  // R2のlist/deleteはいずれも1000件単位。無料枠のサブリクエスト上限(50/リクエスト)に
+  // 収まるよう、1回のリクエストで最大20バッチ(=最大20000ファイル)まで処理する。
+  for (let i = 0; i < 20; i++) {
+    const listed = await env.FILES.list({ prefix, limit: 1000 });
+    if (listed.objects.length === 0) break;
+    await env.FILES.delete(listed.objects.map((o) => o.key));
+    deleted += listed.objects.length;
+    if (!listed.truncated) break;
+  }
+  // 残りがある場合はメタを残し、再実行を促す(部分削除のまま案件が消えるのを防ぐ)
+  const remaining = await env.FILES.list({ prefix, limit: 1 });
+  if (remaining.objects.length > 0) {
+    return json(200, {
+      ok: false,
+      deletedFiles: deleted,
+      message: "ファイルが多いため一部のみ削除しました。もう一度削除を実行してください。",
+    });
+  }
+
+  await env.META.delete(projectKey(slug));
+  return json(200, { ok: true, deletedFiles: deleted });
 }
 
 async function allocateVersion(env: Env, slug: string): Promise<Response> {

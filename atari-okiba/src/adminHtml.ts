@@ -33,6 +33,7 @@ button { padding: 8px 16px; font-size: 14px; border: 1px solid #1c1917; backgrou
 button:hover { opacity: 0.85; }
 button.small { padding: 4px 10px; font-size: 12px; }
 button.ghost { background: #fff; color: #1c1917; border-color: #d6d3d1; }
+button.danger { background: #fff; color: #b91c1c; border-color: #fca5a5; margin-left: 8px; }
 .hint { font-size: 12px; color: #a8a29e; margin: 8px 0 0; }
 .project-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
 .project-head h2 { margin: 0; }
@@ -64,7 +65,7 @@ button.ghost { background: #fff; color: #1c1917; border-color: #d6d3d1; }
     <form id="login-form" autocomplete="on">
       <div class="form-row">
         <label>管理トークン(ADMIN_TOKEN)
-          <input id="token-input" type="password" name="password" autocomplete="current-password" autocapitalize="off" spellcheck="false">
+          <input id="token-input" type="password" autocomplete="current-password" autocapitalize="off" spellcheck="false">
         </label>
         <button id="login-btn" type="submit">ログイン</button>
       </div>
@@ -392,6 +393,32 @@ button.ghost { background: #fff; color: #1c1917; border-color: #d6d3d1; }
       }).catch(function (err) { setMsg(statusEl, 'エラー: ' + err.message, true); });
     });
     tools.appendChild(pwBtn);
+
+    var delBtn = el('button', 'small danger', '削除');
+    delBtn.type = 'button';
+    delBtn.addEventListener('click', function () {
+      var answer = window.prompt(
+        '案件「' + p.name + '」を削除します。全バージョンのファイルが消え、URLは開けなくなります。' +
+        '取り消せません。よければスラッグ「' + p.slug + '」を入力してください。'
+      );
+      if (answer === null) return;
+      if (answer.trim() !== p.slug) {
+        setMsg(statusEl, 'スラッグが一致しないため削除しませんでした。', true);
+        return;
+      }
+      setMsg(statusEl, '削除中…');
+      api('DELETE', '/api/projects/' + p.slug + '?confirm=' + encodeURIComponent(p.slug)).then(function (data) {
+        if (data && data.ok === false) {
+          setMsg(statusEl, data.message || 'もう一度削除を実行してください。', true);
+          return loadProjects();
+        }
+        return loadProjects().then(function () {
+          setMsg($('global-msg'), '案件「' + p.name + '」を削除しました(' + ((data && data.deletedFiles) || 0) + 'ファイル)');
+        });
+      }).catch(function (err) { setMsg(statusEl, 'エラー: ' + err.message, true); });
+    });
+    tools.appendChild(delBtn);
+
     card.appendChild(tools);
     return card;
   }
