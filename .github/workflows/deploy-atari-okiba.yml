@@ -1,0 +1,73 @@
+name: あたり置き場をデプロイ
+
+# GitHubの画面から手動で実行します(Actions タブ → このワークフロー → Run workflow)。
+# 事前に Settings → Secrets and variables → Actions で次を登録してください:
+#   CLOUDFLARE_API_TOKEN … Cloudflareで発行したAPIトークン(必須)
+#   CLOUDFLARE_ACCOUNT_ID … CloudflareのアカウントID(必須)
+#   ATARI_ADMIN_TOKEN … 管理画面の鍵。自分で決めた長いランダム文字列(必須)
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: atari-okiba
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: atari-okiba/package-lock.json
+
+      - name: 必要なシークレットが揃っているか確認
+        run: |
+          missing=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          [ -n "${{ secrets.ATARI_ADMIN_TOKEN }}" ] || missing="$missing ATARI_ADMIN_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "✘ 次のシークレットが未登録です:$missing"
+            echo "  Settings → Secrets and variables → Actions から登録してください。"
+            exit 1
+          fi
+
+      - name: 部品を入れる
+        run: npm ci
+
+      - name: 型チェックとテスト
+        run: npm run check
+
+      - name: R2バケットとKVネームスペースを用意する
+        run: sh scripts/provision.sh
+
+      - name: 管理画面の鍵を設定する
+        run: printf '%s' "$ADMIN_TOKEN" | npx wrangler secret put ADMIN_TOKEN
+        env:
+          ADMIN_TOKEN: ${{ secrets.ATARI_ADMIN_TOKEN }}
+
+      - name: デプロイ
+        run: npx wrangler deploy 2>&1 | tee deploy.log
+
+      - name: 公開URLを表示する
+        run: |
+          url=$(grep -o 'https://[a-z0-9.-]*\.workers\.dev' deploy.log | head -n 1)
+          {
+            echo "### あたり置き場をデプロイしました"
+            echo ""
+            if [ -n "$url" ]; then
+              echo "- 管理画面: ${url}/admin"
+              echo "- 確認用URL: ${url}/p/<スラッグ>/"
+            else
+              echo "URLはデプロイのログを確認してください。"
+            fi
+            echo ""
+            echo "管理画面には ATARI_ADMIN_TOKEN に登録した文字列でログインします。"
+          } >> "$GITHUB_STEP_SUMMARY"

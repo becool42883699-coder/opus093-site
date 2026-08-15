@@ -11,7 +11,49 @@
 - [Node.js](https://nodejs.org/ja)(v20以上)
 - Cloudflareアカウント(無料プランでOK)— <https://dash.cloudflare.com/sign-up> から作成
 
-## セットアップ手順(コピペで進められます)
+## セットアップ
+
+3つのやり方があります。**A がいちばん簡単**です。
+
+| | やり方 | あなたの作業 |
+|---|---|---|
+| **A** | 自動スクリプト | `sh setup.sh` を1回実行するだけ |
+| **B** | GitHub Actions | GitHubの画面でシークレットを3つ登録してボタンを押すだけ(ターミナル不要) |
+| **C** | 手動 | 下の6ステップをコピペ |
+
+いずれの場合も、**R2の有効化だけは最初に一度、Cloudflareの画面で必要**です:
+<https://dash.cloudflare.com/> → 左メニュー「R2」→ 案内に従って有効化。
+(無料枠10GB。支払い情報の登録を求められることがありますが、無料枠内なら課金されません)
+
+### A. 自動スクリプトで済ませる
+
+```sh
+sh setup.sh
+```
+
+ログイン → R2作成 → KV作成と設定反映 → 鍵の生成と設定 → デプロイまで自動で進みます。
+途中でブラウザが開いたら「Allow」を押してください。最後に**管理画面の鍵が表示されるので必ず控えてください**
+(この画面にしか出ません)。
+
+### B. GitHub Actions でデプロイする(ターミナル不要)
+
+1. Cloudflareで **APIトークン**を作る:
+   <https://dash.cloudflare.com/profile/api-tokens> → 「Create Token」→ 「Edit Cloudflare Workers」テンプレート
+   → 権限に **Workers R2 Storage: Edit** と **Workers KV Storage: Edit** も追加して作成
+2. **アカウントID**を控える(ダッシュボード右側、またはURLの `dash.cloudflare.com/<ここ>`)
+3. GitHubのリポジトリ → Settings → Secrets and variables → Actions → 「New repository secret」で3つ登録:
+
+   | 名前 | 中身 |
+   |---|---|
+   | `CLOUDFLARE_API_TOKEN` | 手順1のトークン |
+   | `CLOUDFLARE_ACCOUNT_ID` | 手順2のアカウントID |
+   | `ATARI_ADMIN_TOKEN` | 管理画面の鍵(自分で決めた長いランダム文字列) |
+
+4. Actions タブ →「あたり置き場をデプロイ」→ 「Run workflow」を押す
+
+完了すると実行結果の画面に管理画面のURLが表示されます。以後も同じボタンで再デプロイできます。
+
+### C. 手動で進める(コピペ)
 
 すべてこのフォルダ(`atari-okiba/`)の中で実行します。
 
