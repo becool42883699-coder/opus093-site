@@ -1,10 +1,14 @@
 name: あたり置き場をデプロイ
 
 # GitHubの画面から手動で実行します(Actions タブ → このワークフロー → Run workflow)。
-# 事前に Settings → Secrets and variables → Actions で次を登録してください:
-#   CLOUDFLARE_API_TOKEN … Cloudflareで発行したAPIトークン(必須)
-#   CLOUDFLARE_ACCOUNT_ID … CloudflareのアカウントID(必須)
-#   ATARI_ADMIN_TOKEN … 管理画面の鍵。自分で決めた長いランダム文字列(必須)
+#
+# 必要なのは1つだけ:
+#   CLOUDFLARE_API_TOKEN … Cloudflareで発行したAPIトークン
+#
+# 任意(未設定でも動きます):
+#   CLOUDFLARE_ACCOUNT_ID … 複数アカウントを持っている場合のみ必要
+#   ATARI_ADMIN_TOKEN … 管理画面の鍵。未設定なら自動生成して実行結果に表示します
+#                        (公開リポジトリでは鍵が他人に見えるため、登録が必須になります)
 on:
   workflow_dispatch:
 
@@ -27,15 +31,14 @@ jobs:
           cache: npm
           cache-dependency-path: atari-okiba/package-lock.json
 
-      - name: 必要なシークレットが揃っているか確認
+      - name: APIトークンが登録されているか確認
         run: |
-          missing=""
-          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
-          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
-          [ -n "${{ secrets.ATARI_ADMIN_TOKEN }}" ] || missing="$missing ATARI_ADMIN_TOKEN"
-          if [ -n "$missing" ]; then
-            echo "✘ 次のシークレットが未登録です:$missing"
-            echo "  Settings → Secrets and variables → Actions から登録してください。"
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "✘ CLOUDFLARE_API_TOKEN が未登録です。"
+            echo "  1. https://dash.cloudflare.com/profile/api-tokens で「Edit Cloudflare Workers」テンプレートから作成"
+            echo "     (権限に Workers R2 Storage: Edit と Workers KV Storage: Edit も追加してください)"
+            echo "  2. このリポジトリの Settings → Secrets and variables → Actions → New repository secret"
+            echo "     名前を CLOUDFLARE_API_TOKEN にして貼り付け"
             exit 1
           fi
 
@@ -49,9 +52,31 @@ jobs:
         run: sh scripts/provision.sh
 
       - name: 管理画面の鍵を設定する
-        run: printf '%s' "$ADMIN_TOKEN" | npx wrangler secret put ADMIN_TOKEN
         env:
-          ADMIN_TOKEN: ${{ secrets.ATARI_ADMIN_TOKEN }}
+          PROVIDED_TOKEN: ${{ secrets.ATARI_ADMIN_TOKEN }}
+          IS_PRIVATE: ${{ github.event.repository.private }}
+        run: |
+          if [ -n "$PROVIDED_TOKEN" ]; then
+            TOKEN="$PROVIDED_TOKEN"
+          else
+            # 未登録なら自動生成する。ただし公開リポジトリでは実行結果が誰でも見られるので拒否する
+            if [ "$IS_PRIVATE" != "true" ]; then
+              echo "✘ このリポジトリは公開設定のため、鍵を実行結果に表示できません。"
+              echo "  Settings → Secrets and variables → Actions で ATARI_ADMIN_TOKEN を登録してから再実行してください。"
+              exit 1
+            fi
+            TOKEN=$(node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))")
+            echo "::add-mask::$TOKEN"
+            {
+              echo "### 管理画面の鍵（初回のみ表示。今すぐ控えてください）"
+              echo ''
+              echo '```'
+              echo "$TOKEN"
+              echo '```'
+              echo ''
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          printf '%s' "$TOKEN" | npx wrangler secret put ADMIN_TOKEN
 
       - name: デプロイ
         run: npx wrangler deploy 2>&1 | tee deploy.log
