@@ -269,8 +269,11 @@ button.ghost { background: #fff; color: #1c1917; border-color: #d6d3d1; }
       return api('POST', '/api/projects/' + slug + '/versions/' + version + '/finalize', { fileCount: files.length });
     }).then(function (data) {
       uploading = false;
-      setMsg(statusEl, 'v' + data.version + ' を公開しました(' + data.fileCount + 'ファイル)');
-      return loadProjects();
+      // loadProjects() はカードDOM(statusElを含む)を作り直すため、成功メッセージは
+      // 再描画で消えない #global-msg に出す(公開URLはカードに恒常表示される)
+      return loadProjects().then(function () {
+        setMsg($('global-msg'), 'v' + data.version + ' を公開しました(' + data.fileCount + 'ファイル)');
+      });
     }).catch(function (err) {
       uploading = false;
       setMsg(statusEl, 'エラー: ' + err.message + ' — この版は公開されていません(最新URLは以前のままです)', true);
