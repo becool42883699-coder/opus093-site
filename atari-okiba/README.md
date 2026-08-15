@@ -27,8 +27,16 @@
 
 ### A. 自動スクリプトで済ませる
 
+**Mac / Linux**（ターミナル）
+
 ```sh
 sh setup.sh
+```
+
+**Windows**（PowerShell。スタートボタンを右クリック →「ターミナル」or「PowerShell」）
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
 ログイン → R2作成 → KV作成と設定反映 → 鍵の生成と設定 → デプロイまで自動で進みます。
