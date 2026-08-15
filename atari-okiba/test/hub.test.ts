@@ -96,8 +96,12 @@ describe("完了条件1: 案件を作成できる", () => {
     expect(res.status).toBe(401);
   });
 
-  it("Basic認証(パスワード=ADMIN_TOKEN)でも通る", async () => {
-    const res = await SELF.fetch(`${BASE}/api/projects`, { headers: { Authorization: basicAuth("admin", TOKEN) } });
+  it("Basic認証(パスワード=ADMIN_TOKEN)+ /admin由来のRefererで通る", async () => {
+    // ブラウザの管理画面(/admin)からのfetchを模す。Basic認証はReferer検証を伴う
+    // (Referer検証の網羅は「Basic認証経由のオリジン隔離」describeを参照)
+    const res = await SELF.fetch(`${BASE}/api/projects`, {
+      headers: { Authorization: basicAuth("admin", TOKEN), Referer: `${BASE}/admin` },
+    });
     expect(res.status).toBe(200);
   });
 
@@ -351,6 +355,44 @@ describe("セキュリティ: パストラバーサル", () => {
     }
   });
 
+  it("R2キーが1024バイト上限を超える長い日本語パスは弾く(文字数ではなくバイト長で判定)", async () => {
+    await createProject("sec-bytelen");
+    const v = await allocateVersion("sec-bytelen");
+    // 各セグメント200文字(UTF-8で600バイト)×2 → 文字数400・バイト数1200。文字数制限は通るがバイト超過
+    const longPath = "あ".repeat(200) + "/" + "い".repeat(200) + ".html";
+    const res = await putFile("sec-bytelen", v, longPath, "x");
+    expect(res.status).toBe(400);
+    // 配信側でも同様に長すぎるパスは404(R2例外を誘発しない)
+    const serve = await SELF.fetch(`${BASE}/p/sec-bytelen/${encodeURIComponent(longPath)}`);
+    expect([400, 404]).toContain(serve.status);
+  });
+
+  it('先頭が "v" のパスはバージョンURLと衝突するため400で拒否', async () => {
+    await createProject("sec-vseg");
+    const v = await allocateVersion("sec-vseg");
+    expect((await putFile("sec-vseg", v, "v/1/index.html", "shadow")).status).toBe(400);
+    // "v" 単体でなければOK(video.mp4 や css/v/x は許可)
+    expect((await putFile("sec-vseg", v, "video.mp4", "x")).status).toBe(200);
+    expect((await putFile("sec-vseg", v, "css/v/x.css", "x")).status).toBe(200);
+  });
+
+  it("Content-Lengthのない(チャンク転送)アップロードは411で拒否", async () => {
+    await createProject("sec-chunked");
+    const v = await allocateVersion("sec-chunked");
+    // ReadableStreamボディはContent-Lengthが付かずchunkedになる
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("streamed body"));
+        controller.close();
+      },
+    });
+    const res = await SELF.fetch(
+      `${BASE}/api/projects/sec-chunked/versions/${v}/files?path=x.html`,
+      { method: "PUT", headers: adminHeaders(), body: stream, duplex: "half" } as RequestInit,
+    );
+    expect(res.status).toBe(411);
+  });
+
   it("配信時のトラバーサル風URLで他案件やR2キー外へ到達できない", async () => {
     await createProject("sec-serve");
     await uploadVersion("sec-serve", { "index.html": "<h1>sec ok</h1>" });
@@ -422,6 +464,48 @@ describe("セキュリティ: 管理画面と管理API", () => {
       (p) => p.slug === "sec-leak",
     );
     expect(proj?.hasPassword).toBe(true);
+  });
+});
+
+describe("セキュリティ: Basic認証経由のオリジン隔離(CSRF/XSS)", () => {
+  it("Bearer認証はReferer検証を課されない(curl・テスト用)", async () => {
+    const res = await SELF.fetch(`${BASE}/api/projects`, {
+      headers: { Authorization: `Bearer ${TOKEN}` },
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("Basic認証 + /admin由来のRefererは許可される", async () => {
+    const res = await SELF.fetch(`${BASE}/api/projects`, {
+      headers: { Authorization: basicAuth("admin", TOKEN), Referer: `${BASE}/admin` },
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("Basic認証 + 配信ページ(/p)由来のRefererは403(成果物HTMLからの管理API乗っ取りを遮断)", async () => {
+    const res = await SELF.fetch(`${BASE}/api/projects`, {
+      headers: { Authorization: basicAuth("admin", TOKEN), Referer: `${BASE}/p/some-slug/` },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("Basic認証 + Refererなしは403(no-refererで詐称する経路も遮断)", async () => {
+    const res = await SELF.fetch(`${BASE}/api/projects`, {
+      headers: { Authorization: basicAuth("admin", TOKEN) },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("Basic認証 + 別オリジンのRefererは403", async () => {
+    const res = await SELF.fetch(`${BASE}/api/projects`, {
+      headers: { Authorization: basicAuth("admin", TOKEN), Referer: "https://evil.example/admin" },
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("/admin レスポンスのReferrer-Policyはsame-origin(管理画面のRefererが/apiへ届く)", async () => {
+    const res = await SELF.fetch(`${BASE}/admin`, { headers: { Authorization: basicAuth("admin", TOKEN) } });
+    expect(res.headers.get("referrer-policy")).toBe("same-origin");
   });
 });
 

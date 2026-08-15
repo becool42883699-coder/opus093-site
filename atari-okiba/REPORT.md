@@ -26,4 +26,25 @@
 
 ## 品質ゲート結果
 
-(検証完了後に記入)
+| ゲート | 結果 | 内容 |
+|---|---|---|
+| 1. `tsc --noEmit` ゼロエラー | ✅ PASS | 型エラー0件 |
+| 2. vitest(@cloudflare/vitest-pool-workers)で完了条件を自動テスト | ✅ PASS | 47テスト全パス。実workerd上でWorker全体(SELF)を叩き、完了条件1〜5+セキュリティ要件を網羅 |
+| 3. security-reviewerの指摘ゼロまで修正(最低2周) | ✅ 2周実施 | 1周目: 8件検出→検証で7件(should-fix 4/accepted-risk 3)。should-fix 4件+低コストのaccepted-risk 1件を修正。2周目で解消と回帰を検証 |
+| 4. qa-testerがwrangler dev実機で完了条件を再現(Playwright) | ✅ 実施 | wrangler dev + curl で完了条件1〜5、Playwrightで管理画面実操作とスマホ幅表示を確認 |
+| 5. スマホ幅(375px)の閲覧側表示確認 | ✅ 実施 | 375×667で配信ページ・401ページを確認、横スクロールなし |
+
+### セキュリティレビューで修正した項目(1周目 should-fix)
+
+| ID | 指摘 | 対応 |
+|---|---|---|
+| F1 | `fetch`ハンドラの`try`内が`await`なしで非同期例外を捕捉できず、500ページがデッドコード化 | 各ハンドラ呼び出しを`return await`に変更 |
+| F2 | `/p`配信の成果物HTML/SVGが同一オリジンで実行され、Basic資格の自動再送で管理APIを乗っ取れる | Basic認証経由の`/api`に`/admin`由来Referer検証を追加(Bearerは対象外)。`/admin`のReferrer-Policyを`same-origin`に |
+| F3 | relパス長がUTF-16文字数基準でR2キーの1024バイト上限と不整合(未認証URLでR2例外を誘発可) | UTF-8バイト長(900B上限)で判定 |
+| F4 | 版URL名前空間`v/`をサイトコンテンツがシャドーイング | アップロード時に先頭`v`セグメントを400拒否 |
+| F7 | Content-Lengthなしのチャンク転送がサイズ検査前に全量をメモリバッファ | Content-Length必須化(無ければ411)、バッファ経路を削除 |
+
+### accepted-risk として据え置いた項目(理由はDESIGN.mdの制約表に記載)
+
+- **存在オラクル(401 vs 404)**: 構造上ほぼ不可避。スラッグに機微な顧客名を使わない運用で回避。
+- **閲覧パスワードのSHA-256(1回)**: KV読み取り漏えいが前提で、その状況ではR2本体も読めて保護は無意味。CPU 10ms制約との両立のためPBKDF2は不採用。将来課題(HMAC署名Cookieキャッシュ+PBKDF2)を明記。

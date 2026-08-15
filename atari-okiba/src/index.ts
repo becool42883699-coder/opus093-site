@@ -41,6 +41,7 @@ interface ProjectMeta {
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const MAX_FILE_BYTES = 95 * 1024 * 1024; // プラットフォーム上限100MBの手前
+const MAX_REL_BYTES = 900; // R2キー全体を1024バイト上限内に収めるための相対パスのUTF-8バイト長上限
 const MAX_NAME_LEN = 100;
 const MAX_PASSWORD_LEN = 128;
 const MAX_LIST_PROJECTS = 40; // 無料枠のサブリクエスト上限(50)対策
@@ -103,7 +104,10 @@ function contentTypeFor(path: string): string {
 function sanitizeRelPath(input: string): string | null {
   if (typeof input !== "string") return null;
   const p = input.normalize("NFC");
-  if (p.length === 0 || p.length > 1024) return null;
+  if (p.length === 0) return null;
+  // R2キー全体(sites/<slug>/v<n>/<rel>)の1024バイト上限に収めるため、UTF-8バイト長で判定する
+  // (プレフィックス最大 sites/ + slug63 + /v999999/ ≒ 80バイトを差し引いた安全側の上限)
+  if (te.encode(p).length > MAX_REL_BYTES) return null;
   // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(p)) return null;
   if (p.includes("\\")) return null;
@@ -293,16 +297,40 @@ async function readJson(request: Request): Promise<Record<string, unknown> | nul
 // 管理側の認証
 // ---------------------------------------------------------------------------
 
-async function isAdminAuthorized(request: Request, env: Env): Promise<boolean> {
+type AdminAuth = { ok: false } | { ok: true; scheme: "basic" | "bearer" };
+
+async function authorizeAdmin(request: Request, env: Env): Promise<AdminAuth> {
   const token = env.ADMIN_TOKEN;
-  if (!token) return false;
+  if (!token) return { ok: false };
   const header = request.headers.get("authorization");
-  if (!header) return false;
+  if (!header) return { ok: false };
   const bearer = header.match(/^Bearer\s+(.+)$/i);
-  if (bearer) return timingSafeEqualStr(bearer[1].trim(), token);
+  if (bearer) {
+    return (await timingSafeEqualStr(bearer[1].trim(), token)) ? { ok: true, scheme: "bearer" } : { ok: false };
+  }
   const basic = decodeBasicAuth(header);
-  if (basic) return timingSafeEqualStr(basic.pass, token);
-  return false;
+  if (basic) {
+    return (await timingSafeEqualStr(basic.pass, token)) ? { ok: true, scheme: "basic" } : { ok: false };
+  }
+  return { ok: false };
+}
+
+/**
+ * リクエストの Referer が同一オリジンの /admin である場合に true。
+ * Basic認証(ブラウザが同一オリジンへ資格を自動再送する)経由の書き込みで、
+ * 配信ページ(/p)由来のCSRF/同一オリジンXSS悪用を弾くために使う。
+ * Referer は forbidden header でありページ側JSから詐称できないため、
+ * 攻撃者は自分のURL(/p/...)以外の Referer を送れない。
+ */
+function refererIsAdmin(request: Request, url: URL): boolean {
+  const referer = request.headers.get("referer");
+  if (!referer) return false;
+  try {
+    const r = new URL(referer);
+    return r.origin === url.origin && (r.pathname === "/admin" || r.pathname.startsWith("/admin/"));
+  } catch {
+    return false;
+  }
 }
 
 function adminAuthRequired(asJson: boolean): Response {
@@ -337,7 +365,7 @@ async function handleAdminPage(request: Request, env: Env): Promise<Response> {
       "ADMIN_TOKEN が未設定です。ターミナルで npx wrangler secret put ADMIN_TOKEN を実行して設定してください。",
     );
   }
-  if (!(await isAdminAuthorized(request, env))) return adminAuthRequired(false);
+  if (!(await authorizeAdmin(request, env)).ok) return adminAuthRequired(false);
 
   const nonce = crypto.randomUUID();
   const html = ADMIN_HTML.replaceAll("__CSP_NONCE__", nonce);
@@ -348,7 +376,9 @@ async function handleAdminPage(request: Request, env: Env): Promise<Response> {
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
       "X-Frame-Options": "DENY",
-      "Referrer-Policy": "no-referrer",
+      // 同一オリジンには /admin パスの Referer を送り、/api 側の Referer 検証を成立させる
+      // (クロスオリジンには送らない)
+      "Referrer-Policy": "same-origin",
       "Content-Security-Policy":
         `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; ` +
         "connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
@@ -364,10 +394,19 @@ async function handleApi(request: Request, env: Env, url: URL): Promise<Response
   if (!env.ADMIN_TOKEN) {
     return apiError(500, "ADMIN_TOKEN が未設定です。npx wrangler secret put ADMIN_TOKEN で設定してください。");
   }
-  if (!(await isAdminAuthorized(request, env))) return adminAuthRequired(true);
+  const auth = await authorizeAdmin(request, env);
+  if (!auth.ok) return adminAuthRequired(true);
+
+  // オリジン隔離: Basic認証はブラウザが同一オリジンリクエストへ資格を自動再送するため、
+  // 配信ページ(/p の成果物HTML/SVG)からの管理API乗っ取りを防ぐ。管理画面(/admin)由来の
+  // リクエストのみ許可する。Bearer認証(curl・スクリプト)はブラウザ自動送信の対象外で
+  // CSRFにならないため、この検証を課さない。
+  if (auth.scheme === "basic" && !refererIsAdmin(request, url)) {
+    return apiError(403, "管理画面(/admin)以外からのリクエストは受け付けられません。");
+  }
 
   const method = request.method;
-  // CSRF対策: 書き込み系は独自ヘッダを必須にする(クロスオリジンからは
+  // CSRF対策(多層防御): 書き込み系は独自ヘッダを必須にする(クロスオリジンからは
   // CORSプリフライトなしに独自ヘッダを付けられず、本WorkerはCORSを許可しない)
   if (method !== "GET" && method !== "HEAD" && request.headers.get("x-atari-admin") !== "1") {
     return apiError(403, "不正なリクエストです(X-Atari-Admin: 1 ヘッダが必要です)。");
@@ -525,22 +564,25 @@ async function uploadFile(
   if (rel === null) {
     return apiError(400, "パスが不正です(空セグメント・「..」・バックスラッシュ・制御文字は使えません)。");
   }
+  // 配信ルートの版URL名前空間(/p/<slug>/v/<n>/)と衝突するため、先頭セグメント "v" は禁止する
+  if (rel.split("/")[0] === "v") {
+    return apiError(400, 'トップレベルに "v" というフォルダ名は使えません(バージョンURLと衝突します)。');
+  }
+
+  // Content-Length必須。無い/不正なら、サイズ検査前に全量をメモリへ載せる経路を避けるため411で拒否する。
+  // (管理画面の fetch(PUT, body: File) は常にContent-Lengthを付けるため運用影響はない)
+  const lenHeader = request.headers.get("content-length");
+  if (lenHeader === null || !/^[0-9]+$/.test(lenHeader)) {
+    return apiError(411, "Content-Length ヘッダが必要です(1ファイルずつ送信してください)。");
+  }
+  const len = parseInt(lenHeader, 10);
+  if (len > MAX_FILE_BYTES) {
+    return apiError(413, "ファイルが大きすぎます(1ファイル95MBまで)。");
+  }
 
   const key = r2Key(slug, target.version, rel);
-  const lenHeader = request.headers.get("content-length");
-  if (lenHeader !== null && /^[0-9]+$/.test(lenHeader)) {
-    if (parseInt(lenHeader, 10) > MAX_FILE_BYTES) {
-      return apiError(413, "ファイルが大きすぎます(1ファイル95MBまで)。");
-    }
-    // Content-Length既知ならメモリに乗せずストリームのままR2へ
-    await env.FILES.put(key, request.body);
-  } else {
-    const buf = await request.arrayBuffer();
-    if (buf.byteLength > MAX_FILE_BYTES) {
-      return apiError(413, "ファイルが大きすぎます(1ファイル95MBまで)。");
-    }
-    await env.FILES.put(key, buf);
-  }
+  // Content-Length既知なのでメモリに乗せずストリームのままR2へ(空ファイルは空文字列でput)
+  await env.FILES.put(key, len === 0 ? "" : request.body);
   return json(200, { ok: true, path: rel });
 }
 
@@ -755,9 +797,11 @@ export default {
       if (path === "/") {
         return new Response(null, { status: 302, headers: { Location: "/admin" } });
       }
-      if (path === "/admin" || path === "/admin/") return handleAdminPage(request, env);
-      if (path === "/api" || path.startsWith("/api/")) return handleApi(request, env, url);
-      if (path === "/p" || path.startsWith("/p/")) return handleServe(request, env, url);
+      // return await にすること。await を挟まないと非同期例外が下の catch を素通りし、
+      // 意図した500ページではなくランタイム例外(本番のCloudflare 1101)になる。
+      if (path === "/admin" || path === "/admin/") return await handleAdminPage(request, env);
+      if (path === "/api" || path.startsWith("/api/")) return await handleApi(request, env, url);
+      if (path === "/p" || path.startsWith("/p/")) return await handleServe(request, env, url);
       return textPage(404, "見つかりません", "ページが存在しません。");
     } catch (e) {
       // スタックはログのみ。クライアントには内部情報を返さない
