@@ -1,0 +1,134 @@
+/* TRX-4 エンジンページのスタイル。
+   t-rex-engine-v3.html の <style> をそのまま踏襲する(配色・寸法・尺は変更しない)。
+   ブランド色: --e-accent #3EC1F0 / --e-ink #05080D / --e-gold #C9B08A
+   JSからの参照は data-* 属性で行うため、ここでのクラス名はスタイル専用。 */
+
+.page {
+  --e-ink: #05080D;
+  --e-bone: #EDF1F5;
+  --e-accent: #3EC1F0;
+  --e-gold: #C9B08A;
+  --e-mut: #8C94A2;
+  --e-line: #1B2430;
+
+  position: relative;
+  background: var(--e-ink);
+  color: var(--e-bone);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.serif { font-family: Georgia, "Hiragino Mincho ProN", "Times New Roman", serif; }
+
+/* ---- ヘッダー ------------------------------------------------------- */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(12px + env(safe-area-inset-top)) 5vw 12px;
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .22em; font-size: 14px; color: var(--e-bone); }
+.tx {
+  width: 27px; height: 27px; border-radius: 50%; background: var(--e-accent); color: #04121c;
+  display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; letter-spacing: .02em;
+}
+.chapnav { display: none; gap: 26px; font-size: 11px; letter-spacing: .18em; color: var(--e-mut); margin: 0; padding: 0; list-style: none; }
+.chapnav li { transition: color .3s; }
+.chapnav li[data-on="true"] { color: var(--e-accent); }
+.chapnow { font-size: 11px; letter-spacing: .18em; color: var(--e-accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (min-width: 820px) {
+  .chapnav { display: flex; }
+  .chapnow { display: none; }
+}
+.progress { position: fixed; top: 0; left: 0; height: 2px; width: 100%; background: var(--e-accent); transform: scaleX(0); transform-origin: 0 50%; z-index: 55; }
+
+/* ---- ヒーロー ------------------------------------------------------- */
+.hero {
+  min-height: 100vh; min-height: 100svh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 20vh 6vw 12vh; position: relative;
+}
+.eyebrow { font-size: 11px; letter-spacing: .3em; color: var(--e-gold); margin: 0 0 26px; }
+.hero h1 { margin: 0; font-weight: 800; line-height: 1.06; letter-spacing: .01em; font-size: clamp(2.7rem, 11.5vw, 7.6rem); }
+.hero h1 span { color: var(--e-accent); }
+.lede { margin: 28px 0 0; max-width: 38ch; color: var(--e-mut); font-size: clamp(.98rem, 2.3vw, 1.15rem); line-height: 1.85; }
+.cue {
+  position: absolute; left: 6vw; bottom: calc(34px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 14px; font-size: 10px; letter-spacing: .3em; color: var(--e-mut);
+}
+.cue i { display: block; width: 1px; height: 56px; background: linear-gradient(var(--e-accent), transparent); animation: drip 2.2s ease-in-out infinite; }
+@keyframes drip {
+  0%   { transform: scaleY(0); transform-origin: top; }
+  45%  { transform: scaleY(1); transform-origin: top; }
+  55%  { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* ---- ステージ(ピン留めされる4幕) ------------------------------------ */
+.stageWrap { position: relative; }
+.stage { height: 100vh; height: 100svh; position: relative; overflow: hidden; }
+.gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.vin { position: absolute; inset: 0; pointer-events: none; z-index: 3; background: radial-gradient(120% 90% at 50% 45%, transparent 55%, rgba(0,0,0,.5) 100%); }
+.chapter {
+  position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 0 6vw calc(42px + env(safe-area-inset-bottom));
+}
+.num {
+  font-weight: 800; line-height: .78; letter-spacing: -.03em; font-size: clamp(6.5rem, 26vw, 15rem);
+  color: transparent; -webkit-text-stroke: 2px rgba(62,193,240,.85);
+}
+.chapter h2 { margin: 8px 0 0; font-weight: 800; letter-spacing: .02em; line-height: 1.1; font-size: clamp(1.9rem, 7.5vw, 4.6rem); }
+.chapter h2 em { font-style: normal; color: var(--e-accent); }
+.cap { margin: 16px 0 0; color: var(--e-mut); font-size: clamp(.9rem, 2.2vw, 1.02rem); max-width: 44ch; line-height: 1.85; }
+
+.lbl { position: absolute; z-index: 5; font-size: 10px; letter-spacing: .2em; color: var(--e-bone); pointer-events: none; white-space: nowrap; }
+.lbl i { display: block; height: 1px; background: #3a6478; margin-top: 7px; transform-origin: 0 50%; }
+.lbl b { color: var(--e-accent); font-weight: 600; }
+.lbl1 { top: 16%; left: 6%; }
+.lbl1 i { width: 120px; }
+.lbl2 { top: 33%; right: 6%; text-align: right; }
+.lbl2 i { transform-origin: 100% 50%; width: 110px; margin-left: auto; }
+.lbl3 { bottom: 32%; left: 8%; }
+.lbl3 i { width: 90px; }
+@media (max-width: 719px) {
+  .lbl3 { display: none; }
+  .lbl { font-size: 9px; }
+}
+
+/* ---- 諸元 ----------------------------------------------------------- */
+.spec { padding: 22vh 6vw 14vh; }
+.k { font-size: 11px; letter-spacing: .3em; color: var(--e-accent); margin: 0 0 48px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--e-line); border: 1px solid var(--e-line); max-width: 900px; }
+.cell { background: var(--e-ink); padding: 30px 26px 34px; }
+.v { font-weight: 800; font-size: clamp(1.6rem, 5vw, 2.6rem); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.v small { font-size: .5em; color: var(--e-mut); font-weight: 600; letter-spacing: .06em; }
+.l { margin-top: 10px; font-size: 11px; letter-spacing: .18em; color: var(--e-mut); }
+.cta { margin-top: 64px; display: flex; flex-wrap: wrap; gap: 26px; align-items: center; }
+.btn {
+  display: inline-block; background: var(--e-accent); color: #04121c; border-radius: 999px;
+  padding: 18px 38px; font-size: 13px; font-weight: 700; letter-spacing: .14em; text-decoration: none;
+  transition: filter .3s, transform .3s;
+}
+.btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.btn:focus-visible { outline: 2px solid var(--e-bone); outline-offset: 3px; }
+.price { color: var(--e-gold); font-style: italic; }
+.footer { padding: 0 6vw 60px; color: #5d6675; font-size: 12px; line-height: 1.9; max-width: 70ch; }
+.footer b { color: var(--e-mut); font-weight: 600; }
+.footer a { color: var(--e-mut); text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---- 演出を出さないとき(reduced-motion / WebGL非対応 / JS無効) --------
+   v3 の .no-motion と同じ。ステージのピンを解いて4幕を縦に並べ、全文を読ませる。
+   data-motion 属性が付いていない = まだ初期化されていない、も同じ扱いにするため
+   「data-motion="on" のときだけ演出用レイアウトにする」書き方にしている。 */
+.page:not([data-motion="on"]) .stage { height: auto; min-height: 0; display: block; padding: 8vh 0 2vh; overflow: visible; }
+.page:not([data-motion="on"]) .gl,
+.page:not([data-motion="on"]) .vin { display: none; }
+.page:not([data-motion="on"]) .chapter { position: relative; inset: auto; padding: 9vh 6vw 4vh; opacity: 1 !important; transform: none !important; visibility: visible !important; }
+.page:not([data-motion="on"]) .lbl,
+.page:not([data-motion="on"]) .cue,
+.page:not([data-motion="on"]) .progress,
+.page:not([data-motion="on"]) .chapnow { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cue i { animation: none; }
+  .btn { transition: none; }
+}

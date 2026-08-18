@@ -314,3 +314,63 @@ SERVICE と WORKS の間に **EQUIPMENT（対応車両）セクション**があ
 3. 車外から見えない `MOTOR`（エンジン）と `salon`（内装）のノードを削除（頂点の約36%）
 4. `gltf-transform` で `dedup → prune → resize 1024 → webp 82 → weld → simplify 0.5 → quantize`
    （デコーダ不要にするため Draco / meshopt は使わない。`KHR_mesh_quantization` は three が対応済み）
+
+## 7. T-REX側 `/engine` — TRX-4 オーバーホールの4幕ページ
+
+`t-rex-engine-v3.html`（ユーザー提供のHTML1枚デモ）を移植したストーリーページ。
+スクロールで **鉄の塊 → 透視 → 手組み → 始動** の4幕が進む。
+
+### 構成ファイル
+- `app/engine/page.tsx` … サーバーコンポーネント。4幕のコピー・ラベル・諸元・CTAを
+  **静的HTMLで出し切る**（JS無効・クローラでも全文が読める）。
+- `app/components/engine/EngineSceneMount.tsx` … `next/dynamic(ssr:false)` の薄い包み。
+- `app/components/engine/EngineScene.tsx` … WebGL＋GSAP＋Lenis。描くDOMは `<canvas>` だけ。
+- `app/components/engine/buildEngine.ts` … 造形とマテリアル。three は引数で受け取る
+  （このモジュール自体は three を引き込まない）。
+- `app/components/engine/engine.module.css` … v3のCSSを踏襲。
+
+### 守る決まり
+- **このページだけ SubpageShell（＝TrmMotion）を使わない**。v3独自のヘッダーを持つため。
+  よって **Lenis と ScrollTrigger の橋渡しは `EngineScene` が1回だけ持つ**。
+  SubpageShell を足すと Lenis が二重生成されてスクロールが壊れる。
+- 演出の尺・振り付け・カメラのキーフレーム・クランク機構の物理式・縦画面補正(dm)は
+  v3の数値そのまま。`PIN_END = "+=460%"`、scrub 0.55 / 1.05 / 0.5 も同じ。
+- **断面スイープとバルブカバーの「T-REX」プレートは不採用（復活させない）。**
+  点火・失火の閃光は火の色（オレンジ系）。シアンに戻さない。
+- JSからのDOM参照は **`data-*` 属性のみ**（`data-ch` / `data-lbl` / `data-chapnow` ほか）。
+  CSS Modules はクラス名をハッシュ化するので、クラス名でJSから引かない。
+- 演出を出す時だけルートに `data-motion="on"` を付ける。付いていない状態
+  （JS無効・reduced-motion・WebGL2非対応）では CSS 側が4幕を縦に並べた静的版に戻す。
+
+### r128 → r185 で必要だった対応（再移植時も同じ）
+- `renderer.outputEncoding = sRGBEncoding` は**削除**（現行の既定がsRGB）。
+- ライト強度は**全て ×π**。r155 で `useLegacyLights` の既定が false になり、
+  レガシー時の π 倍が外れたため。`PointLight.decay` は **明示的に 1**（現行既定は2）。
+- `map` に使う CanvasTexture は `colorSpace = SRGBColorSpace`。
+  `bumpMap` はデータなので **NoColorSpace のまま触らない**。
+- `hasWebGL()` は **webgl2 のみ**で判定する。three は r163 で WebGL1 を切ったので、
+  webgl1で「対応」と誤判定すると `new WebGLRenderer()` が例外を投げる。
+- `scene.environment` 使用時、`material.envMapIntensity` は
+  **`scene.environmentIntensity` に上書きされる**。強度調整はそこに一本化する。
+- pmndrs postprocessing を使うので **`renderer.toneMapping = NoToneMapping`**。
+  ACES は `ToneMappingEffect` 側で1回だけ掛ける（両方入れると二重）。
+  `renderer.toneMappingExposure` は pmndrs が読まないので、v3の露出1.18は
+  `ENV_INTENSITY` と `lightScale` に畳み込んである。
+
+### 依存とアセット
+- **`postprocessing`（pmndrs）6.39.4 を新規追加**。CLAUDE.md §4「新規npm依存は追加しない」
+  の例外で、要綱書での明示指定による。Zlib ライセンス、three 0.185 と peer 互換。
+  three 同梱の EffectComposer でも代替可能なので、依存を減らしたくなったら差し替えられる。
+- HDRIは `/becool` の EQUIPMENT と**同じ `public/assets/hdri/env.hdr` を使い回す**
+  （Poly Haven「quarry_01」1K・CC0）。ページ追加によるアセット増は0。
+- 周辺減光は CSS の `.vin` が既にステージ全面に掛かっているので、
+  **postprocessing 側の Vignette は入れない**（二重になるため）。
+
+### 未達（GLTFエンジンモデル）
+要綱書の「GLTFモデルを導入」は**未実施**。この作業環境から商用可ライセンスの
+4気筒エンジンglTFが入手できないため（Sketchfab・Poly Haven・poly.pizza 等の
+CC0配布元は全てプロキシが403。到達できた Khronos の `2CylinderEngine` は
+2気筒かつライセンス表記が無く、Khronos自身が新リポジトリから除外している）。
+現状は v3 由来の自作ジオメトリ。差し替える場合の接続点は `buildEngine()` が返す
+`shellG`（外殻）/ `headG`（ヘッド）/ `panG`（オイルパン）/ `crankRoot`（可動内部）で、
+全幅約7ユニット・接地 y=-1.6 に正規化して差し込む。
