@@ -28,14 +28,11 @@ const HDRI_URL = `${BASE}/assets/hdri/env.hdr`;
 const YAW_BASE = 4.0;
 const YAW_RANGE = 0.9;
 
-function hasWebGL(): boolean {
+/* three は r163 で WebGL1 を切ったので、webgl1で「対応」と判定すると
+   new WebGLRenderer() が例外を投げる。webgl2 のみで判定する。 */
+function hasWebGL2(): boolean {
   try {
-    const c = document.createElement("canvas");
-    return !!(
-      c.getContext("webgl2") ||
-      c.getContext("webgl") ||
-      c.getContext("experimental-webgl")
-    );
+    return !!document.createElement("canvas").getContext("webgl2");
   } catch {
     return false;
   }
@@ -66,7 +63,7 @@ export default function TruckScene() {
     if (!host || !canvas) return;
 
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (motionQuery.matches || !hasWebGL() || !canRun3D()) return;
+    if (motionQuery.matches || !hasWebGL2() || !canRun3D()) return;
 
     let disposed = false;
     let teardown: (() => void) | null = null;
