@@ -262,3 +262,55 @@
   Chromium の `isMobile/hasTouch` エミュレーションで代替し、その旨を報告に明記する。
 - 検証用サーバーは `out/` へのsymlink経由で立てる。リビルドしたら
   **プロセスを落として立て直す**（§3-4）。
+
+## 6. T-REX側（ルート `/`）— EQUIPMENT の3D車両ビューア
+
+`/becool` とは別に、ルート側の T-REX サイト（`app/page.tsx` ほか）には
+SERVICE と WORKS の間に **EQUIPMENT（対応車両）セクション**がある。
+クレーン付き特装車の glTF を Three.js で表示し、光と映り込みは HDRI から取る。
+
+### 構成ファイル
+- `app/components/TruckScene.tsx` … シーン本体（"use client"）
+- `app/globals.css` の「EQUIPMENT」ブロック … `.truckStage` / `.truckCanvas` / `.equipmentSpecs`
+- `public/models/crane-truck.glb` … 3.4MB（gzip 1.8MB）/ 約115K三角形
+- `public/assets/hdri/env.hdr` … Poly Haven「quarry_01」1K（CC0・屋外曇天）
+- `public/equipment-crane-truck.webp` … 3Dを出さない環境用の静止画（透過WebP・41KB）
+
+### 守る決まり
+- three とローダーは **必ず動的import**。初期バンドルに載せない。
+- HDRI は `scene.environment` にだけ入れる。**`scene.background` には使わない**
+  （黒背景とサイトの世界観は変えない）。強度は `scene.environmentIntensity = 1.0`。
+  読み込み失敗時は `console.warn` 1行だけ出して映り込みなしで続行する。
+- 回転はスクロール連動のヨー（±0.45rad）と、**fine pointer のときだけ**ドラッグ。
+  タッチではドラッグを取らない（縦スクロールを殺さないため）。
+- canvas は `pointer-events:none` + `touch-action:auto`。ポインタ操作は親
+  `.truckStage` 側で拾う。
+- IntersectionObserver（`rootMargin: 300px`）で画面に近づいたら初期化、離れたら
+  **破棄**（`renderer.dispose()` + `forceContextLoss()`）。タブ非表示で描画ループ停止。
+- reduced-motion / WebGL非対応 / `saveData` / 低性能端末（cores≤2 or memory≤1）は
+  3Dを起動せず静止画のまま。JS無効時も静止画がそのまま残る。
+- 静止画とシーンのカメラは同じ値を使う（fov 34 / 距離 `maxDim*1.22` / 高さ `maxDim*0.36` /
+  ヨー 4.0）。**片方だけ変えると切り替わる瞬間に絵が飛ぶ**ので必ず両方直す。
+
+### モデルの素性と注意（重要）
+- 元データはユーザー提供の FBX（Ural Next クレーン車）。**GTA の車両MOD由来**で、
+  ライセンスの出所がはっきりしない。商用サイトで使い続けるなら権利の確認、
+  もしくは自社車両の実写・自作モデルへの差し替えを勧めること。
+- 取り込み時に次の外国語表記を除去済み。**差し替え・再変換する時は同じ処理が必要**。
+  - ブームの赤文字（電話番号 / ЧЕЛЯБИНЕЦ / GTA MOD配布者のウォーターマーク）
+    → テクスチャ `55.png` を拡散インペイントで塗り潰し
+  - クレーン架装のメーカー銘板・ロシア語警告表記 → `57.png` を周囲色で平滑化
+  - 運転席ドアとクレーンキャビンの**三色旗デカール**
+    → テクスチャではなく純色マテリアルの小さなポリゴン。該当プリミティブを削除
+      （マテリアル `.9` / `.15` / `door_rf_ok.7` / `salon.4` / `.11` の200頂点未満）
+- フロントグリルの「URAL」ロゴは車種そのものの標識なので残してある。
+- コピーは「当社の車両」と言い切らず、**車種イメージ**である旨を必ず併記する。
+
+### 変換パイプライン（再現手順）
+リポジトリにツールは入れない。作業時にスクラッチ領域へ入れて使う。
+1. `assimp export <model>.FBX out.gltf -f gltf2`（FBX2glTF はテクスチャを解決できない）
+2. TGA を PNG へ変換し、gltf の `images[].uri` をファイル名だけに書き換える。
+   **拡張子は小文字**にする（`image/PNG` だと gltf-transform のテクスチャ処理が素通りする）
+3. 車外から見えない `MOTOR`（エンジン）と `salon`（内装）のノードを削除（頂点の約36%）
+4. `gltf-transform` で `dedup → prune → resize 1024 → webp 82 → weld → simplify 0.5 → quantize`
+   （デコーダ不要にするため Draco / meshopt は使わない。`KHR_mesh_quantization` は three が対応済み）

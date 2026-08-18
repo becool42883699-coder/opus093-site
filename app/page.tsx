@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import HeroSequence from "./components/HeroSequence";
+import TruckScene from "./components/TruckScene";
 
 const navItems = [
   ["トップ", "/"],
@@ -210,6 +211,18 @@ export default function Home() {
         <section className="contentSection services" id="service" aria-labelledby="service-title">
           <div className="sectionIntro"><p>SERVICE</p><h2 id="service-title">事業内容</h2><span data-reveal>現場のあらゆるニーズに、<br />専門性とスピードで応える。</span></div>
           <div className="serviceGrid" id="service-content">{[['01','板金塗装','美しく、使い出しの外観へ。損傷の修復もお任せください。','spray-gun'],['02','荷台換装・修理','用途に合わせた荷台の換装・修理で、作業効率と安全性を向上。','cargo-conversion'],['03','出張修理','現場まで駆けつけ、迅速に対応。ダウンタイムを最小限に。','rapid-response-tools'],['04','車両陸送・軽運送','車両や資材の陸送・軽運送に、安全かつ丁寧に対応します。','mobile-repair-truck']].map(([n,t,d,icon]) => <article className="serviceCard" key={n}><b>{n}</b><div className="serviceIcon"><UiIcon name={icon} /></div><h3>{t}</h3><p>{d}</p><Link href="/contact" aria-label={`${t}について相談する`}><Arrow /></Link></article>)}</div>
+        </section>
+        <section className="contentSection equipment" id="equipment" aria-labelledby="equipment-title">
+          <div className="sectionIntro"><p>EQUIPMENT</p><h2 id="equipment-title">対応車両</h2><span data-reveal>大型ダンプからクレーン付き特装車まで。<br />架装・修理・塗装に対応します。</span></div>
+          <div className="equipmentBody">
+            <TruckScene />
+            <ul className="equipmentSpecs">
+              <li><b>荷台換装</b><span>用途に合わせた架装・載せ替えに対応</span></li>
+              <li><b>板金塗装</b><span>全塗装から部分補修まで</span></li>
+              <li><b>出張・持込修理</b><span>現場でも工場でも対応可能</span></li>
+            </ul>
+            <p className="equipmentNote"><span className="equipmentHint">DRAG TO ROTATE</span>※ 表示している3Dモデルは車種イメージです。実際の車両とは異なります。</p>
+          </div>
         </section>
         <section className="wipeZone" aria-hidden="true">
           <div className="wipePanel"><p className="wipeLabel">PROJECT FILE</p></div>
