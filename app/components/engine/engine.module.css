@@ -22,10 +22,17 @@
 .serif { font-family: Georgia, "Hiragino Mincho ProN", "Times New Roman", serif; }
 
 /* ---- ヘッダー ------------------------------------------------------- */
+/* 固定ヘッダーは常に不透明のブランドダーク。透明にすると、下部の白いセクションに
+   かかった時にロゴ(--e-bone)とハンバーガーが白地に白で消える。命綱の電話ボタンが
+   載る帯なので、スクロール位置によらず読める状態を無条件で保証する。
+   ヒーローと4幕ステージの背景も同じ --e-ink なので、そこでは帯の存在が見えない。
+   JS無効でも成立させたいので、スクロール連動の状態切替には**しない**。 */
 .header {
   position: fixed; top: 0; left: 0; right: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between;
   padding: calc(12px + env(safe-area-inset-top)) 5vw 12px;
+  background: var(--e-ink);
+  border-bottom: 1px solid var(--e-line);
 }
 .brand { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; white-space: nowrap; font-weight: 800; letter-spacing: .22em; font-size: 14px; color: var(--e-bone); }
 .tx {

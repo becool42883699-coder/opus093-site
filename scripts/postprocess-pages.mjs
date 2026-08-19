@@ -22,7 +22,12 @@ if (basePath) {
   let patched = 0;
   for (const file of walk(OUT).filter((f) => f.endsWith(".css"))) {
     const source = readFileSync(file, "utf-8");
-    const result = source.replaceAll(/url\((['"]?)\//g, `url($1${basePath}/`);
+    /* 既に basePath が付いているものは飛ばす(このスクリプトを同じ out/ に
+       2回かけても二重に付かないようにする。付くと /opus093-site/opus093-site/… で404) */
+    const result = source.replaceAll(
+      /url\((['"]?)\/(?!$|\/)/g,
+      (m, q, offset, str) => (str.startsWith(`${basePath}/`, offset + m.length - 1) ? m : `url(${q}${basePath}/`),
+    );
     if (result !== source) {
       writeFileSync(file, result);
       patched += 1;
