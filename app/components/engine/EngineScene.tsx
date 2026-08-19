@@ -84,14 +84,16 @@ export default function EngineScene() {
         { ScrollTrigger },
         { default: Lenis },
         { HDRLoader },
+        { GLTFLoader },
         PP,
-        { buildEngine, CYLX, PH, R, L },
+        { buildEngine, PH, CRANK_CYCLE },
       ] = await Promise.all([
         import("three"),
         import("gsap"),
         import("gsap/ScrollTrigger"),
         import("lenis"),
         import("three/examples/jsm/loaders/HDRLoader.js"),
+        import("three/examples/jsm/loaders/GLTFLoader.js"),
         import("postprocessing"),
         import("./buildEngine"),
       ]);
@@ -146,12 +148,18 @@ export default function EngineScene() {
           console.warn("EngineScene: 環境マップを読み込めなかったため、映り込みなしで表示します");
         });
 
-      /* ---- エンジン本体 ---- */
-      const parts: EngineParts = buildEngine(THREE, scene, {
+      /* ---- エンジン本体(ブロックとクランク機構は glTF) ---- */
+      const parts: EngineParts = await buildEngine(THREE, new GLTFLoader(), scene, {
         dustCount: tier.dust,
         shadows: tier.shadows,
         lightScale: Math.PI * EXPOSURE,
+        basePath: base,
       });
+      if (cancelled) {
+        parts.dispose();
+        renderer.dispose();
+        return;
+      }
 
       /* ---- ポストプロセス -------------------------------------------
          Bloom は閾値を高めにして、点火の閃光とコイルの発光だけを滲ませる。
@@ -200,11 +208,6 @@ export default function EngineScene() {
       /* ---- 状態とカメラ(v3と同一の初期値) ---- */
       const state = { theta: 0.7, explode: 0, shell: 1, capSlide: 0, start: 0 };
       const cam = { az: 0.55, el: 0.31, dist: 9.4, ty: 1.25, fov: 38 };
-      const UP = new THREE.Vector3(0, 1, 0);
-      const vA = new THREE.Vector3();
-      const vB = new THREE.Vector3();
-      const vP = new THREE.Vector3();
-      const vD = new THREE.Vector3();
       let dm = 1;
       let aux = 0;
       let lastT = 0;
@@ -229,7 +232,15 @@ export default function EngineScene() {
           run * 2.4;
         aux += dt * 0.0018 * spd;
         const TH = state.theta + aux;
-        parts.crank.rotation.x = TH;
+
+        /* クランク機構(glTF)の駆動。モデルのアニメーション1周＝クランク1回転なので、
+           クランク角をそのまま時間へ写像すればスクロールと連動して回る。 */
+        const TAU = Math.PI * 2;
+        const cycle = ((TH % TAU) + TAU) % TAU;
+        parts.crankMixer.setTime((cycle / TAU) * CRANK_CYCLE);
+        /* ミキサーが position を書いた後にキャップをずらす(順番が重要) */
+        parts.setCapSlide(state.capSlide);
+
         parts.crankRoot.position.y = -0.7 * state.explode;
 
         const e = state.explode;
@@ -244,30 +255,15 @@ export default function EngineScene() {
         parts.root.position.y = Math.sin(t * 0.083) * 0.003 * vib;
         parts.pipeM.emissiveIntensity = run * 0.4;
 
+        /* 上死点の点火と、始動前半の失火のばらつき。閃光は火の色 */
         const gate = (1 - state.shell) * Math.max(0, 1 - e * 2.5);
         for (let i = 0; i < 4; i++) {
-          const th = TH + PH[i];
-          const c = Math.cos(th);
-          const sn = Math.sin(th);
-          const wristY =
-            R * c + Math.sqrt(L * L - R * R * sn * sn) + 1.15 * e + Math.sin(t * 0.001 + i) * 0.02 * e;
-          parts.pistons[i].position.y = wristY;
-          vA.set(CYLX[i], wristY, 0);
-          vP.set(CYLX[i], parts.crankRoot.position.y + R * c, R * sn);
-          vB.copy(vP).lerp(vD.set(CYLX[i], wristY - L, 0), Math.max(0, e));
-          vD.subVectors(vB, vA).normalize();
-          vB.copy(vA).addScaledVector(vD, L);
-          parts.rods[i].position.copy(vA).addScaledVector(vD, L / 2);
-          parts.rods[i].quaternion.setFromUnitVectors(UP, vD.clone().negate());
-          parts.caps[i].position.y = -0.36 * state.capSlide;
-
-          /* 失火のばらつき(始動前半)＋上死点の点火。閃光は火の色 */
+          const c = Math.cos(TH + PH[i]);
           const sput =
             crk * (1 - run) * Math.pow(Math.max(0, Math.sin(t * 0.017 + i * 2.3)), 24) * 0.6 *
             (1 - state.shell);
           const f = Math.pow(Math.max(0, c), 12) * gate * (1 + run * 0.6) + sput;
           parts.glowMats[i].opacity = Math.min(1, f * 0.85);
-          /* ライト強度は r155 で π 倍が外れたぶんを足す */
           parts.fires[i].intensity = Math.min(3.2, f * 2.6) * parts.lightScale;
         }
 

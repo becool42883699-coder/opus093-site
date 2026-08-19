@@ -113,7 +113,13 @@
 .price { color: var(--e-gold); font-style: italic; }
 .footer { padding: 0 6vw 60px; color: #5d6675; font-size: 12px; line-height: 1.9; max-width: 70ch; }
 .footer b { color: var(--e-mut); font-weight: 600; }
+.footer p { margin: 0 0 14px; }
+.footer p:last-child { margin-bottom: 0; }
 .footer a { color: var(--e-mut); text-decoration: underline; text-underline-offset: 3px; }
+.footer a:hover { color: var(--e-bone); }
+.footer a:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 2px; }
+/* CC-BY の帰属表示。ライセンス上、消さないこと */
+.credits { font-size: 11px; line-height: 1.9; color: #4f5866; }
 
 /* ---- 演出を出さないとき(reduced-motion / WebGL非対応 / JS無効) --------
    v3 の .no-motion と同じ。ステージのピンを解いて4幕を縦に並べ、全文を読ませる。

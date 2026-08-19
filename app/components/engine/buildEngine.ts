@@ -1,28 +1,57 @@
 /**
- * TRX-4 エンジンのジオメトリ・マテリアル一式を組み立てる。
- * t-rex-engine-v3.html の造形をそのまま踏襲する(寸法・配置・気筒位相は変更しない)。
+ * TRX-4 エンジンの造形。ブロックとクランク機構は GLTF モデル、
+ * シリンダーヘッド・カム・バルブ・オイルパンは t-rex-engine-v3.html の自作ジオメトリ。
  *
- * three は呼び出し側が動的importしたネームスペースを渡す。この方式なら
+ * three と GLTFLoader は呼び出し側が動的importしたものを渡す。この方式なら
  * このモジュール自体は初期バンドルに載っても three を引き込まない。
  *
- * r128 → r185 で直した点(見た目を合わせるための対応):
- *  - ライト強度は全て ×Math.PI。r155 で useLegacyLights の既定が false になり、
- *    レガシー時に掛かっていた π 倍が無くなったため。
- *  - PointLight の decay を明示的に 1 にする(r128 の既定。現行の既定は 2)。
- *  - map として使う CanvasTexture には colorSpace = SRGBColorSpace を付ける。
- *    bumpMap はデータテクスチャなので NoColorSpace のまま触らない。
+ * ── 使用している 3D モデル(いずれも CC-BY-4.0 / 商用可・要クレジット) ──
+ *  ブロック: "Inline 4 engine block diagram (see through)" by Lame3D models
+ *  クランク機構: "Rigged 4-Cylinder Engine (FREE)" by david.gnzlv
+ *  クレジットは app/engine/page.tsx のフッターに記載している。
+ *
+ * ── 2モデルとv3座標系の合わせ方(実測値。動かすと噛み合わなくなる) ──
+ *  クランク軸を y=0、気筒をX方向に置くのは v3 と同じ。
+ *  ブロックのボア中心(モデル素の値) : -1.020 / -0.280 / +0.448 / +1.192
+ *  クランク機構の気筒中心(素の値)   : 0 / 2.2534 / 4.4898 / 6.761、クランク軸 y=-3.0204
+ *  両者のボア間隔を 1.300 に揃えると BLOCK_SCALE / CRANK_SCALE が決まる。
+ *  最後に FIT_SCALE で全体をv3のシルエットに縮め、カメラのキーフレームを流用する。
+ *
+ * ── r128 → r185 で直した点 ──
+ *  - ライト強度は全て ×π(r155で useLegacyLights のπ倍が外れたため)
+ *  - PointLight の decay は明示的に 1(r128の既定。現行の既定は2)
+ *  - map に使う CanvasTexture は colorSpace = SRGBColorSpace。bumpMap は触らない
  */
 
 import type * as THREE_NS from "three";
+import type { GLTFLoader as GLTFLoaderType } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 type THREE = typeof THREE_NS;
 
-export const CYLX = [-1.8, -0.6, 0.6, 1.8];
-/** 直列4気筒のクランク位相(1-4 / 2-3 が対) */
+/** 気筒の中心X。ブロックモデルのボア間隔(1.300)に合わせてある */
+export const CYLX = [-1.949, -0.65, 0.65, 1.949];
+/** 直列4気筒のクランク位相(1-4 / 2-3 が対)。点火タイミングに使う */
 export const PH = [0, Math.PI, Math.PI, 0];
-/** クランク半径とコンロッド長 */
-export const R = 0.45;
-export const L = 1.35;
+
+/* ---- 2モデルの配置(すべて実測から算出) ---- */
+const BLOCK_SCALE = 1.7645; // ボア間隔 0.7373 → 1.300
+const BLOCK_X = -0.15; //     ボア中心の平均をv3の気筒中心に合わせる
+const BLOCK_Y = 0.95; //      デッキ面がピストン上死点の上に来る高さ
+const CRANK_SCALE = 0.57691; // 気筒間隔 2.2534 → 1.300
+const CRANK_AXIS_RAW_Y = 3.0204; // モデル素のクランク軸を y=0 へ持ち上げる量
+const CRANK_CENTER_RAW_X = 6.761 / 2; // 気筒1と気筒4の中点
+/** クランク1回転ぶんのアニメーション長(秒)。回転角からこの尺へ写像する */
+export const CRANK_CYCLE = 4 / 3;
+/** ブロックのデッキ面(この上にヘッドを載せる) */
+const DECK_Y = BLOCK_Y + (2.09 * BLOCK_SCALE) / 2;
+/** ブロックのスカート下端(この下にオイルパンを吊る) */
+const SKIRT_Y = BLOCK_Y - (2.09 * BLOCK_SCALE) / 2;
+/** v3のヘッド/パンをブロックに合わせて動かす量 */
+const HEAD_LIFT = DECK_Y - 2.2;
+const PAN_DROP = SKIRT_Y - -0.55;
+/** 組み上がった全体をv3のシルエットまで縮める。カメラのキーフレームを流用するため */
+const FIT_SCALE = 0.78;
+const FIT_Y = 0.046;
 
 /** レガシーライト相当に戻すための係数(r155でπ倍が外れたぶんを足す) */
 const LIGHT_PI = Math.PI;
@@ -38,50 +67,44 @@ export type EngineParts = {
   headG: THREE_NS.Group;
   panG: THREE_NS.Group;
   crankRoot: THREE_NS.Group;
-  crank: THREE_NS.Group;
-  pistons: THREE_NS.Group[];
-  rods: THREE_NS.Group[];
-  caps: THREE_NS.Group[];
   spin: SpinPart[];
   valves: ValvePart[];
   glowMats: THREE_NS.SpriteMaterial[];
   fires: THREE_NS.PointLight[];
   pipeM: THREE_NS.MeshStandardMaterial;
   dust: { geo: THREE_NS.BufferGeometry; mat: THREE_NS.PointsMaterial; count: number };
+  /** クランク機構のアニメーション。クランク角から時間へ写像して駆動する */
+  crankMixer: THREE_NS.AnimationMixer;
+  /** ロッドキャップ。分解の第一手として下へずらす */
+  setCapSlide: (v: number) => void;
   setShell: (o: number) => void;
   dispose: () => void;
 };
 
 export type BuildOptions = {
-  /** 塵の粒数。モバイルは半減させる */
   dustCount?: number;
-  /** 影を落とすか(低性能端末では切る) */
   shadows?: boolean;
-  /** ライト強度の係数。既定は π(r155でレガシー時のπ倍が外れたぶんを戻す) */
   lightScale?: number;
+  /** public 配下のベースパス(GitHub Pages のサブパス配信用) */
+  basePath?: string;
 };
 
-export function buildEngine(
+export async function buildEngine(
   THREE: THREE,
+  loader: GLTFLoaderType,
   scene: THREE_NS.Scene,
   options: BuildOptions = {},
-): EngineParts {
+): Promise<EngineParts> {
   const dustN = options.dustCount ?? 110;
   const shadows = options.shadows ?? true;
   const lightScale = options.lightScale ?? LIGHT_PI;
+  const base = options.basePath ?? "";
 
-  /* 破棄用に自前で集める(three は自動解放しない) */
   const geometries: THREE_NS.BufferGeometry[] = [];
   const materials: THREE_NS.Material[] = [];
   const textures: THREE_NS.Texture[] = [];
-  const track = <T extends THREE_NS.BufferGeometry>(g: T): T => {
-    geometries.push(g);
-    return g;
-  };
-  const trackM = <T extends THREE_NS.Material>(m: T): T => {
-    materials.push(m);
-    return m;
-  };
+  const track = <T extends THREE_NS.BufferGeometry>(g: T): T => (geometries.push(g), g);
+  const trackM = <T extends THREE_NS.Material>(m: T): T => (materials.push(m), m);
 
   /* ---- Canvasテクスチャ ------------------------------------------- */
   function texCanvas(
@@ -96,7 +119,6 @@ export function buildEngine(
     draw(cv.getContext("2d") as CanvasRenderingContext2D, w, h);
     const t = new THREE.CanvasTexture(cv);
     t.anisotropy = 4;
-    /* 色として見せるテクスチャだけ sRGB。bumpMap はデータなので既定のまま */
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     textures.push(t);
     return t;
@@ -197,7 +219,7 @@ export function buildEngine(
   scene.add(key);
 
   const rim = new THREE.PointLight(0x3ec1f0, 0.95 * lightScale, 24);
-  rim.decay = 1; // r128 の既定に戻す(現行の既定 2 だと届かない)
+  rim.decay = 1;
   rim.position.set(-6, 2.6, -4.5);
   scene.add(rim);
 
@@ -269,19 +291,23 @@ export function buildEngine(
   );
   const panM = std(0x121821, 0.7, 0.4, { transparent: true });
   const alumM = std(0xb9bdc2, 0.32, 0.92, { bumpMap: hairTex, bumpScale: 0.004 });
-  const alumHot = std(0x8d9096, 0.4, 0.9);
   const steelM = std(0x4c5158, 0.35, 0.95);
   const polishM = std(0x9aa2ab, 0.18, 1.0);
   const darkM = std(0x171b21, 0.5, 0.7);
   const goldM = std(0xb59a6a, 0.4, 1.0);
   const pipeM = std(0x3c4046, 0.42, 0.88, { emissive: 0xff3808, emissiveIntensity: 0 });
-  const sleeveM = std(0x7c8794, 0.25, 0.9, { transparent: true, opacity: 0.15, depthWrite: false });
   const fadeMats: THREE_NS.Material[] = [ironM, headM, coverM];
   const hudFade: THREE_NS.Material[] = [];
 
-  /* ---- 造形ヘルパー ------------------------------------------------- */
+  /* ---- グループ構成 --------------------------------------------------
+     root   … 始動時の微振動(v3が毎フレーム position を書く)
+     fit    … 2モデルを組んだ実寸を、v3のカメラで収まる大きさへ一括で縮める */
   const root = new THREE.Group();
   scene.add(root);
+  const fit = new THREE.Group();
+  fit.scale.setScalar(FIT_SCALE);
+  fit.position.y = FIT_Y;
+  root.add(fit);
 
   const plate = (
     w: number,
@@ -290,13 +316,13 @@ export function buildEngine(
     x: number,
     y: number,
     z: number,
-    parent?: THREE_NS.Object3D,
+    parent: THREE_NS.Object3D,
   ) => {
     const mat = trackM(new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
     mat.toneMapped = false;
     const m = new THREE.Mesh(track(new THREE.PlaneGeometry(w, h)), mat);
     m.position.set(x, y, z);
-    (parent || root).add(m);
+    parent.add(m);
     return m;
   };
   const box = (
@@ -307,14 +333,14 @@ export function buildEngine(
     x: number,
     y: number,
     z: number,
-    parent?: THREE_NS.Object3D,
+    parent: THREE_NS.Object3D,
     shadow?: boolean,
   ) => {
     const m = new THREE.Mesh(track(new THREE.BoxGeometry(w, h, d)), mat);
     m.position.set(x, y, z);
     if (shadow && shadows) m.castShadow = true;
     m.receiveShadow = shadows;
-    (parent || root).add(m);
+    parent.add(m);
     return m;
   };
   const cylY = (
@@ -324,14 +350,14 @@ export function buildEngine(
     x: number,
     y: number,
     z: number,
-    parent?: THREE_NS.Object3D,
+    parent: THREE_NS.Object3D,
     seg?: number,
   ) => {
     const m = new THREE.Mesh(track(new THREE.CylinderGeometry(r, r, h, seg || 24)), mat);
     m.position.set(x, y, z);
     m.castShadow = shadows;
     m.receiveShadow = shadows;
-    (parent || root).add(m);
+    parent.add(m);
     return m;
   };
   const cylX = (
@@ -341,63 +367,53 @@ export function buildEngine(
     x: number,
     y: number,
     z: number,
-    parent?: THREE_NS.Object3D,
+    parent: THREE_NS.Object3D,
     seg?: number,
   ) => {
     const m = cylY(r, h, mat, x, y, z, parent, seg);
     m.rotation.z = Math.PI / 2;
     return m;
   };
-  const torX = (
-    r: number,
-    t: number,
-    mat: THREE_NS.Material,
-    x: number,
-    y: number,
-    z: number,
-    parent?: THREE_NS.Object3D,
-  ) => {
-    const m = new THREE.Mesh(track(new THREE.TorusGeometry(r, t, 10, 26)), mat);
-    m.rotation.y = Math.PI / 2;
-    m.position.set(x, y, z);
-    m.castShadow = shadows;
-    (parent || root).add(m);
-    return m;
-  };
 
   const hexGeo = track(new THREE.CylinderGeometry(0.05, 0.05, 0.09, 6));
 
-  /* ---- 外殻(ブロック) ----------------------------------------------- */
+  /* ---- 外殻: シリンダーブロック(GLTF) -------------------------------- */
   const shellG = new THREE.Group();
-  root.add(shellG);
-  box(5.7, 2.75, 1.7, ironM, 0, 0.83, 0, shellG);
-  box(5.85, 0.16, 1.82, ironM, 0, 2.14, 0, shellG);
-  box(5.85, 0.14, 1.82, ironM, 0, -0.48, 0, shellG);
-  box(0.5, 0.5, 1.9, ironM, -2.85, 0.5, 0, shellG);
-  box(0.5, 0.5, 1.9, ironM, 2.85, 0.5, 0, shellG);
-  [-2.4, -1.2, 1.2, 2.4].forEach((wx) => box(0.14, 1.6, 0.1, ironM, wx, 0.95, 0.83, shellG));
-  box(5.4, 0.06, 0.1, darkM, 0, 1.88, 0.85, shellG);
-  box(5.4, 0.06, 0.1, darkM, 0, 0.16, 0.85, shellG);
-  CYLX.forEach((x) => {
-    const fp = new THREE.Mesh(track(new THREE.CylinderGeometry(0.15, 0.15, 0.07, 20)), alumM);
-    fp.rotation.x = Math.PI / 2;
-    fp.position.set(x, 0.6, 0.88);
-    shellG.add(fp);
-    const fr = new THREE.Mesh(track(new THREE.TorusGeometry(0.15, 0.02, 8, 22)), darkM);
-    fr.position.set(x, 0.6, 0.91);
-    shellG.add(fr);
-  });
-  const oilF = new THREE.Mesh(track(new THREE.CylinderGeometry(0.26, 0.26, 0.44, 22)), goldM);
-  oilF.rotation.x = Math.PI / 2;
-  oilF.position.set(2.2, 0.14, 1.0);
-  oilF.castShadow = shadows;
-  shellG.add(oilF);
-  box(2.06, 0.54, 0.05, darkM, 0, 1.52, 0.85, shellG);
-  const badge = plate(1.9, 0.44, textTex("TRX-4 · 1998", "#3EC1F0", "#0a0f16", 720), 0, 1.52, 0.885, shellG);
+  fit.add(shellG);
+  const blockGltf = await loader.loadAsync(`${base}/models/engine-block.glb`);
+  const blockRoot = blockGltf.scene;
+  {
+    const bbox = new THREE.Box3().setFromObject(blockRoot);
+    blockRoot.position.sub(bbox.getCenter(new THREE.Vector3()));
+    const holder = new THREE.Group();
+    holder.add(blockRoot);
+    holder.scale.setScalar(BLOCK_SCALE);
+    holder.position.set(BLOCK_X, BLOCK_Y, 0);
+    shellG.add(holder);
+    blockRoot.traverse((o) => {
+      const mesh = o as THREE_NS.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.material = ironM;
+      mesh.castShadow = shadows;
+      mesh.receiveShadow = shadows;
+      geometries.push(mesh.geometry);
+    });
+  }
+  /* 型式プレート。ブロック側面に貼るのでX線と一緒に消える */
+  const badge = plate(
+    1.9,
+    0.44,
+    textTex("TRX-4 · 1998", "#3EC1F0", "#0a0f16", 720),
+    0,
+    1.5,
+    (1.526 * BLOCK_SCALE) / 2 + 0.02,
+    shellG,
+  );
 
-  /* ---- ヘッド周り --------------------------------------------------- */
+  /* ---- ヘッド周り(v3の自作。ブロックのデッキ面に載せる) -------------- */
   const headG = new THREE.Group();
-  root.add(headG);
+  headG.position.y = HEAD_LIFT;
+  fit.add(headG);
   box(5.7, 0.7, 1.6, headM, 0, 2.55, 0, headG);
   box(5.15, 0.42, 1.28, coverM, 0, 3.1, 0, headG);
   box(4.7, 0.12, 1.06, coverM, 0, 3.35, 0, headG);
@@ -506,9 +522,10 @@ export function buildEngine(
   box(3.6, 0.34, 0.44, pipeM, 0, 0.98, -1.48, headG, true);
   cylY(0.12, 0.3, goldM, 1.9, 0.85, -1.48, headG, 14);
 
-  /* ---- オイルパン --------------------------------------------------- */
+  /* ---- オイルパン(v3の自作。ブロックのスカート下端に吊る) ------------ */
   const panG = new THREE.Group();
-  root.add(panG);
+  panG.position.y = PAN_DROP;
+  fit.add(panG);
   box(5.1, 0.4, 1.5, panM, 0, -0.75, 0, panG);
   box(3.0, 0.5, 1.3, panM, 0, -1.15, 0, panG);
   cylY(0.06, 0.08, goldM, 0, -1.42, 0, panG);
@@ -526,194 +543,46 @@ export function buildEngine(
   }
   panG.add(panBolts);
 
-  /* ---- シリンダースリーブ ------------------------------------------- */
-  CYLX.forEach((x) => {
-    const s = new THREE.Mesh(
-      track(new THREE.CylinderGeometry(0.44, 0.44, 1.25, 26, 1, true)),
-      sleeveM,
-    );
-    s.position.set(x, 1.575, 0);
-    root.add(s);
-  });
-
-  /* ---- クランクシャフト --------------------------------------------- */
+  /* ---- 可動内部: クランク + コンロッド + ピストン(GLTF・リグ付き) ----
+     モデルのアニメーションがクランク1回転そのものなので、
+     クランク角を時間へ写像して駆動する(スクロール連動はこの1本で効く)。 */
   const crankRoot = new THREE.Group();
-  root.add(crankRoot);
-  const crank = new THREE.Group();
-  crankRoot.add(crank);
-  cylX(0.14, 6.0, steelM, 0, 0, 0, crank);
-  [-2.4, -1.2, 0, 1.2, 2.4].forEach((x) => cylX(0.18, 0.2, polishM, x, 0, 0, crank));
-  CYLX.forEach((x, i) => {
-    const thr = new THREE.Group();
-    thr.position.x = x;
-    thr.rotation.x = PH[i];
-    crank.add(thr);
-    [-0.19, 0.19].forEach((dx) => {
-      box(0.13, 1.02, 0.46, steelM, dx, 0.1, 0, thr, true);
-      box(0.16, 0.44, 0.72, steelM, dx, -0.5, 0, thr, true);
-      cylX(0.3, 0.15, steelM, dx, -0.52, 0, thr);
-    });
-    cylX(0.13, 0.36, polishM, 0, R, 0, thr);
-  });
+  fit.add(crankRoot);
+  const crankGltf = await loader.loadAsync(`${base}/models/engine-crank.glb`);
+  const crankModel = crankGltf.scene;
+  crankModel.position.set(-CRANK_CENTER_RAW_X, CRANK_AXIS_RAW_Y, 0);
+  const crankHolder = new THREE.Group();
+  crankHolder.add(crankModel);
+  crankHolder.scale.setScalar(CRANK_SCALE);
+  crankRoot.add(crankHolder);
 
-  const timing = new THREE.Group();
-  timing.position.x = -2.72;
-  crank.add(timing);
-  const td = new THREE.Mesh(track(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 20)), steelM);
-  td.rotation.z = Math.PI / 2;
-  timing.add(td);
-  for (let t = 0; t < 8; t++) {
-    const a = (t / 8) * Math.PI * 2;
-    const to = new THREE.Mesh(track(new THREE.BoxGeometry(0.07, 0.06, 0.06)), darkM);
-    to.position.set(0, Math.cos(a) * 0.2, Math.sin(a) * 0.2);
-    to.rotation.x = a;
-    timing.add(to);
-  }
-
-  const fly = new THREE.Group();
-  fly.position.x = 3.35;
-  crank.add(fly);
-  const fd = new THREE.Mesh(track(new THREE.CylinderGeometry(1.05, 1.05, 0.18, 40)), steelM);
-  fd.rotation.z = Math.PI / 2;
-  fd.castShadow = shadows;
-  fly.add(fd);
-  const toothGeo = track(new THREE.BoxGeometry(0.16, 0.09, 0.1));
-  const flyTeeth = new THREE.InstancedMesh(toothGeo, darkM, 36);
-  {
-    const m4 = new THREE.Matrix4();
-    const e = new THREE.Euler();
-    const q = new THREE.Quaternion();
-    const p = new THREE.Vector3();
-    const s = new THREE.Vector3(1, 1, 1);
-    for (let t = 0; t < 36; t++) {
-      const a = (t / 36) * Math.PI * 2;
-      p.set(0, Math.cos(a) * 1.1, Math.sin(a) * 1.1);
-      e.set(a, 0, 0);
-      q.setFromEuler(e);
-      m4.compose(p, q, s);
-      flyTeeth.setMatrixAt(t, m4);
+  const capNodes: { node: THREE_NS.Object3D; baseY: number }[] = [];
+  crankModel.traverse((o) => {
+    const mesh = o as THREE_NS.Mesh;
+    if (mesh.isMesh) {
+      const name = (o.parent?.name || o.name).toLowerCase();
+      mesh.material = /pist|biela/.test(name) ? alumM : /bul/.test(name) ? polishM : steelM;
+      mesh.castShadow = shadows;
+      mesh.receiveShadow = shadows;
+      geometries.push(mesh.geometry);
     }
-    flyTeeth.instanceMatrix.needsUpdate = true;
-  }
-  fly.add(flyTeeth);
+    /* ロッドキャップ(Biela inferior)は分解の第一手で下へ抜く */
+    if (/inferior/i.test(o.name)) capNodes.push({ node: o, baseY: o.position.y });
+  });
+  const crankMixer = new THREE.AnimationMixer(crankModel);
+  crankMixer.clipAction(crankGltf.animations[0]).play();
+  crankMixer.setTime(0);
 
-  const pul = new THREE.Group();
-  pul.position.x = -3.3;
-  crank.add(pul);
-  const pd = new THREE.Mesh(track(new THREE.CylinderGeometry(0.55, 0.55, 0.24, 30)), darkM);
-  pd.rotation.z = Math.PI / 2;
-  pd.castShadow = shadows;
-  pul.add(pd);
-  const pr = new THREE.Mesh(track(new THREE.TorusGeometry(0.55, 0.05, 8, 30)), steelM);
-  pr.rotation.y = Math.PI / 2;
-  pul.add(pr);
-  const markMat = trackM(new THREE.MeshBasicMaterial({ color: 0x3ec1f0 }));
-  markMat.toneMapped = false;
-  const mark = new THREE.Mesh(track(new THREE.BoxGeometry(0.14, 0.1, 0.08)), markMat);
-  mark.position.set(0, 0.5, 0);
-  pul.add(mark);
+  const setCapSlide = (v: number) => {
+    /* ミキサーが毎フレーム position を書くので、setTime の後に呼ぶこと */
+    for (const c of capNodes) c.node.position.y = c.baseY - 1.05 * v;
+  };
 
-  /* ---- ピストンとコンロッド ----------------------------------------- */
-  const crownPts = [
-    new THREE.Vector2(0, 0.355),
-    new THREE.Vector2(0.14, 0.385),
-    new THREE.Vector2(0.27, 0.395),
-    new THREE.Vector2(0.36, 0.36),
-    new THREE.Vector2(0.4, 0.3),
-    new THREE.Vector2(0.4, 0.08),
-  ];
-  const crownGeo = track(new THREE.LatheGeometry(crownPts, 26));
-
-  const rodShape = new THREE.Shape();
-  rodShape.moveTo(-0.06, 0.07);
-  rodShape.lineTo(0.06, 0.07);
-  rodShape.lineTo(0.06, 0.045);
-  rodShape.lineTo(0.016, 0.045);
-  rodShape.lineTo(0.016, -0.045);
-  rodShape.lineTo(0.06, -0.045);
-  rodShape.lineTo(0.06, -0.07);
-  rodShape.lineTo(-0.06, -0.07);
-  rodShape.lineTo(-0.06, -0.045);
-  rodShape.lineTo(-0.016, -0.045);
-  rodShape.lineTo(-0.016, 0.045);
-  rodShape.lineTo(-0.06, 0.045);
-  rodShape.lineTo(-0.06, 0.07);
-  const shankLen = L - 0.56;
-  const rodGeo = track(
-    new THREE.ExtrudeGeometry(rodShape, {
-      depth: shankLen,
-      bevelEnabled: true,
-      bevelThickness: 0.008,
-      bevelSize: 0.008,
-      bevelSegments: 2,
-      curveSegments: 4,
-    }),
-  );
-  rodGeo.rotateX(-Math.PI / 2);
-  rodGeo.translate(0, 0.02 - shankLen / 2, 0);
-
-  const pistons: THREE_NS.Group[] = [];
-  const rods: THREE_NS.Group[] = [];
-  const caps: THREE_NS.Group[] = [];
+  /* ---- 点火の閃光(気筒の上、ブロックのデッキ直下) --------------------- */
   const glowMats: THREE_NS.SpriteMaterial[] = [];
   const fires: THREE_NS.PointLight[] = [];
-
-  const buildPiston = (x: number) => {
-    const p = new THREE.Group();
-    p.position.set(x, 1.6, 0);
-    root.add(p);
-    const crown = new THREE.Mesh(crownGeo, alumM);
-    crown.castShadow = shadows;
-    p.add(crown);
-    const band = new THREE.Mesh(track(new THREE.CylinderGeometry(0.4, 0.4, 0.14, 26)), alumHot);
-    band.position.y = 0.05;
-    p.add(band);
-    ([[0.31, darkM, 0.016], [0.25, darkM, 0.016], [0.18, goldM, 0.013]] as const).forEach((rr) => {
-      const g = new THREE.Mesh(track(new THREE.TorusGeometry(0.4, rr[2], 8, 30)), rr[1]);
-      g.rotation.x = Math.PI / 2;
-      g.position.y = rr[0];
-      p.add(g);
-    });
-    [-1.15, Math.PI - 1.15].forEach((ts) => {
-      const sk = new THREE.Mesh(
-        track(new THREE.CylinderGeometry(0.4, 0.38, 0.42, 20, 1, true, ts, 2.3)),
-        alumM,
-      );
-      sk.position.y = -0.13;
-      sk.castShadow = shadows;
-      p.add(sk);
-    });
-    cylX(0.14, 0.12, alumM, -0.2, 0, 0, p);
-    cylX(0.14, 0.12, alumM, 0.2, 0, 0, p);
-    cylX(0.068, 0.6, polishM, 0, 0, 0, p);
-    torX(0.075, 0.012, darkM, -0.29, 0, 0, p);
-    torX(0.075, 0.012, darkM, 0.29, 0, 0, p);
-    return p;
-  };
-
-  const buildRod = () => {
-    const g = new THREE.Group();
-    root.add(g);
-    torX(0.12, 0.05, alumM, 0, L / 2, 0, g);
-    const shank = new THREE.Mesh(rodGeo, alumM);
-    shank.castShadow = shadows;
-    g.add(shank);
-    torX(0.19, 0.055, alumM, 0, -L / 2, 0, g);
-    const cap = new THREE.Group();
-    g.add(cap);
-    box(0.17, 0.12, 0.3, steelM, 0, -L / 2 - 0.14, 0, cap, true);
-    [0.13, -0.13].forEach((z) => {
-      const b = new THREE.Mesh(track(new THREE.CylinderGeometry(0.03, 0.03, 0.17, 6)), polishM);
-      b.position.set(0, -L / 2 - 0.03, z);
-      cap.add(b);
-    });
-    caps.push(cap);
-    return g;
-  };
-
+  const FLASH_Y = DECK_Y - 0.1;
   CYLX.forEach((x) => {
-    pistons.push(buildPiston(x));
-    rods.push(buildRod());
     const gm = trackM(
       new THREE.SpriteMaterial({
         map: glowTex,
@@ -726,13 +595,13 @@ export function buildEngine(
     ) as THREE_NS.SpriteMaterial;
     glowMats.push(gm);
     const sp = new THREE.Sprite(gm);
-    sp.position.set(x, 2.02, 0);
-    sp.scale.set(1.1, 1.1, 1);
-    root.add(sp);
+    sp.position.set(x, FLASH_Y, 0);
+    sp.scale.set(1.3, 1.3, 1);
+    fit.add(sp);
     const li = new THREE.PointLight(0xff7a30, 0, 2.8);
     li.decay = 1;
-    li.position.set(x, 1.95, 0);
-    root.add(li);
+    li.position.set(x, FLASH_Y - 0.1, 0);
+    fit.add(li);
     fires.push(li);
   });
 
@@ -778,7 +647,8 @@ export function buildEngine(
     for (const t of textures) t.dispose();
     headBolts.dispose();
     panBolts.dispose();
-    flyTeeth.dispose();
+    crankMixer.stopAllAction();
+    crankMixer.uncacheRoot(crankModel);
     scene.remove(root);
   };
 
@@ -789,16 +659,14 @@ export function buildEngine(
     headG,
     panG,
     crankRoot,
-    crank,
-    pistons,
-    rods,
-    caps,
     spin,
     valves,
     glowMats,
     fires,
     pipeM,
     dust: { geo: dustGeo, mat: dustMat, count: dustN },
+    crankMixer,
+    setCapSlide,
     setShell,
     dispose,
   };

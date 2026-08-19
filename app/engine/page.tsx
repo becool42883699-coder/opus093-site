@@ -121,10 +121,45 @@ export default function EnginePage() {
       </section>
 
       <footer className={styles.footer}>
-        <b>制作メモ。</b>
-        このページのエンジンは写真ではなく、ブラウザ上でリアルタイムに描いている3Dです。
-        始動シーンはクランキング→初爆→安定回転を実時間で回しています。バルブ16本はカムに叩かれて実際に動き、
-        ピストンはクランク機構の物理式でリアルタイム計算しています。T-REX WORKS制作。
+        <p>
+          <b>制作メモ。</b>
+          このページのエンジンは写真ではなく、ブラウザ上でリアルタイムに描いている3Dです。
+          シリンダーブロックとクランク機構は3Dモデル、シリンダーヘッド・カム・バルブ・オイルパンは
+          プログラムで生成しています。始動シーンはクランキング→初爆→安定回転を実時間で回しており、
+          バルブ16本はカムに叩かれて実際に動きます。T-REX WORKS制作。
+        </p>
+        <p className={styles.credits}>
+          <b>3Dモデルのクレジット。</b>
+          This work is based on{" "}
+          <a
+            href="https://sketchfab.com/3d-models/inline-4-engine-block-diagram-see-through-cf087cd5f8ff4dd495576d206a6dafcf"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            &quot;Inline 4 engine block diagram (see through)&quot;
+          </a>{" "}
+          by{" "}
+          <a href="https://sketchfab.com/Lame3dModels" rel="noopener noreferrer" target="_blank">
+            Lame3D models
+          </a>{" "}
+          and{" "}
+          <a
+            href="https://sketchfab.com/3d-models/rigged-4-cylinder-engine-free-e14ebe68273d49a3becda6802270b4b0"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            &quot;Rigged 4-Cylinder Engine (FREE)&quot;
+          </a>{" "}
+          by{" "}
+          <a href="https://sketchfab.com/david.gnzlv" rel="noopener noreferrer" target="_blank">
+            david.gnzlv
+          </a>
+          , licensed under{" "}
+          <a href="http://creativecommons.org/licenses/by/4.0/" rel="noopener noreferrer" target="_blank">
+            CC-BY-4.0
+          </a>
+          . 環境マップは Poly Haven「quarry_01」(CC0)。
+        </p>
       </footer>
     </div>
   );
