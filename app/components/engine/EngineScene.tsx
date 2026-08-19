@@ -10,8 +10,8 @@
  * app/engine/page.tsx がサーバー側で出しており、ここからは data-* 属性で拾う
  * (app/components/TrmMotion.tsx と同じ流儀。JS無効でも本文が読める)。
  *
- * このページは独自ヘッダーのため SubpageShell(=TrmMotion) を使わない。
- * したがって Lenis と ScrollTrigger の橋渡しはこのコンポーネントが1回だけ持つ。
+ * Lenis の橋渡しはトップページの TopMotion が唯一の所有者。ここは作らない
+ * (2つ作るとスクロールが震えて壊れる。CLAUDE.md §3 の Lenis 二重生成)。
  */
 
 import { useEffect, useRef } from "react";
@@ -35,6 +35,25 @@ function hasWebGL2(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * ヒーローが描き終わってから重いアセット(three / postprocessing / glb 2本 / HDRI)を
+ * 取りに行くためのゲート。LCP はヒーローの見出しテキストなので、そこへ帯域と
+ * メインスレッドを奪わせない。rAF 2回で「初回ペイント済み」を待ち、そのあと
+ * アイドル(最長1.5秒で打ち切り)でプリフェッチを始める。
+ */
+function afterHeroPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number })
+      .requestIdleCallback;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (idle) idle(() => resolve(), { timeout: 1500 });
+        else setTimeout(resolve, 200);
+      }),
+    );
+  });
 }
 
 type Tier = { dpr: number; dust: number; shadows: boolean; ssao: boolean; bloomScale: number };
@@ -78,11 +97,12 @@ export default function EngineScene() {
     let cleanup = () => {};
 
     const setup = async () => {
+      await afterHeroPaint();
+      if (cancelled) return;
       const [
         THREE,
         { gsap },
         { ScrollTrigger },
-        { default: Lenis },
         { HDRLoader },
         { GLTFLoader },
         PP,
@@ -91,7 +111,6 @@ export default function EngineScene() {
         import("three"),
         import("gsap"),
         import("gsap/ScrollTrigger"),
-        import("lenis"),
         import("three/examples/jsm/loaders/HDRLoader.js"),
         import("three/examples/jsm/loaders/GLTFLoader.js"),
         import("postprocessing"),
@@ -109,7 +128,8 @@ export default function EngineScene() {
           powerPreference: "high-performance",
         });
       } catch {
-        return; // コンテキストが取れない端末は静的フォールバックのまま
+        delete document.documentElement.dataset.engineMotion; // 静的版へ戻す
+        return;
       }
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, tier.dpr));
       /* トーンマッピングは Composer の ToneMappingEffect に一本化する。
@@ -117,6 +137,16 @@ export default function EngineScene() {
       renderer.toneMapping = THREE.NoToneMapping;
       renderer.shadowMap.enabled = tier.shadows;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      /* glb 2本 + HDRI の読み込み進捗。スピナーではなく細いバーで見せる */
+      const bar = page.querySelector<HTMLElement>("[data-engine-progress]");
+      const manager = new THREE.LoadingManager();
+      manager.onProgress = (_url, loaded, total) => {
+        if (bar && total > 0) bar.style.transform = `scaleX(${Math.min(1, loaded / total)})`;
+      };
+      manager.onLoad = () => {
+        page.dataset.assets = "ready";
+      };
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x05080d);
@@ -132,7 +162,7 @@ export default function EngineScene() {
          上書きされるので、調整はこの1箇所に集約する。 */
       let envMap: THREE_NS.Texture | null = null;
       const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
-      new HDRLoader()
+      new HDRLoader(manager)
         .loadAsync(`${base}/assets/hdri/env.hdr`)
         .then((texture) => {
           if (cancelled) {
@@ -149,7 +179,7 @@ export default function EngineScene() {
         });
 
       /* ---- エンジン本体(ブロックとクランク機構は glTF) ---- */
-      const parts: EngineParts = await buildEngine(THREE, new GLTFLoader(), scene, {
+      const parts: EngineParts = await buildEngine(THREE, new GLTFLoader(manager), scene, {
         dustCount: tier.dust,
         shadows: tier.shadows,
         lightScale: Math.PI * EXPOSURE,
@@ -313,19 +343,9 @@ export default function EngineScene() {
         composer.render();
       };
 
-      /* ---- Lenis + ScrollTrigger の橋渡し(このページの唯一の所有者) ---- */
+      /* Lenis の橋渡しは TopMotion が持つ(2つ作るとスクロールが壊れるため)。
+         ここは ScrollTrigger のタイムラインを積むだけ。 */
       gsap.registerPlugin(ScrollTrigger);
-      const coarse = window.matchMedia("(pointer: coarse)").matches;
-      const lenis = coarse
-        ? null
-        : new Lenis({ duration: 1.15, smoothWheel: true, wheelMultiplier: 0.88 });
-      const onLenisScroll = () => ScrollTrigger.update();
-      const raf = (time: number) => lenis?.raf(time * 1000);
-      if (lenis) {
-        lenis.on("scroll", onLenisScroll);
-        gsap.ticker.add(raf);
-        gsap.ticker.lagSmoothing(0);
-      }
 
       /* 演出用レイアウトへ切り替えてから採寸する(ピン位置がずれないよう順番が重要) */
       page.dataset.motion = "on";
@@ -351,8 +371,9 @@ export default function EngineScene() {
       applyLoop();
 
       /* 章表示の切り替え */
-      const nowEl = page.querySelector<HTMLElement>("[data-chapnow]");
-      const navEls = Array.from(page.querySelectorAll<HTMLElement>("[data-chapnav]"));
+      /* 章インジケータと章ナビは固定ヘッダー側にある(= .page の外)ので document から引く */
+      const nowEl = document.querySelector<HTMLElement>("[data-chapnow]");
+      const navEls = Array.from(document.querySelectorAll<HTMLElement>("[data-chapnav]"));
       let cur = -1;
       const setChapter = (i: number) => {
         if (i === cur) return;
@@ -367,7 +388,6 @@ export default function EngineScene() {
       /* ---- 振り付け(絶対時刻。合計9.4。v3の値をそのまま) ---- */
       const shellProxy = { o: 1 };
       const ctx = gsap.context(() => {
-        gsap.from("[data-rise]", { y: 56, autoAlpha: 0, duration: 1.1, stagger: 0.09, ease: "power3.out" });
         gsap.to("[data-progress]", {
           scaleX: 1,
           ease: "none",
@@ -387,6 +407,10 @@ export default function EngineScene() {
             onUpdate: (self) => {
               const p = self.progress;
               setChapter(p < 0.2 ? 0 : p < 0.43 ? 1 : p < 0.71 ? 2 : 3);
+            },
+            /* 章ナビはピン区間にいる間だけ出す(下のセクションでは邪魔になる) */
+            onToggle: (self) => {
+              document.documentElement.dataset.enginePinned = self.isActive ? "true" : "false";
             },
             onLeave: () => setChapter(3),
             onEnterBack: () => setChapter(3),
@@ -459,12 +483,6 @@ export default function EngineScene() {
         ctx.revert();
         document.removeEventListener("visibilitychange", onVisibility);
         window.removeEventListener("resize", resize);
-        if (lenis) {
-          lenis.off("scroll", onLenisScroll);
-          gsap.ticker.remove(raf);
-          lenis.destroy();
-          gsap.ticker.lagSmoothing(1000, 16); // 既定へ戻す
-        }
         parts.dispose();
         composer.dispose();
         envMap?.dispose();
@@ -472,6 +490,7 @@ export default function EngineScene() {
         renderer.dispose();
         renderer.forceContextLoss();
         delete page.dataset.motion;
+        delete document.documentElement.dataset.enginePinned;
       };
       if (cancelled) cleanup();
     };

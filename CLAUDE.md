@@ -315,14 +315,19 @@ SERVICE と WORKS の間に **EQUIPMENT（対応車両）セクション**があ
 4. `gltf-transform` で `dedup → prune → resize 1024 → webp 82 → weld → simplify 0.5 → quantize`
    （デコーダ不要にするため Draco / meshopt は使わない。`KHR_mesh_quantization` は three が対応済み）
 
-## 7. T-REX側 `/engine` — TRX-4 オーバーホールの4幕ページ
+## 7. TRX-4 オーバーホールの4幕演出（**トップページ `/` に移設済み**）
 
-`t-rex-engine-v3.html`（ユーザー提供のHTML1枚デモ）を移植したストーリーページ。
+`t-rex-engine-v3.html`（ユーザー提供のHTML1枚デモ）を移植したストーリー演出。
 スクロールで **鉄の塊 → 透視 → 手組み → 始動** の4幕が進む。
 
+> **2026-08-19: `/engine` を廃止し、演出はトップ `/` の主役に移した。**
+> 配置と命綱の決まりは §8 を必ず読むこと。`/engine` には `/` へ転送する置き石だけが
+> 残っている（`app/engine/page.tsx` + `EngineRedirect.tsx`、それと
+> `scripts/postprocess-pages.mjs` が `out/engine/index.html` に挿す meta refresh）。
+
 ### 構成ファイル
-- `app/engine/page.tsx` … サーバーコンポーネント。4幕のコピー・ラベル・諸元・CTAを
-  **静的HTMLで出し切る**（JS無効・クローラでも全文が読める）。
+- `app/TopPage.tsx` … 4幕のコピー・ラベル・諸元を**静的HTMLで出し切る**
+  （JS無効・クローラでも全文が読める）。旧 `app/engine/page.tsx` の役割を引き継いだ。
 - `app/components/engine/EngineSceneMount.tsx` … `next/dynamic(ssr:false)` の薄い包み。
 - `app/components/engine/EngineScene.tsx` … WebGL＋GSAP＋Lenis。描くDOMは `<canvas>` だけ。
 - `app/components/engine/buildEngine.ts` … 造形とマテリアル。three は引数で受け取る
@@ -330,17 +335,19 @@ SERVICE と WORKS の間に **EQUIPMENT（対応車両）セクション**があ
 - `app/components/engine/engine.module.css` … v3のCSSを踏襲。
 
 ### 守る決まり
-- **このページだけ SubpageShell（＝TrmMotion）を使わない**。v3独自のヘッダーを持つため。
-  よって **Lenis と ScrollTrigger の橋渡しは `EngineScene` が1回だけ持つ**。
-  SubpageShell を足すと Lenis が二重生成されてスクロールが壊れる。
+- **SubpageShell（＝TrmMotion）を使わない**。v3独自のヘッダーを持つため。
+  **Lenis と ScrollTrigger の橋渡しは `app/components/TopMotion.tsx` が唯一の所有者**で、
+  `EngineScene` は Lenis を作らない。2つ作るとホイール1回で2倍スクロールし、
+  `<html>` の `lenis-*` クラスが発振して操作感が壊れる（§8 も参照）。
 - 演出の尺・振り付け・カメラのキーフレーム・クランク機構の物理式・縦画面補正(dm)は
   v3の数値そのまま。`PIN_END = "+=460%"`、scrub 0.55 / 1.05 / 0.5 も同じ。
 - **断面スイープとバルブカバーの「T-REX」プレートは不採用（復活させない）。**
   点火・失火の閃光は火の色（オレンジ系）。シアンに戻さない。
 - JSからのDOM参照は **`data-*` 属性のみ**（`data-ch` / `data-lbl` / `data-chapnow` ほか）。
   CSS Modules はクラス名をハッシュ化するので、クラス名でJSから引かない。
-- 演出を出す時だけルートに `data-motion="on"` を付ける。付いていない状態
-  （JS無効・reduced-motion・WebGL2非対応）では CSS 側が4幕を縦に並べた静的版に戻す。
+- 演出を出す時だけ `<html>` に `data-engine-motion="on"` を付ける。判定は **初回ペイント前**に
+  走るインラインスクリプト（`TopPage.tsx` の `MOTION_PROBE`）が行うので、レイアウトが飛ばない。
+  付いていない状態（JS無効・reduced-motion・WebGL2非対応）では CSS 側が4幕を縦に並べた静的版に戻す。
 
 ### r128 → r185 で必要だった対応（再移植時も同じ）
 - `renderer.outputEncoding = sRGBEncoding` は**削除**（現行の既定がsRGB）。
@@ -394,3 +401,54 @@ SERVICE と WORKS の間に **EQUIPMENT（対応車両）セクション**があ
 順番を逆にすると毎フレーム上書きされて分解が効かなくなる。
 
 差し替える場合の接続点は `buildEngine()` の `shellG`（外殻）/ `headG` / `panG` / `crankRoot`。
+
+## 8. トップページ `/` の構成（2026-08-19 全面差し替え）
+
+旧トップ（写真ヒーロー）を廃し、**§7 の4幕エンジン体験を主役**に据えた。
+体験を優先しつつ「急いで電話したい客」を取りこぼさないのが最優先の設計要件で、
+下の**命綱**は演出の都合で削ってはいけない。
+
+### ファイル分割の理由
+- `app/page.tsx` … **サーバーコンポーネント**。`metadata` / OGP / JSON-LD だけを持つ薄い包み。
+  トップは `"use client"` なので、metadata を持たせるにはこの分割が要る。
+- `app/TopPage.tsx` … 本体（`"use client"`）。固定ヘッダー・ヒーロー・4幕・下部セクション・
+  フッターまで全部ここ。
+- `app/components/TopMotion.tsx` … Lenis + ScrollTrigger の**唯一の所有者**（§7 参照）。
+- `app/components/lenisBridge.ts` … Lenis インスタンスの受け渡しと `scrollToElement()`。
+  Lenis が無い時（モバイル／reduced-motion）はネイティブスクロールに落ちる。
+
+### 上から順の構成（並べ替えは可、削除は不可）
+ヒーロー（即時表示） → 4幕エンジン体験（ピン区間） → 諸元 → 実績バッジ →
+サービス → EQUIPMENT（3D車両・§6） → 黒→白ワイプ → 施工実績 → 会社情報/アクセス →
+問い合わせCTA → フッター（CC-BY クレジット付き）。
+
+### 命綱（合否ライン。触る前に必ず確認する）
+1. **固定ヘッダーの電話ボタンは全スクロール位置で押せる。** ピン区間中も消さない・
+   隠さない・`pointer-events` を切らない。SPは電話アイコン＋番号で1タップ発信
+   （`.telLead` の「電話」ラベルだけ 640px 未満で隠す）。
+2. **ヒーローの電話ボタンはHTMLとして即時表示**。`TopMotion` のフェードイン
+   （`[data-hero-rise]`）の**対象に入れない**。LCPはヒーローのテキストであること
+   （canvasにしない）。
+3. **ヒーローの「サービス一覧へ ↓」でピン区間を飛ばせる**（`scrollToElement()` 経由）。
+   往復してもピンが壊れないこと。
+4. reduced-motion / JS無効 / WebGL2非対応では、4幕が縦積みの静的テキストに落ち、
+   ヒーローと下部セクションが完全に読める。
+
+### 章インジケータの注意
+`[data-chapnow]` / `[data-chapnav]` は**固定ヘッダー側にあり `.page` の外**。
+`EngineScene` はこれらを `document` から引く。`page.querySelector` にすると
+永久に「01 — 鉄の塊」のまま止まる（実際に踏んだ）。
+狭い画面（720px未満）では `.chapnow` を隠してロゴと電話ボタンに場所を譲る。
+
+### 読み込みの順番
+`EngineScene` は `afterHeroPaint()`（rAF×2 → `requestIdleCallback`、最長1.5秒）を
+待ってから three / postprocessing / glb 2本 / HDRI を取りに行く。ヒーローの
+LCPと帯域を食い合わせないため。読み込み中は**黒いcanvas＋シアンの細いバー**
+（`.loadTrack` / `[data-engine-progress]`、`THREE.LoadingManager` が駆動）。
+**スピナーは使わない。** 完了で `[data-engine-page]` に `data-assets="ready"`。
+
+### 旧 `/engine` の転送
+静的エクスポートでは `next.config` の `redirects` が効かないので、
+`scripts/postprocess-pages.mjs` が `out/engine/index.html` の `<head>` 先頭に
+`<meta http-equiv="refresh">` を挿す。canonical は `app/engine/page.tsx` 側で `/` を指す。
+JS無効でも転送される。**sitemap.xml / llms.txt に `/engine` を復活させない。**
