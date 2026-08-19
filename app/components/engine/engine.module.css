@@ -109,7 +109,45 @@
   min-height: 100vh; min-height: 100svh;
   display: flex; flex-direction: column; justify-content: center;
   padding: 20vh 6vw 12vh; position: relative;
+  isolation: isolate; overflow: hidden;
 }
+/* ヒーローの背景。ブランドのメインビジュアルを敷き、その上に暗幕を重ねる。
+   ::before = 写真（**CSSの background-image で敷く**ので LCP 候補にならない。
+              <img>/next/image にすると LCP がヒーローのテキストから写真へ移る）
+   ::after  = 暗幕。左からのグラデで文字側を沈め、下端を --e-ink へ落として
+              4幕ステージへ継ぎ目なく渡す。シアンの光を一枚だけ足す。
+   どちらもアニメーションしないので reduced-motion でもそのまま出る。 */
+.hero::before,
+.hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.hero::before {
+  background-image: url("/hero-trex-construction-final.webp");
+  background-size: cover; background-position: 72% center;
+  opacity: .5; filter: saturate(.75) contrast(1.05);
+}
+.hero::after {
+  background:
+    linear-gradient(100deg, var(--e-ink) 14%, rgba(5,8,13,.86) 42%, rgba(5,8,13,.42) 72%, rgba(5,8,13,.55) 100%),
+    radial-gradient(52% 44% at 74% 30%, rgba(62,193,240,.14), transparent 70%),
+    linear-gradient(to bottom, rgba(5,8,13,.55) 0%, transparent 26%, transparent 58%, var(--e-ink) 97%);
+}
+/* 縦長の画面では横がほとんど切れるので、恐竜の顔が窓に入る位置まで寄せる。
+   暗幕も、左からの斜めではなく上下方向に効かせて本文の可読性を確保する。 */
+@media (max-width: 819px) {
+  /* 幅1100pxの軽量版(86KB)に差し替える。SPは画像の横を2割ほどしか見せないので
+     解像度を落としても見た目が変わらない一方、転送量は 280KB → 86KB になる。 */
+  .hero::before {
+    background-image: url("/hero-trex-construction-sp.webp");
+    background-position: 59% center; opacity: .46;
+  }
+  .hero::after {
+    background:
+      linear-gradient(to bottom, rgba(5,8,13,.72) 0%, rgba(5,8,13,.5) 30%, rgba(5,8,13,.66) 62%, var(--e-ink) 97%),
+      linear-gradient(95deg, var(--e-ink) 2%, rgba(5,8,13,.72) 34%, rgba(5,8,13,.34) 78%),
+      radial-gradient(70% 34% at 62% 24%, rgba(62,193,240,.14), transparent 72%);
+  }
+}
+/* 本文は背景の上に。z-index:-1 の擬似要素と積み順を分ける */
+.hero > * { position: relative; z-index: 1; }
 .eyebrow { font-size: 11px; letter-spacing: .3em; color: var(--e-gold); margin: 0 0 26px; }
 .hero h1 { margin: 0; font-weight: 800; line-height: 1.06; letter-spacing: .01em; font-size: clamp(2.7rem, 11.5vw, 7.6rem); }
 .hero h1 span { color: var(--e-accent); }
