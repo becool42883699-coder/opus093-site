@@ -5,5 +5,5 @@ import nextTs from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores([".next/**", ".edge-shot-profile*/**", "next-env.d.ts"]),
+  globalIgnores([".next/**", "out/**", ".edge-shot-profile*/**", "next-env.d.ts", "atari-okiba/**"]),
 ]);

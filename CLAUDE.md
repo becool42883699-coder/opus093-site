@@ -262,3 +262,205 @@
   Chromium の `isMobile/hasTouch` エミュレーションで代替し、その旨を報告に明記する。
 - 検証用サーバーは `out/` へのsymlink経由で立てる。リビルドしたら
   **プロセスを落として立て直す**（§3-4）。
+
+## 6. T-REX側（ルート `/`）— EQUIPMENT の3D車両ビューア
+
+`/becool` とは別に、ルート側の T-REX サイト（`app/page.tsx` ほか）には
+SERVICE と WORKS の間に **EQUIPMENT（対応車両）セクション**がある。
+クレーン付き特装車の glTF を Three.js で表示し、光と映り込みは HDRI から取る。
+
+### 構成ファイル
+- `app/components/TruckScene.tsx` … シーン本体（"use client"）
+- `app/globals.css` の「EQUIPMENT」ブロック … `.truckStage` / `.truckCanvas` / `.equipmentSpecs`
+- `public/models/crane-truck.glb` … 3.4MB（gzip 1.8MB）/ 約115K三角形
+- `public/assets/hdri/env.hdr` … Poly Haven「quarry_01」1K（CC0・屋外曇天）
+- `public/equipment-crane-truck.webp` … 3Dを出さない環境用の静止画（透過WebP・41KB）
+
+### 守る決まり
+- three とローダーは **必ず動的import**。初期バンドルに載せない。
+- HDRI は `scene.environment` にだけ入れる。**`scene.background` には使わない**
+  （黒背景とサイトの世界観は変えない）。強度は `scene.environmentIntensity = 1.0`。
+  読み込み失敗時は `console.warn` 1行だけ出して映り込みなしで続行する。
+- 回転はスクロール連動のヨー（±0.45rad）と、**fine pointer のときだけ**ドラッグ。
+  タッチではドラッグを取らない（縦スクロールを殺さないため）。
+- canvas は `pointer-events:none` + `touch-action:auto`。ポインタ操作は親
+  `.truckStage` 側で拾う。
+- IntersectionObserver（`rootMargin: 300px`）で画面に近づいたら初期化、離れたら
+  **破棄**（`renderer.dispose()` + `forceContextLoss()`）。タブ非表示で描画ループ停止。
+- reduced-motion / WebGL非対応 / `saveData` / 低性能端末（cores≤2 or memory≤1）は
+  3Dを起動せず静止画のまま。JS無効時も静止画がそのまま残る。
+- 静止画とシーンのカメラは同じ値を使う（fov 34 / 距離 `maxDim*1.22` / 高さ `maxDim*0.36` /
+  ヨー 4.0）。**片方だけ変えると切り替わる瞬間に絵が飛ぶ**ので必ず両方直す。
+
+### モデルの素性と注意（重要）
+- 元データはユーザー提供の FBX（Ural Next クレーン車）。**GTA の車両MOD由来**で、
+  ライセンスの出所がはっきりしない。商用サイトで使い続けるなら権利の確認、
+  もしくは自社車両の実写・自作モデルへの差し替えを勧めること。
+- 取り込み時に次の外国語表記を除去済み。**差し替え・再変換する時は同じ処理が必要**。
+  - ブームの赤文字（電話番号 / ЧЕЛЯБИНЕЦ / GTA MOD配布者のウォーターマーク）
+    → テクスチャ `55.png` を拡散インペイントで塗り潰し
+  - クレーン架装のメーカー銘板・ロシア語警告表記 → `57.png` を周囲色で平滑化
+  - 運転席ドアとクレーンキャビンの**三色旗デカール**
+    → テクスチャではなく純色マテリアルの小さなポリゴン。該当プリミティブを削除
+      （マテリアル `.9` / `.15` / `door_rf_ok.7` / `salon.4` / `.11` の200頂点未満）
+- フロントグリルの「URAL」ロゴは車種そのものの標識なので残してある。
+- コピーは「当社の車両」と言い切らず、**車種イメージ**である旨を必ず併記する。
+
+### 変換パイプライン（再現手順）
+リポジトリにツールは入れない。作業時にスクラッチ領域へ入れて使う。
+1. `assimp export <model>.FBX out.gltf -f gltf2`（FBX2glTF はテクスチャを解決できない）
+2. TGA を PNG へ変換し、gltf の `images[].uri` をファイル名だけに書き換える。
+   **拡張子は小文字**にする（`image/PNG` だと gltf-transform のテクスチャ処理が素通りする）
+3. 車外から見えない `MOTOR`（エンジン）と `salon`（内装）のノードを削除（頂点の約36%）
+4. `gltf-transform` で `dedup → prune → resize 1024 → webp 82 → weld → simplify 0.5 → quantize`
+   （デコーダ不要にするため Draco / meshopt は使わない。`KHR_mesh_quantization` は three が対応済み）
+
+## 7. TRX-4 オーバーホールの4幕演出（**トップページ `/` に移設済み**）
+
+`t-rex-engine-v3.html`（ユーザー提供のHTML1枚デモ）を移植したストーリー演出。
+スクロールで **鉄の塊 → 透視 → 手組み → 始動** の4幕が進む。
+
+> **2026-08-19: `/engine` を廃止し、演出はトップ `/` の主役に移した。**
+> 配置と命綱の決まりは §8 を必ず読むこと。`/engine` には `/` へ転送する置き石だけが
+> 残っている（`app/engine/page.tsx` + `EngineRedirect.tsx`、それと
+> `scripts/postprocess-pages.mjs` が `out/engine/index.html` に挿す meta refresh）。
+
+### 構成ファイル
+- `app/TopPage.tsx` … 4幕のコピー・ラベル・諸元を**静的HTMLで出し切る**
+  （JS無効・クローラでも全文が読める）。旧 `app/engine/page.tsx` の役割を引き継いだ。
+- `app/components/engine/EngineSceneMount.tsx` … `next/dynamic(ssr:false)` の薄い包み。
+- `app/components/engine/EngineScene.tsx` … WebGL＋GSAP＋Lenis。描くDOMは `<canvas>` だけ。
+- `app/components/engine/buildEngine.ts` … 造形とマテリアル。three は引数で受け取る
+  （このモジュール自体は three を引き込まない）。
+- `app/components/engine/engine.module.css` … v3のCSSを踏襲。
+
+### 守る決まり
+- **SubpageShell（＝TrmMotion）を使わない**。v3独自のヘッダーを持つため。
+  **Lenis と ScrollTrigger の橋渡しは `app/components/TopMotion.tsx` が唯一の所有者**で、
+  `EngineScene` は Lenis を作らない。2つ作るとホイール1回で2倍スクロールし、
+  `<html>` の `lenis-*` クラスが発振して操作感が壊れる（§8 も参照）。
+- 演出の尺・振り付け・カメラのキーフレーム・クランク機構の物理式・縦画面補正(dm)は
+  v3の数値そのまま。`PIN_END = "+=460%"`、scrub 0.55 / 1.05 / 0.5 も同じ。
+- **断面スイープとバルブカバーの「T-REX」プレートは不採用（復活させない）。**
+  点火・失火の閃光は火の色（オレンジ系）。シアンに戻さない。
+- JSからのDOM参照は **`data-*` 属性のみ**（`data-ch` / `data-lbl` / `data-chapnow` ほか）。
+  CSS Modules はクラス名をハッシュ化するので、クラス名でJSから引かない。
+- 演出を出す時だけ `<html>` に `data-engine-motion="on"` を付ける。判定は **初回ペイント前**に
+  走るインラインスクリプト（`TopPage.tsx` の `MOTION_PROBE`）が行うので、レイアウトが飛ばない。
+  付いていない状態（JS無効・reduced-motion・WebGL2非対応）では CSS 側が4幕を縦に並べた静的版に戻す。
+
+### r128 → r185 で必要だった対応（再移植時も同じ）
+- `renderer.outputEncoding = sRGBEncoding` は**削除**（現行の既定がsRGB）。
+- ライト強度は**全て ×π**。r155 で `useLegacyLights` の既定が false になり、
+  レガシー時の π 倍が外れたため。`PointLight.decay` は **明示的に 1**（現行既定は2）。
+- `map` に使う CanvasTexture は `colorSpace = SRGBColorSpace`。
+  `bumpMap` はデータなので **NoColorSpace のまま触らない**。
+- `hasWebGL()` は **webgl2 のみ**で判定する。three は r163 で WebGL1 を切ったので、
+  webgl1で「対応」と誤判定すると `new WebGLRenderer()` が例外を投げる。
+- `scene.environment` 使用時、`material.envMapIntensity` は
+  **`scene.environmentIntensity` に上書きされる**。強度調整はそこに一本化する。
+- pmndrs postprocessing を使うので **`renderer.toneMapping = NoToneMapping`**。
+  ACES は `ToneMappingEffect` 側で1回だけ掛ける（両方入れると二重）。
+  `renderer.toneMappingExposure` は pmndrs が読まないので、v3の露出1.18は
+  `ENV_INTENSITY` と `lightScale` に畳み込んである。
+
+### 依存とアセット
+- **`postprocessing`（pmndrs）6.39.4 を新規追加**。CLAUDE.md §4「新規npm依存は追加しない」
+  の例外で、要綱書での明示指定による。Zlib ライセンス、three 0.185 と peer 互換。
+  three 同梱の EffectComposer でも代替可能なので、依存を減らしたくなったら差し替えられる。
+- HDRIは `/becool` の EQUIPMENT と**同じ `public/assets/hdri/env.hdr` を使い回す**
+  （Poly Haven「quarry_01」1K・CC0）。ページ追加によるアセット増は0。
+- 周辺減光は CSS の `.vin` が既にステージ全面に掛かっているので、
+  **postprocessing 側の Vignette は入れない**（二重になるため）。
+
+### GLTFエンジンモデル（導入済み）
+ユーザー提供の2モデルを組み合わせている。**どちらも CC-BY-4.0（商用可・要クレジット）**。
+クレジットは `app/engine/page.tsx` のフッターに出しており、**ライセンス上消してはいけない**。
+
+| 役割 | ファイル | 出典 | 素の三角形 | 収録後 |
+|---|---|---|---|---|
+| シリンダーブロック（透視） | `public/models/engine-block.glb` | "Inline 4 engine block diagram (see through)" by Lame3D models | 11.2K | 249KB / gz 103KB |
+| クランク＋コンロッド＋ピストン | `public/models/engine-crank.glb` | "Rigged 4-Cylinder Engine (FREE)" by david.gnzlv | 78.7K → 32.7K | 786KB / gz 417KB |
+
+シリンダーヘッド・カム・バルブ16本・オイルパンは **v3の自作ジオメトリのまま**（2モデルとも
+その部位を持っていないため）。要綱書のハイブリッド規定どおりの構成。
+
+**位置合わせの実測値**（`buildEngine.ts` の定数。動かすと噛み合わなくなる）
+- ブロックのボア中心（素の値）: `-1.020 / -0.280 / +0.448 / +1.192`（間隔 0.7373）
+- クランク機構の気筒中心（素の値）: `0 / 2.2534 / 4.4898 / 6.761`（間隔 2.2534）、クランク軸 `y=-3.0204`、クランク半径 0.917
+- 両者の間隔を **1.300** に揃える → `BLOCK_SCALE=1.7645` / `CRANK_SCALE=0.57691`、`CYLX=[-1.949,-0.65,0.65,1.949]`
+- ブロックは `BLOCK_Y=0.95`（デッキ面がピストン上死点の上に来る高さ）
+- ヘッドとオイルパンはブロックのデッキ/スカートに合わせて `HEAD_LIFT` / `PAN_DROP` で自動追従
+- 最後に `FIT_SCALE=0.78` で全体を縮め、**v3のカメラのキーフレームをそのまま流用**している
+
+**クランクの駆動**: モデルのアニメーション（`ArmatureAction` / 1.3333秒）が
+**クランク1回転そのもの**なので、クランク角を時間へ写像して `AnimationMixer.setTime()` で回す。
+ピストンの上下・コンロッドの首振りはこれ1本で付いてくる（v3のクランク機構の物理式は
+点火タイミングの `cos(TH + PH[i])` にだけ残っている）。
+ロッドキャップ（`Biela inferior`）は**ミキサーが位置を書いた後**に `setCapSlide()` でずらすこと。
+順番を逆にすると毎フレーム上書きされて分解が効かなくなる。
+
+差し替える場合の接続点は `buildEngine()` の `shellG`（外殻）/ `headG` / `panG` / `crankRoot`。
+
+## 8. トップページ `/` の構成（2026-08-19 全面差し替え）
+
+旧トップ（写真ヒーロー）を廃し、**§7 の4幕エンジン体験を主役**に据えた。
+体験を優先しつつ「急いで電話したい客」を取りこぼさないのが最優先の設計要件で、
+下の**命綱**は演出の都合で削ってはいけない。
+
+### ファイル分割の理由
+- `app/page.tsx` … **サーバーコンポーネント**。`metadata` / OGP / JSON-LD だけを持つ薄い包み。
+  トップは `"use client"` なので、metadata を持たせるにはこの分割が要る。
+- `app/TopPage.tsx` … 本体（`"use client"`）。固定ヘッダー・ヒーロー・4幕・下部セクション・
+  フッターまで全部ここ。
+- `app/components/TopMotion.tsx` … Lenis + ScrollTrigger の**唯一の所有者**（§7 参照）。
+- `app/components/lenisBridge.ts` … Lenis インスタンスの受け渡しと `scrollToElement()`。
+  Lenis が無い時（モバイル／reduced-motion）はネイティブスクロールに落ちる。
+
+### 上から順の構成（並べ替えは可、削除は不可）
+ヒーロー（即時表示） → 4幕エンジン体験（ピン区間） → 諸元 → 実績バッジ →
+サービス → EQUIPMENT（3D車両・§6） → 黒→白ワイプ → 施工実績 → 会社情報/アクセス →
+問い合わせCTA → フッター（CC-BY クレジット付き）。
+
+### 命綱（合否ライン。触る前に必ず確認する）
+1. **固定ヘッダーの電話ボタンは全スクロール位置で押せる。** ピン区間中も消さない・
+   隠さない・`pointer-events` を切らない。SPは電話アイコン＋番号で1タップ発信
+   （`.telLead` の「電話」ラベルだけ 640px 未満で隠す）。
+2. **ヒーローの電話ボタンはHTMLとして即時表示**。`TopMotion` のフェードイン
+   （`[data-hero-rise]`）の**対象に入れない**。LCPはヒーローのテキストであること
+   （canvasにしない）。
+3. **ヒーローの「サービス一覧へ ↓」でピン区間を飛ばせる**（`scrollToElement()` 経由）。
+   往復してもピンが壊れないこと。
+4. reduced-motion / JS無効 / WebGL2非対応では、4幕が縦積みの静的テキストに落ち、
+   ヒーローと下部セクションが完全に読める。
+
+### ヒーローの背景（ユーザー選択・確定）
+ブランドのメインビジュアル（`hero-trex-construction-final.webp`）を敷き、その上に
+暗幕を重ねる。**`<img>` / `next/image` ではなく CSS の `background-image` で敷く**こと
+——要素にすると LCP がヒーローの見出しテキストから写真へ移り、命綱の要件を壊す。
+- 819px以下は軽量版 `hero-trex-construction-sp.webp`（幅1100px・86KB）に差し替え、
+  表示位置を `59% center` に寄せて恐竜の顔を窓に入れる（PCは `72% center`）。
+  SPは画像の横を2割ほどしか見せないので、解像度を落としても見た目は変わらない。
+- 暗幕はPCが左からの斜めグラデ、SPは上下方向。下端は必ず `--e-ink` へ落として
+  4幕ステージへ継ぎ目なく渡す。
+- 文字のコントラストは実測で担保する（背後の実ピクセルの上位2%を最悪ケースとして
+  計測）。現状の最小は本文の 5.80:1（SP）。**暗幕を薄くする時は必ず測り直すこと。**
+
+### 章インジケータの注意
+`[data-chapnow]` / `[data-chapnav]` は**固定ヘッダー側にあり `.page` の外**。
+`EngineScene` はこれらを `document` から引く。`page.querySelector` にすると
+永久に「01 — 鉄の塊」のまま止まる（実際に踏んだ）。
+狭い画面（720px未満）では `.chapnow` を隠してロゴと電話ボタンに場所を譲る。
+
+### 読み込みの順番
+`EngineScene` は `afterHeroPaint()`（rAF×2 → `requestIdleCallback`、最長1.5秒）を
+待ってから three / postprocessing / glb 2本 / HDRI を取りに行く。ヒーローの
+LCPと帯域を食い合わせないため。読み込み中は**黒いcanvas＋シアンの細いバー**
+（`.loadTrack` / `[data-engine-progress]`、`THREE.LoadingManager` が駆動）。
+**スピナーは使わない。** 完了で `[data-engine-page]` に `data-assets="ready"`。
+
+### 旧 `/engine` の転送
+静的エクスポートでは `next.config` の `redirects` が効かないので、
+`scripts/postprocess-pages.mjs` が `out/engine/index.html` の `<head>` 先頭に
+`<meta http-equiv="refresh">` を挿す。canonical は `app/engine/page.tsx` 側で `/` を指す。
+JS無効でも転送される。**sitemap.xml / llms.txt に `/engine` を復活させない。**

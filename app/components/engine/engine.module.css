@@ -1,0 +1,302 @@
+/* TRX-4 エンジンページのスタイル。
+   t-rex-engine-v3.html の <style> をそのまま踏襲する(配色・寸法・尺は変更しない)。
+   ブランド色: --e-accent #3EC1F0 / --e-ink #05080D / --e-gold #C9B08A
+   JSからの参照は data-* 属性で行うため、ここでのクラス名はスタイル専用。 */
+
+.tokens, .page {
+  --e-ink: #05080D;
+  --e-bone: #EDF1F5;
+  --e-accent: #3EC1F0;
+  --e-gold: #C9B08A;
+  --e-mut: #8C94A2;
+  --e-line: #1B2430;
+}
+
+.page {
+  position: relative;
+  background: var(--e-ink);
+  color: var(--e-bone);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.serif { font-family: Georgia, "Hiragino Mincho ProN", "Times New Roman", serif; }
+
+/* ---- ヘッダー ------------------------------------------------------- */
+/* 固定ヘッダーは常に不透明のブランドダーク。透明にすると、下部の白いセクションに
+   かかった時にロゴ(--e-bone)とハンバーガーが白地に白で消える。命綱の電話ボタンが
+   載る帯なので、スクロール位置によらず読める状態を無条件で保証する。
+   ヒーローと4幕ステージの背景も同じ --e-ink なので、そこでは帯の存在が見えない。
+   JS無効でも成立させたいので、スクロール連動の状態切替には**しない**。 */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: calc(12px + env(safe-area-inset-top)) 5vw 12px;
+  background: var(--e-ink);
+  border-bottom: 1px solid var(--e-line);
+}
+.brand { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; white-space: nowrap; font-weight: 800; letter-spacing: .22em; font-size: 14px; color: var(--e-bone); }
+.tx {
+  width: 27px; height: 27px; border-radius: 50%; background: var(--e-accent); color: #04121c;
+  display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; letter-spacing: .02em;
+}
+/* 章の表示はピン区間にいる間だけ。下のセクションでは邪魔になるので消す */
+.chapnav { display: none; gap: 26px; font-size: 11px; letter-spacing: .18em; color: var(--e-mut); margin: 0; padding: 0; list-style: none; }
+.chapnav li { transition: color .3s; }
+.chapnav li[data-on="true"] { color: var(--e-accent); }
+/* 章インジケータ。狭い画面ではロゴと電話ボタン(命綱)に場所を譲る
+   — 幕のタイトルはステージ内に大きく出ているので header 側は無くても困らない。 */
+.chapnow { display: none; font-size: 11px; letter-spacing: .18em; color: var(--e-accent); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (min-width: 720px) {
+  :global(html[data-engine-pinned="true"]) .chapnow { display: block; }
+}
+@media (min-width: 900px) {
+  :global(html[data-engine-pinned="true"]) .chapnav { display: flex; }
+  :global(html[data-engine-pinned="true"]) .chapnow { display: none; }
+}
+
+/* ---- 命綱: 電話ボタンとナビ ----------------------------------------- */
+.headerRight { display: flex; align-items: center; gap: clamp(8px, 1.4vw, 18px); }
+.navLinks { display: none; gap: clamp(14px, 1.6vw, 24px); font-size: 12px; letter-spacing: .08em; color: var(--e-mut); }
+.navLinks a { transition: color .2s; }
+.navLinks a:hover { color: var(--e-bone); }
+@media (min-width: 1080px) { .navLinks { display: flex; } }
+
+/* 全スクロール位置で押せる電話ボタン。ピン区間中も消えない */
+.tel {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--e-accent); color: #04121c; border-radius: 999px;
+  padding: 10px 16px; font-size: 13px; font-weight: 800; letter-spacing: .04em;
+  text-decoration: none; white-space: nowrap;
+  transition: filter .2s, transform .2s;
+}
+.tel:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.tel:focus-visible { outline: 2px solid var(--e-bone); outline-offset: 3px; }
+.tel svg { width: 15px; height: 15px; flex: none; }
+.telNum { font-variant-numeric: tabular-nums; }
+.telLead { display: none; }
+@media (min-width: 640px) { .telLead { display: inline; font-weight: 700; } }
+
+.menuButton {
+  display: grid; place-content: center; gap: 5px; width: 40px; height: 40px;
+  background: none; border: 0; cursor: pointer; padding: 0;
+}
+.menuButton span { display: block; width: 20px; height: 1.5px; background: var(--e-bone); transition: transform .25s, opacity .25s; }
+.menuButton:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 2px; }
+@media (min-width: 1080px) { .menuButton { display: none; } }
+
+/* モバイルのメニューパネル */
+.mobileNav {
+  position: fixed; inset: 0; z-index: 60; display: grid; align-content: center; gap: 6px;
+  padding: 12vh 8vw; background: rgba(5,8,13,.97);
+  transform: translateY(-100%); transition: transform .38s cubic-bezier(.645,.045,.355,1);
+}
+.mobileNav[data-open="true"] { transform: translateY(0); }
+.mobileNav a {
+  padding: 16px 0; font-size: 20px; font-weight: 700; letter-spacing: .04em; color: var(--e-bone);
+  background-image: radial-gradient(circle, var(--e-line) 1px, transparent 1px);
+  background-size: 6px 1px; background-repeat: repeat-x; background-position: bottom;
+}
+.mobileNav .tel { justify-self: start; margin-top: 22px; padding: 14px 22px; font-size: 15px; }
+.mobileClose {
+  position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 5vw;
+  width: 44px; height: 44px; background: none; border: 0; color: var(--e-bone);
+  font-size: 26px; line-height: 1; cursor: pointer;
+}
+.progress { position: fixed; top: 0; left: 0; height: 2px; width: 100%; background: var(--e-accent); transform: scaleX(0); transform-origin: 0 50%; z-index: 55; }
+
+/* ---- ヒーロー ------------------------------------------------------- */
+.hero {
+  min-height: 100vh; min-height: 100svh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 20vh 6vw 12vh; position: relative;
+  isolation: isolate; overflow: hidden;
+}
+/* ヒーローの背景。ブランドのメインビジュアルを敷き、その上に暗幕を重ねる。
+   ::before = 写真（**CSSの background-image で敷く**ので LCP 候補にならない。
+              <img>/next/image にすると LCP がヒーローのテキストから写真へ移る）
+   ::after  = 暗幕。左からのグラデで文字側を沈め、下端を --e-ink へ落として
+              4幕ステージへ継ぎ目なく渡す。シアンの光を一枚だけ足す。
+   どちらもアニメーションしないので reduced-motion でもそのまま出る。 */
+.hero::before,
+.hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.hero::before {
+  background-image: url("/hero-trex-construction-final.webp");
+  background-size: cover; background-position: 72% center;
+  opacity: .5; filter: saturate(.75) contrast(1.05);
+}
+.hero::after {
+  background:
+    linear-gradient(100deg, var(--e-ink) 14%, rgba(5,8,13,.86) 42%, rgba(5,8,13,.42) 72%, rgba(5,8,13,.55) 100%),
+    radial-gradient(52% 44% at 74% 30%, rgba(62,193,240,.14), transparent 70%),
+    linear-gradient(to bottom, rgba(5,8,13,.55) 0%, transparent 26%, transparent 58%, var(--e-ink) 97%);
+}
+/* 縦長の画面では横がほとんど切れるので、恐竜の顔が窓に入る位置まで寄せる。
+   暗幕も、左からの斜めではなく上下方向に効かせて本文の可読性を確保する。 */
+@media (max-width: 819px) {
+  /* 幅1100pxの軽量版(86KB)に差し替える。SPは画像の横を2割ほどしか見せないので
+     解像度を落としても見た目が変わらない一方、転送量は 280KB → 86KB になる。 */
+  .hero::before {
+    background-image: url("/hero-trex-construction-sp.webp");
+    background-position: 59% center; opacity: .46;
+  }
+  .hero::after {
+    background:
+      linear-gradient(to bottom, rgba(5,8,13,.72) 0%, rgba(5,8,13,.5) 30%, rgba(5,8,13,.66) 62%, var(--e-ink) 97%),
+      linear-gradient(95deg, var(--e-ink) 2%, rgba(5,8,13,.72) 34%, rgba(5,8,13,.34) 78%),
+      radial-gradient(70% 34% at 62% 24%, rgba(62,193,240,.14), transparent 72%);
+  }
+}
+/* 本文は背景の上に。z-index:-1 の擬似要素と積み順を分ける */
+.hero > * { position: relative; z-index: 1; }
+.eyebrow { font-size: 11px; letter-spacing: .3em; color: var(--e-gold); margin: 0 0 26px; }
+.hero h1 { margin: 0; font-weight: 800; line-height: 1.06; letter-spacing: .01em; font-size: clamp(2.7rem, 11.5vw, 7.6rem); }
+.hero h1 span { color: var(--e-accent); }
+.lede { margin: 28px 0 0; max-width: 38ch; color: var(--e-mut); font-size: clamp(.98rem, 2.3vw, 1.15rem); line-height: 1.85; }
+/* ヒーローのCTA。電話は最優先なので塗り、相談は輪郭 */
+.heroActions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+.heroTel {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--e-accent); color: #04121c; border-radius: 999px;
+  padding: 17px 30px; font-size: 15px; font-weight: 800; letter-spacing: .04em; text-decoration: none;
+  transition: filter .3s, transform .3s;
+}
+.heroTel:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.heroTel:focus-visible { outline: 2px solid var(--e-bone); outline-offset: 3px; }
+.heroTel svg { width: 17px; height: 17px; flex: none; }
+.heroTel small { font-size: 11px; font-weight: 600; opacity: .72; letter-spacing: .06em; }
+.heroGhost {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 17px 28px; border-radius: 999px; border: 1px solid rgba(237,241,245,.28);
+  color: var(--e-bone); font-size: 14px; font-weight: 700; letter-spacing: .04em; text-decoration: none;
+  transition: border-color .3s, background-color .3s;
+}
+.heroGhost:hover { border-color: var(--e-accent); background: rgba(62,193,240,.08); }
+.heroGhost:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 3px; }
+
+/* ピン区間を飛ばして下のセクションへ。Lenis があれば滑らかに */
+/* ピン区間を飛ばして下のセクションへ送る導線。命綱の一つなので、
+   同じヒーロー内の SCROLL キューより一段強く見せる(下向きの矢羽根 + 12px)。 */
+.skip {
+  margin-top: 26px; align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 10px;
+  background: none; border: 0; padding: 10px 0; cursor: pointer;
+  color: var(--e-bone); font-size: 12px; letter-spacing: .2em; font-family: inherit;
+  transition: color .25s;
+}
+.skip:hover { color: var(--e-accent); }
+.skip:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 4px; }
+.skip i {
+  display: block; width: 9px; height: 9px; margin-top: -4px;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.cue {
+  position: absolute; left: 6vw; bottom: calc(34px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 14px; font-size: 10px; letter-spacing: .3em; color: var(--e-mut);
+}
+.cue i { display: block; width: 1px; height: 56px; background: linear-gradient(var(--e-accent), transparent); animation: drip 2.2s ease-in-out infinite; }
+@keyframes drip {
+  0%   { transform: scaleY(0); transform-origin: top; }
+  45%  { transform: scaleY(1); transform-origin: top; }
+  55%  { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* ---- ステージ(ピン留めされる4幕) ------------------------------------ */
+.stageWrap { position: relative; }
+/* 既定は「演出なし」の縦積み。JS無効・reduced-motion・WebGL2非対応はこのまま。
+   演出を出せる環境では、初回ペイント前にインラインスクリプトが
+   html[data-engine-motion="on"] を立てて下のブロックが上書きする(レイアウトが飛ばない)。 */
+.stage { display: block; padding: 8vh 0 2vh; position: relative; }
+.gl, .vin, .loadTrack { display: none; }
+.chapter {
+  position: relative; z-index: 4; pointer-events: none;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 9vh 6vw 4vh;
+}
+.num {
+  font-weight: 800; line-height: .78; letter-spacing: -.03em; font-size: clamp(6.5rem, 26vw, 15rem);
+  color: transparent; -webkit-text-stroke: 2px rgba(62,193,240,.85);
+}
+.chapter h2 { margin: 8px 0 0; font-weight: 800; letter-spacing: .02em; line-height: 1.1; font-size: clamp(1.9rem, 7.5vw, 4.6rem); }
+.chapter h2 em { font-style: normal; color: var(--e-accent); }
+.cap { margin: 16px 0 0; color: var(--e-mut); font-size: clamp(.9rem, 2.2vw, 1.02rem); max-width: 44ch; line-height: 1.85; }
+
+.lbl { position: absolute; z-index: 5; font-size: 10px; letter-spacing: .2em; color: var(--e-bone); pointer-events: none; white-space: nowrap; }
+.lbl i { display: block; height: 1px; background: #3a6478; margin-top: 7px; transform-origin: 0 50%; }
+.lbl b { color: var(--e-accent); font-weight: 600; }
+.lbl1 { top: 16%; left: 6%; }
+.lbl1 i { width: 120px; }
+.lbl2 { top: 33%; right: 6%; text-align: right; }
+.lbl2 i { transform-origin: 100% 50%; width: 110px; margin-left: auto; }
+.lbl3 { bottom: 32%; left: 8%; }
+.lbl3 i { width: 90px; }
+@media (max-width: 719px) {
+  .lbl3 { display: none; }
+  .lbl { font-size: 9px; }
+}
+
+/* ---- 演出を出せる環境だけの上書き ---------------------------------- */
+:global(html[data-engine-motion="on"]) .stage {
+  height: 100vh; height: 100svh; padding: 0; overflow: hidden;
+}
+:global(html[data-engine-motion="on"]) .gl,
+:global(html[data-engine-motion="on"]) .vin,
+:global(html[data-engine-motion="on"]) .loadTrack { display: block; }
+:global(html[data-engine-motion="on"]) .chapter {
+  position: absolute; inset: 0;
+  padding: 0 6vw calc(42px + env(safe-area-inset-bottom));
+}
+
+/* 読み込み中の進捗。スピナーは使わず、ステージ下端の細いバーだけ */
+.loadTrack {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 2px; z-index: 6;
+  background: rgba(62,193,240,.16); pointer-events: none;
+  transition: opacity .5s .3s var(--e-ease, ease);
+}
+.loadFill {
+  display: block; height: 100%; background: var(--e-accent);
+  transform: scaleX(0); transform-origin: 0 50%; transition: transform .25s linear;
+}
+.page[data-assets="ready"] .loadTrack { opacity: 0; }
+
+/* ---- 諸元 ----------------------------------------------------------- */
+.spec { padding: 22vh 6vw 14vh; }
+.k { font-size: 11px; letter-spacing: .3em; color: var(--e-accent); margin: 0 0 48px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--e-line); border: 1px solid var(--e-line); max-width: 900px; }
+.cell { background: var(--e-ink); padding: 30px 26px 34px; }
+.v { font-weight: 800; font-size: clamp(1.6rem, 5vw, 2.6rem); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.v small { font-size: .5em; color: var(--e-mut); font-weight: 600; letter-spacing: .06em; }
+.l { margin-top: 10px; font-size: 11px; letter-spacing: .18em; color: var(--e-mut); }
+.cta { margin-top: 64px; display: flex; flex-wrap: wrap; gap: 26px; align-items: center; }
+.btn {
+  display: inline-block; background: var(--e-accent); color: #04121c; border-radius: 999px;
+  padding: 18px 38px; font-size: 13px; font-weight: 700; letter-spacing: .14em; text-decoration: none;
+  transition: filter .3s, transform .3s;
+}
+.btn:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.btn:focus-visible { outline: 2px solid var(--e-bone); outline-offset: 3px; }
+.price { color: var(--e-gold); font-style: italic; }
+.footer { padding: 0 6vw 60px; color: #5d6675; font-size: 12px; line-height: 1.9; max-width: 70ch; }
+.footer b { color: var(--e-mut); font-weight: 600; }
+.footer p { margin: 0 0 14px; }
+.footer p:last-child { margin-bottom: 0; }
+.footer a { color: var(--e-mut); text-decoration: underline; text-underline-offset: 3px; }
+.footer a:hover { color: var(--e-bone); }
+.footer a:focus-visible { outline: 2px solid var(--e-accent); outline-offset: 2px; }
+/* CC-BY の帰属表示。ライセンス上、消さないこと */
+.credits { font-size: 11px; line-height: 1.9; color: #4f5866; }
+
+/* ---- 演出を出さないとき(reduced-motion / WebGL非対応 / JS無効) --------
+   v3 の .no-motion と同じ。ステージのピンを解いて4幕を縦に並べ、全文を読ませる。
+   data-motion 属性が付いていない = まだ初期化されていない、も同じ扱いにするため
+   「data-motion="on" のときだけ演出用レイアウトにする」書き方にしている。 */
+.lbl, .progress { display: none; }
+:global(html[data-engine-motion="on"]) .lbl { display: block; }
+:global(html[data-engine-motion="on"]) .progress { display: block; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cue i { animation: none; }
+  .btn { transition: none; }
+}
