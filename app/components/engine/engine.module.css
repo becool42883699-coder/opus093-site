@@ -85,12 +85,20 @@
 @media (min-width: 1080px) { .menuButton { display: none; } }
 
 /* モバイルのメニューパネル */
+/* 閉じている間は translateY(-100%) で画面外へ逃がす。ただし中身が画面より
+   高いと(横向きの端末など)センタリングではみ出した分が上端から覗いてしまうので、
+   overflow でクリップし、visibility でも確実に消す。
+   visibility はスライドが終わってから切り替える(transition の遅延)。 */
 .mobileNav {
   position: fixed; inset: 0; z-index: 60; display: grid; align-content: center; gap: 6px;
-  padding: 12vh 8vw; background: rgba(5,8,13,.97);
-  transform: translateY(-100%); transition: transform .38s cubic-bezier(.645,.045,.355,1);
+  padding: 12vh 8vw; background: rgba(5,8,13,.97); overflow-y: auto; overscroll-behavior: contain;
+  visibility: hidden;
+  transform: translateY(-100%);
+  transition: transform .38s cubic-bezier(.645,.045,.355,1), visibility 0s .38s;
 }
-.mobileNav[data-open="true"] { transform: translateY(0); }
+.mobileNav[data-open="true"] {
+  transform: translateY(0); visibility: visible; transition-delay: 0s, 0s;
+}
 .mobileNav a {
   padding: 16px 0; font-size: 20px; font-weight: 700; letter-spacing: .04em; color: var(--e-bone);
   background-image: radial-gradient(circle, var(--e-line) 1px, transparent 1px);
@@ -232,8 +240,10 @@
 .lbl2 i { transform-origin: 100% 50%; width: 110px; margin-left: auto; }
 .lbl3 { bottom: 32%; left: 8%; }
 .lbl3 i { width: 90px; }
+/* 注釈ラベルは狭い画面だと機構の上に重なって読みづらいので1本だけ残す。
+   同じ情報(DOHC 16V / 部品点数)は諸元セクションに文字で載っている。 */
 @media (max-width: 719px) {
-  .lbl3 { display: none; }
+  .lbl2, .lbl3 { display: none; }
   .lbl { font-size: 9px; }
 }
 
@@ -299,4 +309,79 @@
 @media (prefers-reduced-motion: reduce) {
   .cue i { animation: none; }
   .btn { transition: none; }
+}
+
+/* ---- スマホの詰め直し(819px以下) -------------------------------------
+   4幕の絵は縦画面だと下寄せ・見切れになるので、JS側(EngineScene の
+   PORTRAIT_LIFT と模型のスケール)で上へ寄せてある。こちらはその受け皿で、
+   (1) 本文が3Dに重なっても読めるよう下から暗幕を敷き、
+   (2) 章番号と見出しを画面幅に見合う大きさへ落とし、
+   (3) ヒーローと諸元の間延びした余白を詰める。 */
+/* 4幕の本文の下地。3Dの明るい部品(ピストン等)の上に本文が来ても読めるようにする。
+   狭い画面だけでなく、**背の低い横向き**でも必要なので条件を2つ並べる。 */
+@media (max-width: 819px), (max-height: 560px) {
+  :global(html[data-engine-motion="on"]) .chapter::before {
+    content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 66%;
+    background: linear-gradient(to top,
+      var(--e-ink) 10%, rgba(5, 8, 13, .94) 30%, rgba(5, 8, 13, .68) 55%, transparent 100%);
+    z-index: -1; pointer-events: none;
+  }
+}
+
+@media (max-width: 819px) {
+  :global(html[data-engine-motion="on"]) .chapter {
+    padding-bottom: calc(52px + env(safe-area-inset-bottom));
+  }
+
+  /* (2) 章番号は 26vw = 101px で画面に対して大きすぎた */
+  .num { font-size: clamp(4.2rem, 19vw, 5.6rem); -webkit-text-stroke-width: 1.5px; }
+  .chapter h2 { font-size: clamp(1.65rem, 6.6vw, 2.3rem); }
+  .cap { font-size: .92rem; line-height: 1.75; margin-top: 12px; }
+
+  /* (3) ヒーロー。上に20vh(169px)も空けていて間延びしていた */
+  .hero {
+    padding: calc(88px + env(safe-area-inset-top)) 6vw calc(124px + env(safe-area-inset-bottom));
+  }
+  /* 「NEVER STOP THE SITE」が字間の広さで2行に折れていた */
+  .eyebrow { font-size: 10px; letter-spacing: .16em; margin-bottom: 20px; }
+  .lede { margin-top: 22px; line-height: 1.75; }
+  /* 電話274px / 相談160px と幅がバラバラで雑に見えたので揃える */
+  .heroActions { margin-top: 28px; gap: 10px; }
+  .heroTel, .heroGhost { width: 100%; justify-content: center; }
+  .skip { margin-top: 18px; }
+
+  /* 諸元。上下 22vh/14vh(186px/118px)は空きすぎ。字間も詰めて折り返しを直す */
+  .spec { padding: 13vh 6vw 9vh; }
+  .k { margin-bottom: 26px; }
+  .cell { padding: 22px 18px 24px; }
+  /* .18em の字間で「直列4気筒 DOHC 16V」「圧縮比(ブループリント処理)」が
+     不自然な位置で折れていた */
+  .l { letter-spacing: .06em; line-height: 1.6; }
+  .cta { margin-top: 40px; gap: 16px; }
+  .btn { display: block; width: 100%; text-align: center; letter-spacing: .1em; }
+  .price { font-size: .95rem; }
+}
+
+/* ---- 背の低い横向き(スマホを横に倒した時など) -------------------------
+   高さ390px前後だと4幕の見出しがヘッダーへ突き上げ、本文も入りきらない。
+   幅ではなく高さで判定して字を落とす。3Dは aspect が 1 を超えるので
+   EngineScene 側の縦画面補正は掛からない(横長として扱われる)。 */
+@media (max-height: 560px) {
+  .num { font-size: clamp(2.4rem, 9vh, 3.4rem); -webkit-text-stroke-width: 1.5px; }
+  .chapter h2 { font-size: clamp(1.25rem, 5.6vh, 1.9rem); }
+  .cap { font-size: .82rem; line-height: 1.6; margin-top: 8px; max-width: 46ch; }
+  :global(html[data-engine-motion="on"]) .chapter {
+    padding-bottom: calc(26px + env(safe-area-inset-bottom));
+  }
+  .hero { padding-top: calc(74px + env(safe-area-inset-top)); padding-bottom: 64px; }
+  .hero h1 { font-size: clamp(2rem, 9vh, 3.2rem); }
+  .lede { margin-top: 14px; line-height: 1.6; max-width: 46ch; }
+  .heroActions { margin-top: 18px; }
+  .cue { display: none; }
+  /* 高さ390pxだと縦1列では7項目が入りきらないので2列に畳む */
+  .mobileNav {
+    padding: 6vh 8vw; align-content: start; grid-template-columns: 1fr 1fr; column-gap: 28px;
+  }
+  .mobileNav a { padding: 12px 0; font-size: 17px; }
+  .mobileNav .tel { grid-column: 1 / -1; margin-top: 14px; }
 }

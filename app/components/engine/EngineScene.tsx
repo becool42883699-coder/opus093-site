@@ -28,6 +28,16 @@ const EXPOSURE = 1.18;
 /** HDRIの強度。v3(r128)と各幕の輝度を実測して合わせた値 */
 const ENV_INTENSITY = 2.0 * EXPOSURE;
 
+/* ---- 縦画面のフレーミング --------------------------------------------
+   v3のカメラのキーフレームは横長(16:10前後)前提。縦画面にそのまま出すと
+   エンジンが左右で見切れ、絵が下半分に沈み、その上に本文が重なって読めない。
+   下の2つの定数で「模型を縮めて幅に収める」「描画を上へ寄せる」を行う。
+   値はスマホ390x844で各幕を実測して決めた(本文は下から約266px使う)。 */
+/** 完全な縦画面(aspect 0.55以下)での模型の縮小率。横長へ向けて1.0まで戻す */
+const PORTRAIT_MIN_SCALE = 0.67;
+/** 完全な縦画面で描画を上へ寄せる量(ステージ高さに対する比)。下側を本文に明け渡す */
+const PORTRAIT_LIFT = 0.24;
+
 /** WebGL2 のみ。three は r163 で WebGL1 を切ったので webgl1 判定で通すと例外になる */
 function hasWebGL2(): boolean {
   try {
@@ -333,9 +343,20 @@ export default function EngineScene() {
         renderer.setSize(w, h, false);
         composer.setSize(w, h, false);
         camera.aspect = w / h;
-        camera.updateProjectionMatrix();
         /* 縦画面ほどカメラを引く。v3 と同じ補正 */
         dm = camera.aspect < 1 ? 1 + (1 / camera.aspect - 1) * 0.95 : 1;
+
+        /* 縦画面のフレーミング(定数の意図はファイル冒頭を参照)。
+           dm でカメラを引くだけでは横の見切れを解消しきれない ―― フォグが
+           9〜22 なので引くほど絵が沈む。模型を縮めて幅に収め、setViewOffset で
+           上へ寄せる。横長は scale 1 / オフセットなしでPCの絵は不変。 */
+        /* aspect 1.0(正方形)で0、0.55以下で1になる「縦画面らしさ」。
+           これで縮小と上寄せを連続的に効かせる(端末を回しても飛ばない)。 */
+        const t = Math.min(1, Math.max(0, (1 - camera.aspect) / 0.45));
+        parts.root.scale.setScalar(1 - t * (1 - PORTRAIT_MIN_SCALE));
+        if (t > 0) camera.setViewOffset(w, h, 0, h * PORTRAIT_LIFT * t, w, h);
+        else camera.clearViewOffset();
+        camera.updateProjectionMatrix();
       };
 
       const loop = (t: number) => {
