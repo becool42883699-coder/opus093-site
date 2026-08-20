@@ -1787,7 +1787,14 @@ function calibrate(dt){
   if (c.step === 1){ renderComposer(); }
   else if (c.step === 2){ atmosPass.enabled = false; renderComposer(); }
   else if (c.step === 3){ atmosPass.enabled = false; bloom.enabled = false; renderComposer(); }
-  else if (c.step === 4){ renderer.setRenderTarget(null); renderer.render(scene, camera); }
+  else if (c.step === 4){
+    /* ここだけ canvas へ描くと、?diag=1 が有効にしている
+       preserveDrawingBuffer のコピーが乗って計測が膨らむ
+       (実測でシーン単体が合計を超えた)。他と同じRTへ描く。 */
+    renderer.setRenderTarget(composer.renderTarget2);
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+  }
   c.acc += dt;
   c.frames++;
   /* 速い環境ではフレーム数、遅い環境では時間で打ち切る */
@@ -1803,6 +1810,9 @@ function calibrate(dt){
         bloom:  +Math.max(0, c.t2 - c.t3).toFixed(2),
         atmos:  +Math.max(0, c.t1 - c.t2).toFixed(2),    // 散乱+被写界深度
         total:  +c.t1.toFixed(2),
+        raw: [c.t1, c.t2, c.t3, c.t4].map(v => +v.toFixed(2)),
+        /* 差分が単調でなければ計測が信用できない。丸めて隠さず明示する */
+        sane: (c.t1 >= c.t2 - 0.5) && (c.t2 >= c.t3 - 0.5) && (c.t3 >= c.t4 - 0.5),
       };
       renderDiag();
     }
@@ -1829,7 +1839,8 @@ function renderDiag(){
   const yn = b => b ? '<span class="ok">OK</span>' : '<span class="ng">NG</span>';
   const ext = Object.entries(CAPS.ext).map(([k,v]) => `  ${k} … ${yn(v)}`).join('\n');
   const cal = CAL && CAL.result
-    ? `  シーン本体 ${CAL.result.scene} ms\n  Bloom      ${CAL.result.bloom} ms\n  ATMOS      ${CAL.result.atmos} ms\n  その他post ${CAL.result.post} ms\n  合計       ${CAL.result.total} ms`
+    ? `  シーン本体 ${CAL.result.scene} ms\n  Bloom      ${CAL.result.bloom} ms\n  ATMOS      ${CAL.result.atmos} ms\n  その他post ${CAL.result.post} ms\n  合計       ${CAL.result.total} ms\n  生値 t1..t4 ${CAL.result.raw.join(' / ')}`
+      + (CAL.result.sane ? '' : '\n  <span class="ng">※差分が単調でない = この内訳は信用できない</span>')
     : '  計測中… (画面が数秒ちらつきます)';
   diagEl.innerHTML =
     `<h4>DEVICE</h4>  ${navigator.userAgent}\n  GPU: ${glInfo()}\n  画面 ${innerWidth}×${innerHeight} / devicePixelRatio ${(devicePixelRatio||1).toFixed(2)}` +
