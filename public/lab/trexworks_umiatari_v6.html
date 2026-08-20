@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<script>document.documentElement.className='js';</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>T-REX WORKS — Depth in every detail.</title>
@@ -38,9 +39,11 @@
     background:var(--abyss); color:var(--bone);
     font-family:var(--f-sans);
     overflow-x:hidden; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
-    opacity:0; transition:opacity 1.1s var(--ease);
+    /* 入場フェードはJSがある時だけ。ここで無条件に opacity:0 にすると
+       JS無効・クローラには真っ黒な空ページを返すことになる。 */
   }
-  body.ready{opacity:1}
+  html.js body{opacity:0; transition:opacity 1.1s var(--ease)}
+  html.js body.ready{opacity:1}
 
   /* 技術書体。HUDの全ラベルがこれ1つを共有する */
   .mono{
@@ -67,7 +70,7 @@
   header{
     position:absolute; top:0; left:0; right:0;
     display:flex; justify-content:space-between; align-items:flex-start;
-    padding:26px var(--gut) 0;
+    padding:calc(26px + env(safe-area-inset-top)) var(--gut) 0;
   }
   .brand{font-family:var(--f-mono); font-size:10.5px; font-weight:600; letter-spacing:.26em; color:var(--bone)}
   .brand i{display:block; margin-top:9px; width:38px; height:1px; background:var(--line-dim); font-style:normal}
@@ -142,7 +145,7 @@
   #dive .idx.on{opacity:1; color:var(--line)}
 
   /* ---- 下段 ---- */
-  #foot{position:absolute; left:var(--gut); bottom:30px}
+  #foot{position:absolute; left:var(--gut); bottom:calc(30px + env(safe-area-inset-bottom))}
   #foot .loc{
     display:block; margin-top:9px;
     font-family:var(--f-mono); font-size:13px; font-weight:500; letter-spacing:.16em; color:var(--hud-hi);
@@ -150,7 +153,7 @@
   #foot .track{margin-top:13px; width:172px; height:1px; background:rgba(143,212,222,.2)}
   #foot .fill{display:block; height:1px; width:0%; background:var(--line)}
 
-  #counter{position:absolute; right:var(--gut); bottom:30px; text-align:right}
+  #counter{position:absolute; right:var(--gut); bottom:calc(30px + env(safe-area-inset-bottom)); text-align:right}
   #counter .n{font-family:var(--f-mono); font-size:13px; font-weight:500; letter-spacing:.14em; color:var(--hud-hi); font-variant-numeric:tabular-nums}
   #counter .n small{font-size:11px; color:var(--hud); font-weight:400}
   #counter .track{margin-top:11px; margin-left:auto; display:flex; gap:4px; justify-content:flex-end}
@@ -161,8 +164,9 @@
   #sim b{color:var(--line); font-weight:500}
 
   /* ---- 中央下: 潜行ボタン ---- */
-  #diveBtn{
-    position:absolute; left:50%; bottom:32px; transform:translateX(-50%);
+  #diveBtn{display:none}
+  html.js #diveBtn{
+    position:absolute; left:50%; bottom:calc(32px + env(safe-area-inset-bottom)); transform:translateX(-50%);
     display:flex; flex-direction:column; align-items:center; gap:11px;
   }
   #diveBtn i{
@@ -175,6 +179,7 @@
     content:""; position:absolute; top:0; left:50%; width:46px; height:46px; margin-left:-23px;
     border-radius:50%; border:1px solid rgba(143,212,222,.5); animation:ping 3s var(--ease) infinite;
   }
+  html.js #diveBtn{display:flex}
   #diveBtn:hover i{border-color:var(--line); transform:translateY(3px)}
   #diveBtn em{font-style:normal; font-family:var(--f-mono); font-size:8.5px; letter-spacing:.26em; opacity:.7; text-transform:uppercase}
   @keyframes ping{0%{transform:scale(1); opacity:.5}70%{transform:scale(1.7); opacity:0}100%{opacity:0}}
@@ -188,6 +193,16 @@
   #work .k{display:block; margin-bottom:10px}
   #work .t{font-family:var(--f-serif); font-size:26px; letter-spacing:.01em; color:var(--bone)}
   #work .m{display:block; margin-top:9px; font-family:var(--f-mono); font-size:8.5px; letter-spacing:.22em; color:var(--hud)}
+  #work .go{
+    display:inline-flex; align-items:center; gap:8px; margin-top:16px;
+    padding-bottom:7px; border-bottom:1px solid var(--line-dim);
+    font-size:9px; letter-spacing:.24em; color:var(--bone);
+    transition:border-color .35s var(--ease), gap .35s var(--ease);
+  }
+  #work .go[hidden]{display:none}
+  #work .go em{font-style:normal; transition:transform .35s var(--ease)}
+  #work .go:hover{border-color:var(--line); gap:12px}
+  #work .go:hover em{transform:translate(2px,-2px)}
 
   /* ---- 画面全体の仕上げ ---- */
   /* 周辺減光は「1枚だけ」。3D側にもVignetteを入れると二重になるので入れていない。 */
@@ -203,12 +218,15 @@
   #splash.on{transition:none; opacity:.42}
 
   /* ---- 読み込み ---- */
-  #boot{
+  /* 読み込み板もJSがある時だけ。無いと出しっぱなしで画面を覆う */
+  #boot{display:none}
+  html.js #boot{
     position:fixed; inset:0; z-index:30; background:var(--abyss);
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
     transition:opacity .9s var(--ease); 
   }
-  #boot.gone{opacity:0; pointer-events:none}
+  html.js #boot.gone{opacity:0; pointer-events:none}
+  #noscriptNote{position:fixed; left:var(--gut); bottom:96px; z-index:12; max-width:34em}
   #boot .bar{width:132px; height:1px; background:rgba(143,212,222,.2)}
   #boot .bar span{display:block; height:1px; width:0%; background:var(--line); transition:width .3s linear}
 
@@ -245,16 +263,19 @@
     #hero h1{font-size:clamp(46px,13.5vw,74px); line-height:.94}
     #hero p{margin-top:22px; font-size:11.5px; line-height:2.05; max-width:none}
     #cta{margin-top:24px}
-    /* カードの上に重なるだけの計器は出さない。
-       01/02/03 は #counter が、作品名はカード自身が持っている。 */
-    #dive,#work{display:none}
-    #foot{left:var(--gut); bottom:24px}
+    /* 章インデックスは #counter と重複するので出さない。
+       作品名もカード自身が読めるので隠し、「作品を見る」導線だけ残す。 */
+    #dive{display:none}
+    #work{bottom:calc(74px + env(safe-area-inset-bottom)); left:50%; width:auto; text-align:center}
+    #work .k,#work .t,#work .m{display:none}
+    #work .go{margin-top:0}
+    #foot{left:var(--gut); bottom:calc(24px + env(safe-area-inset-bottom))}
     #foot .track{width:120px}
     #foot .loc{font-size:11.5px}
-    #counter{right:var(--gut); bottom:24px}
+    #counter{right:var(--gut); bottom:calc(24px + env(safe-area-inset-bottom))}
     #counter .n{font-size:11.5px}
     #counter .seg{width:18px}
-    #diveBtn{bottom:74px}
+    #diveBtn{bottom:calc(74px + env(safe-area-inset-bottom))}
     #diveBtn i{width:40px; height:40px}
     #diveBtn::after{width:40px; height:40px; margin-left:-20px}
     #legibility{background:linear-gradient(180deg, rgba(2,14,20,.42) 0%, rgba(2,14,20,.12) 30%, transparent 55%, rgba(2,14,20,.5) 100%)}
@@ -275,14 +296,14 @@
   }
 
   /* ヒーローの入場。1回だけ、重さのある stagger */
-  #hero .eyebrow,#hero h1,#hero p,#cta{
+  html.js #hero .eyebrow,html.js #hero h1,html.js #hero p,html.js #cta{
     opacity:0; transform:translateY(28px);
     transition:opacity 1.1s var(--ease), transform 1.25s var(--ease);
   }
-  body.ready #hero .eyebrow{opacity:1; transform:none; transition-delay:.20s}
-  body.ready #hero h1{opacity:1; transform:none; transition-delay:.34s}
-  body.ready #hero p{opacity:1; transform:none; transition-delay:.56s}
-  body.ready #cta{opacity:1; transform:none; transition-delay:.74s}
+  html.js body.ready #hero .eyebrow{opacity:1; transform:none; transition-delay:.20s}
+  html.js body.ready #hero h1{opacity:1; transform:none; transition-delay:.34s}
+  html.js body.ready #hero p{opacity:1; transform:none; transition-delay:.56s}
+  html.js body.ready #cta{opacity:1; transform:none; transition-delay:.74s}
 </style>
 </head>
 <body>
@@ -292,9 +313,11 @@
   <header>
     <div class="brand">T-REX WORKS<i></i></div>
     <nav class="mono">
-      <a class="now" href="#works">Works</a>
-      <a href="#about">About</a>
-      <a href="#contact">Contact</a>
+      <!-- Works はこのページ内の潜航へ、About/Contact は実在するページへ。
+           存在しない #id を指すと、押しても何も起きないリンクになる。 -->
+      <a class="now" id="navWorks" href="#dive-start">Works</a>
+      <a href="../company/">About</a>
+      <a href="../contact/">Contact</a>
     </nav>
   </header>
 
@@ -322,7 +345,7 @@
     <div class="eyebrow mono shade">Surface / 01 — Selected works</div>
     <h1 class="shade">Depth<br>in every<br>detail.</h1>
     <p class="shade">北九州のWeb制作「T-REX WORKS」。設計から実装、SEO/MEOまで——見えない深さで仕上げます。スクロールして、水の底の仕事を見てください。</p>
-    <a id="cta" class="mono shade" href="#works">Explore the works <em>↘</em></a>
+    <a id="cta" class="mono shade" href="#dive-start">Explore the works <em>↘</em></a>
   </section>
 
   <div id="vert" class="mono">Selected works / 03 projects</div>
@@ -342,6 +365,7 @@
     <span class="k mono" id="workKind">01 / Web site</span>
     <span class="t" id="workTitle">GARAGE BeCool</span>
     <span class="m" id="workMeta">2025 — LIVE</span>
+    <a class="go mono" id="workLink" hidden>View project <em>↗</em></a>
   </div>
 
   <div id="foot" class="mono">
@@ -368,6 +392,12 @@
   <div class="bar"><span id="bootFill"></span></div>
 </div>
 
+<noscript>
+  <p id="noscriptNote" class="mono shade">
+    JavaScript が無効のため、水中の3D表現は再生されません。本文はそのままお読みいただけます。
+  </p>
+</noscript>
+
 <div id="diag" hidden></div>
 
 <div id="fallback">
@@ -375,6 +405,7 @@
   別のブラウザ、または最新版でお試しください。
 </div>
 
+<div id="dive-start"></div>
 <div id="spacer"></div>
 
 <!-- three r185 を ESM で読む。CDN が使えない環境では import map の URL だけ差し替える -->
@@ -1213,14 +1244,19 @@ function cardTexture(o){
 }
 
 const WORKS = [
+  /* url は「実在するものだけ」入れる。相対パスなので配信場所が変わっても追従する。
+     url が無い作品はホバーもクリックもしない(存在しない先へ誘導しないため)。 */
   { num:'01', kind:'01 / Web site',     title:'GARAGE BeCool',   year:'2025', foot:'WEB SITE',
     tag:'LIVE / SELECTED', glow:'rgba(255,208,150,0.40)', thumbLine:'Drive your life.',
+    url:'../becool/',
     lines:['DESIGN — IMPLEMENT — SEO','FUKUOKA / KITAKYUSHU'] },
   { num:'02', kind:'02 / Landing page', title:'L tAq',           year:'2026', foot:'LANDING PAGE',
     tag:'', glow:'rgba(150,225,240,0.42)', thumbLine:'Clear as water.',
+    url:null,
     lines:['ART DIRECTION — FRONT-END','SINGLE PAGE / MOTION'] },
   { num:'03', kind:'03 / Corporate',    title:'T-REX CO., LTD.', year:'2026', foot:'CORPORATE SITE',
     tag:'', glow:'rgba(255,170,150,0.34)', thumbLine:'Never stop the site.',
+    url:'../',
     lines:['STRATEGY — DESIGN — BUILD','CMS / RECRUIT / MEO'] },
 ];
 
@@ -1246,6 +1282,7 @@ const cards = [];
       uMap:{value:cardTexture(WORKS[i])},
       uVis:{value:1},          // 水面越しに見えなくなる分の可視度
       uFocus:{value:0},                       // 0..1 その作品に寄っているか
+      uHover:{value:0},                       // 0..1 ポインタが乗っているか
     };
     const mat = new THREE.ShaderMaterial({
       transparent:true, depthWrite:false, side:THREE.DoubleSide,
@@ -1262,7 +1299,7 @@ const cards = [];
       fragmentShader:`
         #define SKY_OCT ${TIER.skyOctaves}
         uniform sampler2D uMap;
-        uniform float uDepth; uniform float uFocus; uniform float uVis;
+        uniform float uDepth; uniform float uFocus; uniform float uVis; uniform float uHover;
         varying vec2 vUv; varying vec3 vW; varying vec3 vN;
         ${G_NOISE}
         ${G_SKY}
@@ -1295,8 +1332,10 @@ const cards = [];
 
           vec3 col = glass + content.rgb * content.a * (0.85 + uFocus*0.5);
           col += env * F * 0.30;
-          col += vec3(0.55,0.86,0.92) * rim * (0.10 + uFocus*0.16);
-          col += vec3(0.80,0.96,1.00) * hair * (0.55 + uFocus*0.85);
+          col += vec3(0.55,0.86,0.92) * rim * (0.10 + uFocus*0.16 + uHover*0.14);
+          /* ホバーは「縁が一段はっきりする」だけに留める。
+             面を光らせるとガラスではなく発光板に見える。 */
+          col += vec3(0.80,0.96,1.00) * hair * (0.55 + uFocus*0.85 + uHover*0.75);
 
           /* 太陽のスペキュラ。1枚だけ鋭い反射が走ると板が"硬く"見える */
           vec3 H = normalize(V + uSun);
@@ -1693,9 +1732,12 @@ let targetP = 0, sp = 0;               const spV = {v:0};
 let pxT = 0, pyT = 0, px = 0, py = 0;  const pxV = {v:0}, pyV = {v:0};
 let scrollVel = 0;                     let prevSp = 0;
 
+/* 潜航の進行度は「spacerの高さ」で正規化する。document 全体の高さで
+   割ると、下に本文を1行足しただけで潜航の振り付けが全部ずれる。 */
+const spacerEl = document.getElementById('spacer');
 function readScroll(){
-  const max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
-  targetP = Math.min(1, Math.max(0, (scrollY || 0) / max));
+  const span = (spacerEl ? spacerEl.offsetHeight : document.documentElement.scrollHeight) - innerHeight;
+  targetP = Math.min(1, Math.max(0, (scrollY || 0) / Math.max(1, span)));
 }
 addEventListener('scroll', readScroll, { passive:true });
 addEventListener('resize', readScroll);
@@ -1713,7 +1755,53 @@ function scrollToP(p, smooth){
   const max = document.documentElement.scrollHeight - innerHeight;
   scrollTo({ top: max * p, behavior: (reduced || !smooth) ? 'auto' : 'smooth' });
 }
-document.getElementById('cta').addEventListener('click', (e)=>{ e.preventDefault(); scrollToP(0.30, true); });
+const toWorks = (e) => { e.preventDefault(); scrollToP(0.30, true); };
+document.getElementById('cta').addEventListener('click', toWorks);
+document.getElementById('navWorks').addEventListener('click', toWorks);
+
+/* ---- カードのホバーとクリック --------------------------------------
+   3Dのカードを触れるようにする。ただしポインタ専用にはしない ――
+   #work の「View project」は実DOMのリンクなので、キーボードでも辿れ、
+   スクリーンリーダーからも見える。3D側はその強化にすぎない。
+   url を持たない作品は当たり判定から外す(存在しない先へ誘導しない)。 */
+const ray = new THREE.Raycaster();
+const ptrNdc = new THREE.Vector2();
+let hovered = -1;
+
+function pickCard(clientX, clientY){
+  ptrNdc.x = (clientX / innerWidth) * 2 - 1;
+  ptrNdc.y = -(clientY / innerHeight) * 2 + 1;
+  ray.setFromCamera(ptrNdc, camera);
+  const targets = cards.filter(c => WORKS[c.userData.i].url && c.userData.uni.uVis.value > 0.5);
+  const hit = targets.length ? ray.intersectObjects(targets, false)[0] : null;
+  return hit ? hit.object.userData.i : -1;
+}
+function setHover(h){
+  if (h === hovered) return;
+  hovered = h;
+  document.body.style.cursor = h >= 0 ? 'pointer' : '';
+}
+
+if (fine){
+  addEventListener('pointermove', (e) => {
+    /* HUDのリンク上にいる間は canvas にイベントが来ないので、
+       その時はホバーを外す(取り残されると指カーソルが残る)。 */
+    setHover(e.target === renderer.domElement ? pickCard(e.clientX, e.clientY) : -1);
+  }, { passive:true });
+}
+
+/* タップ判定。押してから離すまでの移動が小さい時だけクリックとみなす。
+   preventDefault を一切しないので、縦スクロールは妨げない。 */
+let downX = 0, downY = 0, downT = 0;
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  downX = e.clientX; downY = e.clientY; downT = performance.now();
+}, { passive:true });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (Math.hypot(e.clientX - downX, e.clientY - downY) > 12) return;
+  if (performance.now() - downT > 700) return;
+  const h = pickCard(e.clientX, e.clientY);
+  if (h >= 0 && WORKS[h].url) location.href = WORKS[h].url;
+}, { passive:true });
 document.getElementById('diveBtn').addEventListener('click', ()=>{
   scrollTo({ top: scrollY + innerHeight*1.8, behavior: reduced ? 'auto' : 'smooth' });
 });
@@ -1737,9 +1825,16 @@ const workEl  = document.getElementById('work');
 const workKind= document.getElementById('workKind');
 const workTitle=document.getElementById('workTitle');
 const workMeta =document.getElementById('workMeta');
+const workLink =document.getElementById('workLink');
 const legibilityEl = document.getElementById('legibility');
 
 let lastDepth='', lastLoc='', lastSec=-1, lastWork=-1, splashed=false;
+
+/* 深度の定義は1箇所に集約する。ルーラーの目盛り・針・現在地の帯名が
+   別々の式を持つと、表示どうしが食い違う(実際に食い違っていた)。 */
+const DEPTH_MAX = 600;                 // ルーラー最下段の目盛りと一致させること
+const DEPTH_PER_UNIT = 69.8;           // ワールド1単位あたりの表示メートル
+const LOC_BLUE = 4, LOC_ABYSS = 230;   // 現在地の帯の境目
 
 function ss(a,b,x){ x = Math.min(1, Math.max(0, (x-a)/(b-a))); return x*x*(3-2*x); }
 
@@ -1941,7 +2036,7 @@ function frame(){
   /* 縦画面は水面を見下ろす面積が大きく、近景の波ばかりになる。
      水面に入るまでの間だけカメラを上へ振り、水平線を画面の下寄りへ送る
      (＝空を多く見せ、1枚目のカードを本文の下に落とす)。 */
-  const portraitLift = camera.aspect < 1 ? 0.22 * (1 - ss(0.02, 0.20, sp)) : 0;
+  const portraitLift = PORTRAIT_LIFT * (1 - ss(0.02, 0.20, sp));
   camera.rotation.x = -0.06 + portraitLift
                     + 0.21*ss(0.10,0.46,sp) - 0.32*ss(0.60,0.97,sp)
                     + py*-0.030
@@ -1993,6 +2088,11 @@ function frame(){
     const near = 1 - Math.min(1, Math.abs(camera.position.y - u.base.y)/(isMobile ? 2.2 : 2.7));
     const f = near*near;
     u.uni.uFocus.value += (f - u.uni.uFocus.value) * Math.min(1, dt*3.2);
+    /* ホバーは縁の強調と、ごく僅かに手前へ寄るだけ。大きく動かすと
+       板が飛んで「浮いている物」ではなくUI部品に見える。 */
+    const hv = (hovered === i && !reduced) ? 1 : 0;
+    u.uni.uHover.value += (hv - u.uni.uHover.value) * Math.min(1, dt*6.0);
+    c.position.z = u.base.z + u.uni.uHover.value * 0.12;
     /* 水面は不透明なので、水面より上のカードは潜った瞬間に見えなくなるのが
        正しい。放っておくと波の稜線でカードが切り取られたように見える。 */
     const vis = u.base.y > 0.4 ? 1 - ss(0.004, 0.050, depth01) : 1;
@@ -2056,14 +2156,16 @@ function frame(){
   heroEl.style.transform = `translateY(${(-46*(1-hop)).toFixed(1)}px)`;
   heroEl.style.pointerEvents = hop < 0.08 ? 'none' : '';
 
-  const depthM = Math.max(0, -camera.position.y) * 69.8;
+  const depthM = Math.max(0, -camera.position.y) * DEPTH_PER_UNIT;
   const dTxt = (depthM<100 ? (depthM<10?'00':'0') : '') + depthM.toFixed(1);
   if (dTxt !== lastDepth){ depthEl.innerHTML = dTxt + '<small>M</small>'; lastDepth = dTxt; }
-  const loc = depthM < 4 ? 'SURFACE' : (depthM < 230 ? 'THE BLUE' : 'THE ABYSS');
+  const loc = depthM < LOC_BLUE ? 'SURFACE' : (depthM < LOC_ABYSS ? 'THE BLUE' : 'THE ABYSS');
   if (loc !== lastLoc){ locEl.textContent = loc; lastLoc = loc; }
 
+  /* 進捗バーはスクロール量、ルーラーの針は「深度」。
+     深度は sp の非線形関数なので、針を sp で置くと目盛りと約112Mずれる。 */
   fillEl.style.width = (sp*100).toFixed(1) + '%';
-  rdotEl.style.top = (sp*100).toFixed(2) + '%';
+  rdotEl.style.top = Math.min(100, depthM / DEPTH_MAX * 100).toFixed(2) + '%';
 
   const sec = Math.min(2, Math.floor(sp*3));
   if (sec !== lastSec){
@@ -2082,6 +2184,14 @@ function frame(){
     workKind.textContent = w.kind;
     workTitle.textContent = w.title;
     workMeta.textContent = w.year + (w.tag ? ' — LIVE' : '');
+    if (w.url){
+      workLink.href = w.url;
+      workLink.hidden = false;
+      workLink.setAttribute('aria-label', `${w.title} のサイトを見る`);
+    } else {
+      workLink.removeAttribute('href');   // href が無い <a> はフォーカスも受けない
+      workLink.hidden = true;
+    }
   }
   if (!showWork) lastWork = -1;
 
@@ -2126,6 +2236,51 @@ function frame(){
 /* ================================================================
    12) リサイズ・可視性
    ================================================================ */
+
+/* ---- 縦画面のフレーミング解 ----------------------------------------
+   ヒーローの本文とCTAはDOM、カードは3D。別々の座標系なので固定値で
+   合わせると、表示領域の高さが変わった瞬間に重なる。実機Safariは
+   ブラウザUIぶん表示領域が低く、CTAへ 57.8% 食い込んでいた。
+   レイアウト確定後にCTAの下端を実測し、1枚目のカードがその下へ来る
+   カメラの仰角を二分法で解く。カードのワールド座標は動かさない
+   (下げると波の下に潜り、不透明な水面に隠れてしまうため)。 */
+let PORTRAIT_LIFT = 0.22;
+const _pcam = new THREE.PerspectiveCamera();
+const _pv = new THREE.Vector3();
+function solvePortraitLift(){
+  if (camera.aspect >= 1){ PORTRAIT_LIFT = 0; return; }
+  const cta  = document.getElementById('cta');
+  const lede = document.querySelector('#hero p');
+  if (!cta) return;
+  const target = Math.max(cta.getBoundingClientRect().bottom,
+                          lede ? lede.getBoundingClientRect().bottom : 0) + 18;
+
+  const card  = cards[0];
+  const halfH = 1.72 * card.scale.y * 0.5;
+  /* 仰角 lift のときの、1枚目のカード上端の画面Y。lift を上げるほど
+     カメラが上を向き、被写体は画面の下へ動く(= topY は単調増加)。 */
+  const topY = (lift) => {
+    _pcam.fov = camera.fov; _pcam.aspect = camera.aspect;
+    _pcam.near = camera.near; _pcam.far = camera.far;
+    _pcam.position.set(0, 0.95, 0);
+    _pcam.rotation.order = 'YXZ';
+    _pcam.rotation.set(-0.06 + lift, 0, 0);
+    _pcam.updateProjectionMatrix();
+    _pcam.updateMatrixWorld(true);
+    _pv.set(card.userData.base.x, card.userData.base.y + halfH, card.userData.base.z).project(_pcam);
+    return (1 - (_pv.y * 0.5 + 0.5)) * innerHeight;
+  };
+
+  let lo = 0.06, hi = 0.52;
+  if (topY(hi) < target){ PORTRAIT_LIFT = hi; return; }   // 上限でも届かない
+  if (topY(lo) >= target){ PORTRAIT_LIFT = lo; return; }  // 下限で足りている
+  for (let k = 0; k < 20; k++){
+    const mid = (lo + hi) / 2;
+    if (topY(mid) < target) lo = mid; else hi = mid;
+  }
+  PORTRAIT_LIFT = hi;
+}
+
 function resize(){
   const w = innerWidth, h = innerHeight;
   camera.aspect = w/h;
@@ -2140,8 +2295,11 @@ function resize(){
   gradePass.uniforms.uRes.value.set(w*DPR, h*DPR);
   atmosPass.uniforms.uNear.value = camera.near;
   atmosPass.uniforms.uFar.value  = camera.far;
+  solvePortraitLift();
   readScroll();
 }
+/* フォントの入れ替わりでCTAの位置が動くので、確定後にもう一度解く */
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(solvePortraitLift);
 addEventListener('resize', resize);
 
 document.addEventListener('visibilitychange', ()=>{
