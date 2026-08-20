@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ja" data-draft="1" class="worksPage">
+<head>
+<!-- className= で代入すると worksPage クラスまで消える。
+     消すと html.worksPage の指定が全部効かなくなり、さらに
+     html.js body{opacity:0} を解除する .ready を付ける者がいないので
+     ページが白いまま何も出なくなる(実際に踏んだ)。
+     このページは3Dを待つ必要が無いので、その場で ready にする。 -->
+<script>
+  document.documentElement.classList.add('js');
+  addEventListener('DOMContentLoaded', function(){ document.body.classList.add('ready'); });
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>制作実績 — 汀ノ庭 / MIGIWA STUDIO</title>
+<meta name="description" content="MIGIWA STUDIO の制作実績。3件の画面と、このサイト自体の制作記。">
+<meta name="theme-color" content="#03141b">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2303141b'/%3E%3Cpath d='M6 13h20M16 13v13' stroke='%238FD4DE' stroke-width='2'/%3E%3C/svg%3E">
+<style>
+  :root{
+    /* ---- 単一のカラーランプ。画面のどの色もここから派生させる ----
+       WebGLの最終グレーディングと同じ方向へ揃えてあるので、
+       DOM と 3D が「別作品」に見えない。 */
+    --abyss:#03141b;      /* 最深部・ページ地色 */
+    --deep:#062028;
+    --teal:#0B3A46;
+    --line:#8FD4DE;       /* 唯一のアクセント。これ以上増やさない */
+    --line-dim:rgba(143,212,222,.34);
+    --bone:#EDF6F4;
+    --hud:rgba(196,224,228,.60);
+    --hud-hi:rgba(226,244,246,.92);
+
+    /* ---- タイポグラフィのスケール ----
+       大見出し(serif)と極小の技術書体(mono)の対比だけで階層を作る。
+       中間サイズを増やさないのが密度感の要。 */
+    --f-serif:"Times New Roman",Times,Georgia,"Hiragino Mincho ProN","Yu Mincho",serif;
+    /* 和文だけの塊(ブランドマーク)は、欧文フォントを先に並べても
+       グリフが無くて素通りするだけなので、明朝を先頭に置く。
+       Linux では Noto Serif CJK まで落ちる。総称の serif に任せると
+       環境によってゴシックが当たる。 */
+    --f-serif-jp:"Hiragino Mincho ProN","Hiragino Mincho Pro","Yu Mincho",YuMincho,
+                 "Noto Serif JP","Noto Serif CJK JP","Source Han Serif JP",
+                 "MS PMincho",serif;
+    --f-sans:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic",sans-serif;
+    --f-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+
+    --gut:34px;           /* 画面端のガター */
+    --ease:cubic-bezier(.22,.61,.24,1);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:auto; background:var(--abyss)}
+  body{
+    background:var(--abyss); color:var(--bone);
+    font-family:var(--f-sans);
+    overflow-x:hidden; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    /* 入場フェードはJSがある時だけ。ここで無条件に opacity:0 にすると
+       JS無効・クローラには真っ黒な空ページを返すことになる。 */
+  }
+  html.js body{opacity:0; transition:opacity 1.1s var(--ease)}
+  html.js body.ready{opacity:1}
+
+  /* 技術書体。HUDの全ラベルがこれ1つを共有する */
+  .mono{
+    font-family:var(--f-mono);
+    font-size:9.5px; font-weight:500; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--hud); font-variant-numeric:tabular-nums;
+  }
+
+  #stage{position:fixed; inset:0; z-index:0; background:var(--abyss)}
+  #stage canvas{display:block; width:100%; height:100%}
+  #spacer{height:620vh}
+
+  /* ============================ HUD ============================
+     3Dの上に乗る情報層。pointer-events は原則切って、リンクだけ拾う。 */
+  #hud{position:fixed; inset:0; z-index:10; pointer-events:none}
+  #hud a,#hud button{pointer-events:auto; color:inherit; text-decoration:none; background:none; border:0; cursor:pointer; font:inherit}
+  #hud a:focus-visible,#hud button:focus-visible{outline:1px solid var(--line); outline-offset:5px}
+
+  /* 可読性の担保は影ではなく、3D側の暗幕と本文まわりの極薄グラデで作る。
+     文字自体を光らせない(リファレンスの文字はどれも発光していない)。 */
+  .shade{text-shadow:0 1px 12px rgba(2,14,20,.55), 0 0 2px rgba(2,14,20,.35)}
+
+  /* ---- ヘッダー ---- */
+  header{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:calc(26px + env(safe-area-inset-top)) var(--gut) 0;
+  }
+  /* ブランドマーク。和文4字なので、欧文用の字送り(.26em)をそのまま当てると
+     字間が空きすぎて「ばらけた4文字」に見える。和文は明朝で大きめに組み、
+     字送りは詰め気味(.10em)にして1つの塊として読ませる。
+     欧文の MIGIWA STUDIO はその下に小さく敷いて、和文の重さを支える。 */
+  .brand{display:block; line-height:1; color:var(--bone)}
+  .brand b{
+    display:block; font-family:var(--f-serif-jp); font-weight:400;
+    font-size:19px; letter-spacing:.10em; text-indent:.10em;
+  }
+  .brand em{
+    display:block; margin-top:7px; font-style:normal;
+    font-family:var(--f-mono); font-size:8px; font-weight:500;
+    letter-spacing:.30em; text-indent:.30em; opacity:.60;
+  }
+  .brand i{display:block; margin-top:9px; width:38px; height:1px; background:var(--line-dim); font-style:normal}
+  @media (max-width:520px){
+    .brand b{font-size:17px}
+    .brand em{font-size:7.5px; letter-spacing:.24em; text-indent:.24em}
+  }
+  nav{display:flex; gap:30px; padding-top:1px}
+  nav a{position:relative; opacity:.62; transition:opacity .35s var(--ease)}
+  nav a::after{
+    content:""; position:absolute; left:0; right:100%; bottom:-6px; height:1px;
+    background:var(--line); transition:right .4s var(--ease);
+  }
+  nav a:hover{opacity:1}
+  nav a:hover::after{right:0}
+  nav a.now{color:var(--line); opacity:1}
+  nav a.now::after{right:0}
+
+  /* ---- 左: 深度計 + 目盛り(リファレンスの垂直ルーラー) ---- */
+  #meter{position:absolute; top:112px; left:var(--gut)}
+  #meter .cap{display:block; margin-bottom:9px}
+  #meter .v{
+    font-family:var(--f-mono); font-size:15px; font-weight:500; letter-spacing:.12em;
+    color:var(--hud-hi); font-variant-numeric:tabular-nums;
+  }
+  #meter .v::after{content:""; display:block; margin-top:8px; width:44px; height:1px; background:var(--line-dim)}
+
+  /* 深度の目盛り。水面では巨大なブランドマークと同じ場所に来て
+     数字が字画に食い込むので、潜り始めるまで出さない。
+     潜航が始まれば(data-dived)フェードで現れる。 */
+  #ruler{
+    position:absolute; left:calc(var(--gut) + 3px); top:196px; height:32vh; min-height:220px;
+    border-left:1px solid rgba(143,212,222,.22);
+    opacity:0; transition:opacity .7s var(--ease);
+  }
+  :root[data-dived] #ruler{opacity:1}
+  #ruler .tick{
+    position:absolute; left:11px; transform:translateY(-50%);
+    font-family:var(--f-mono); font-size:8px; letter-spacing:.16em; color:rgba(196,224,228,.42);
+    white-space:nowrap;
+  }
+  #ruler .tick::before{content:""; position:absolute; left:-11px; top:50%; width:6px; height:1px; background:rgba(143,212,222,.3)}
+  #rdot{
+    position:absolute; left:-3px; top:0; width:5px; height:5px; border-radius:50%;
+    background:var(--line); box-shadow:0 0 10px rgba(143,212,222,.9);
+    transition:transform .18s linear;
+  }
+
+  /* ---- ヒーロー ---- */
+  #hero{position:absolute; left:var(--gut); top:26vh; max-width:min(620px,52vw); will-change:opacity,transform}
+  #hero .eyebrow{margin-bottom:26px}
+  /* ロックアップ。和文4字＋欧文の2段組。ブランド名を一番大きく出す。
+     和文は欧文用の字送りをそのまま当てると「ばらけた4文字」に見えるので、
+     詰め気味(.06em)にして塊で読ませ、欧文を下に敷いて重さを支える。 */
+  #hero h1{color:var(--bone); line-height:1}
+  #lockup b{
+    display:block; font-family:var(--f-serif-jp); font-weight:400;
+    font-size:clamp(62px,10.5vw,148px); letter-spacing:.06em; text-indent:.06em;
+  }
+  #lockup span{
+    display:block; margin-top:clamp(14px,1.6vw,22px);
+    font-size:clamp(10px,1.05vw,13px); font-weight:500;
+    letter-spacing:.42em; text-indent:.42em; color:rgba(222,240,242,.72);
+  }
+  #hero p{
+    margin-top:30px; max-width:33em;
+    font-size:12.5px; line-height:2.25; letter-spacing:.045em;
+    color:rgba(222,240,242,.82);
+  }
+  #cta{
+    display:inline-flex; align-items:center; gap:12px; margin-top:30px;
+    padding-bottom:8px; border-bottom:1px solid var(--line-dim);
+    transition:border-color .35s var(--ease), gap .35s var(--ease);
+  }
+  #cta:hover{border-color:var(--line); gap:16px}
+  #cta em{font-style:normal; transition:transform .35s var(--ease)}
+  #cta:hover em{transform:translate(3px,3px)}
+
+  /* ---- 右: 縦組みラベルと章インデックス ---- */
+  #vert{
+    position:absolute; right:calc(var(--gut) + 66px); top:34vh;
+    writing-mode:vertical-rl; font-size:8.5px; letter-spacing:.34em; opacity:.5;
+  }
+  #dive{position:absolute; right:var(--gut); top:34vh; text-align:right; line-height:2.3}
+  #dive .cap{display:block; margin-bottom:14px; opacity:.72}
+  #dive .idx{display:block; opacity:.32; transition:opacity .4s var(--ease), color .4s var(--ease)}
+  #dive .idx.on{opacity:1; color:var(--line)}
+
+  /* ---- 下段 ---- */
+  #foot{position:absolute; left:var(--gut); bottom:calc(30px + env(safe-area-inset-bottom))}
+  #foot .loc{
+    display:block; margin-top:9px;
+    font-family:var(--f-mono); font-size:13px; font-weight:500; letter-spacing:.16em; color:var(--hud-hi);
+  }
+  #foot .track{margin-top:13px; width:172px; height:1px; background:rgba(143,212,222,.2)}
+  #foot .fill{display:block; height:1px; width:100%; background:var(--line); transform:scaleX(0); transform-origin:0 50%}
+
+  #counter{position:absolute; right:var(--gut); bottom:calc(30px + env(safe-area-inset-bottom)); text-align:right}
+  #counter .n{font-family:var(--f-mono); font-size:13px; font-weight:500; letter-spacing:.14em; color:var(--hud-hi); font-variant-numeric:tabular-nums}
+  #counter .n small{font-size:11px; color:var(--hud); font-weight:400}
+  #counter .track{margin-top:11px; margin-left:auto; display:flex; gap:4px; justify-content:flex-end}
+  #counter .seg{width:26px; height:1px; background:rgba(143,212,222,.22); transition:background .5s var(--ease)}
+  #counter .seg.on{background:var(--line)}
+
+  #sim{position:absolute; top:112px; right:var(--gut); text-align:right; font-size:8.5px; line-height:2.1; letter-spacing:.18em; opacity:.42}
+  #sim b{color:var(--line); font-weight:500}
+
+  /* ---- 中央下: 潜行ボタン ---- */
+  #diveBtn{display:none}
+  html.js #diveBtn{
+    position:absolute; left:50%; bottom:calc(32px + env(safe-area-inset-bottom)); transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:11px;
+  }
+  #diveBtn i{
+    width:46px; height:46px; border:1px solid rgba(190,230,235,.42); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-style:normal; font-size:12px;
+    color:var(--bone); transition:border-color .4s var(--ease), transform .4s var(--ease);
+  }
+  #diveBtn i::before{content:""; width:7px; height:7px; margin-top:-3px; border-right:1px solid currentColor; border-bottom:1px solid currentColor; transform:rotate(45deg)}
+  #diveBtn::after{
+    content:""; position:absolute; top:0; left:50%; width:46px; height:46px; margin-left:-23px;
+    border-radius:50%; border:1px solid rgba(143,212,222,.5); animation:ping 3s var(--ease) infinite;
+  }
+  html.js #diveBtn{display:flex}
+  #diveBtn:hover i{border-color:var(--line); transform:translateY(3px)}
+  #diveBtn em{font-style:normal; font-family:var(--f-mono); font-size:8.5px; letter-spacing:.26em; opacity:.7; text-transform:uppercase}
+  @keyframes ping{0%{transform:scale(1); opacity:.5}70%{transform:scale(1.7); opacity:0}100%{opacity:0}}
+
+  /* ---- 作品名のオーバーレイ(3Dのカードに寄り添う小さな組版) ---- */
+  #work{
+    position:absolute; left:50%; bottom:16vh; transform:translateX(-50%);
+    text-align:center; opacity:0; transition:opacity .7s var(--ease);
+  }
+  #work.on{opacity:1}
+  #work .k{display:block; margin-bottom:10px}
+  #work .t{font-family:var(--f-serif); font-size:26px; letter-spacing:.01em; color:var(--bone)}
+  #work .m{display:block; margin-top:9px; font-family:var(--f-mono); font-size:8.5px; letter-spacing:.22em; color:var(--hud)}
+  #work .go{
+    display:inline-flex; align-items:center; gap:8px; margin-top:16px;
+    padding-bottom:7px; border-bottom:1px solid var(--line-dim);
+    font-size:9px; letter-spacing:.24em; color:var(--bone);
+    transition:border-color .35s var(--ease), gap .35s var(--ease);
+  }
+  #work .go[hidden]{display:none}
+  #work .go em{font-style:normal; transition:transform .35s var(--ease)}
+  #work .go:hover{border-color:var(--line); gap:12px}
+  #work .go:hover em{transform:translate(2px,-2px)}
+
+  /* ---- 画面全体の仕上げ ---- */
+  /* 周辺減光は「1枚だけ」。3D側にもVignetteを入れると二重になるので入れていない。 */
+  #vig{position:fixed; inset:0; z-index:6; pointer-events:none;
+    background:radial-gradient(124% 96% at 50% 46%, transparent 54%, rgba(1,9,13,.62) 100%)}
+  /* 本文が乗る左下だけ、ごく薄く沈める(文字の可読性を影ではなく地で作る) */
+  #legibility{position:fixed; inset:0; z-index:5; pointer-events:none;
+    background:linear-gradient(105deg, rgba(2,14,20,.5) 0%, rgba(2,14,20,.2) 34%, transparent 62%)}
+  #grain{position:fixed; inset:0; z-index:7; pointer-events:none; opacity:.038; mix-blend-mode:overlay;
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="220" height="220" filter="url(%23n)" opacity="0.6"/></svg>')}
+  /* 水面を切る瞬間の一瞬の白。JSが 60ms だけ点ける */
+  /* 明滅はJS側で包絡線を作って毎フレーム書くので、transition は持たせない */
+  #splash{position:fixed; inset:0; z-index:8; pointer-events:none; background:#dff6fa; opacity:0}
+
+  /* ---- 読み込み ---- */
+  /* 読み込み板もJSがある時だけ。無いと出しっぱなしで画面を覆う */
+  #boot{display:none}
+  html.js #boot{
+    position:fixed; inset:0; z-index:30; background:var(--abyss);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+    transition:opacity .9s var(--ease); 
+  }
+  html.js #boot.gone{opacity:0; pointer-events:none}
+  #noscriptNote{position:fixed; left:var(--gut); bottom:96px; z-index:12; max-width:34em}
+  #boot .bar{width:132px; height:1px; background:rgba(143,212,222,.2)}
+  #boot .bar span{display:block; height:1px; width:0%; background:var(--line); transition:width .3s linear}
+
+  /* ---------- 診断オーバーレイ (?diag=1 のときだけ) ---------- */
+  #diag{
+    display:block;
+    position:fixed; left:0; top:0; z-index:40; max-width:min(560px,94vw); max-height:100vh;
+    overflow:auto; padding:14px 16px; margin:8px;
+    background:rgba(2,14,20,.90); border:1px solid rgba(143,212,222,.34);
+    font-family:var(--f-mono); font-size:10.5px; line-height:1.75; color:var(--bone);
+    -webkit-overflow-scrolling:touch; white-space:pre-wrap; word-break:break-word;
+  }
+  #diag b{color:var(--line); font-weight:500}
+  #diag .ok{color:#7fe3a4}
+  #diag .ng{color:#ff8f7a}
+  #diag h4{margin:10px 0 3px; font-size:10px; letter-spacing:.2em; color:var(--line); font-weight:500}
+  #diag h4:first-child{margin-top:0}
+
+  /* ============================ 本文 ============================
+     潜航の後に続く通常フローのセクション。canvasのピクセルではなく
+     実テキストで置く(検索エンジンにもスクリーンリーダーにも見える)。
+     面はガラス板・blur・影・発光を使わない。地色＋罫1本＋組版のみ。 */
+  #content{
+    position:relative; z-index:15; background:var(--abyss);
+    border-top:1px solid rgba(143,212,222,.20);
+    padding:clamp(76px,10vw,150px) var(--gut) 0;
+  }
+  #content section{max-width:940px; margin:0 auto; padding-bottom:clamp(66px,8vw,124px)}
+  #content h2{
+    font-family:var(--f-serif); font-weight:400; letter-spacing:-.02em;
+    font-size:clamp(30px,4.6vw,56px); line-height:1.04; margin-bottom:10px;
+  }
+  #content a{color:inherit; text-decoration:none}
+  #content a:focus-visible{outline:1px solid var(--line); outline-offset:4px}
+  .workList .visit em,#content .back em{font-style:normal; transition:transform .35s var(--ease)}
+  .workList .visit:hover em{transform:translate(2px,-2px)}
+  .facts a{border-bottom:1px solid var(--line-dim); padding-bottom:2px}
+  .facts a:hover{border-color:var(--line)}
+  #content .lead{margin-bottom:44px; font-size:12.5px; line-height:2.2; letter-spacing:.04em; color:rgba(222,240,242,.78); max-width:44em}
+  #content p{font-size:13px; line-height:2.15; letter-spacing:.03em; color:rgba(222,240,242,.86)}
+
+  .workList{list-style:none}
+  .workList li{
+    display:grid; gap:6px 26px; padding:30px 0;
+    border-top:1px solid rgba(143,212,222,.16);
+    grid-template-columns:56px minmax(0,1fr);
+  }
+  .workList li:last-child{border-bottom:1px solid rgba(143,212,222,.16)}
+  .workList .no{grid-row:1 / span 4; padding-top:6px; color:var(--line); font-size:11px; letter-spacing:.18em}
+  .workList h3{font-family:var(--f-serif); font-weight:400; font-size:clamp(22px,2.8vw,32px); letter-spacing:-.01em}
+  .workList .role{font-size:9px; letter-spacing:.22em; color:var(--hud); text-transform:uppercase}
+  .workList .desc{font-size:12.5px; line-height:2.05; color:rgba(222,240,242,.8); max-width:42em}
+  .workList .visit{
+    justify-self:start; display:inline-flex; align-items:center; gap:9px; margin-top:6px;
+    padding-bottom:6px; border-bottom:1px solid var(--line-dim);
+    font-size:9px; letter-spacing:.22em; color:var(--bone);
+    transition:border-color .35s var(--ease), gap .35s var(--ease);
+  }
+  .workList .visit:hover{border-color:var(--line); gap:13px}
+
+  .facts{list-style:none; display:grid; gap:1px; background:rgba(143,212,222,.14); border:1px solid rgba(143,212,222,.14); max-width:640px}
+  .facts li{display:flex; gap:18px; background:var(--abyss); padding:15px 18px; font-size:12px; letter-spacing:.03em}
+  .facts b{flex:0 0 8.5em; font-weight:400; font-size:9.5px; letter-spacing:.2em; color:var(--hud); text-transform:uppercase; padding-top:3px}
+
+  #content .back{
+    display:inline-flex; align-items:center; gap:9px; margin-top:8px;
+    font-size:9px; letter-spacing:.22em; color:var(--hud);
+    padding-bottom:6px; border-bottom:1px solid var(--line-dim);
+  }
+  #content .back:hover{color:var(--bone); border-color:var(--line)}
+
+  /* ---- 本文の構造(生成元は copy.json / scripts/build-migiwa.mjs) ---- */
+  #content .blk{max-width:820px; padding-bottom:clamp(40px,5vw,72px)}
+  #content .blk:last-child{padding-bottom:0}
+  #content h3{
+    font-family:var(--f-serif); font-weight:400; letter-spacing:-.01em;
+    font-size:clamp(21px,2.7vw,30px); line-height:1.35; margin-bottom:12px;
+  }
+  #content .eyebrow{
+    font-size:8.5px; letter-spacing:.24em; color:var(--hud);
+    text-transform:uppercase; margin-bottom:13px;
+  }
+  #content .blead{
+    margin:0 0 22px; font-size:12.5px; line-height:2.1; letter-spacing:.04em;
+    color:rgba(222,240,242,.80); max-width:42em;
+  }
+  #content .blk p + p{margin-top:1.1em}
+  #content .glabel{
+    margin:30px 0 12px; font-size:8.5px; letter-spacing:.22em;
+    color:var(--hud); text-transform:uppercase;
+  }
+  /* 定義リスト。左に見出し、右に説明。狭い画面では縦に積む */
+  #content .dl{margin-top:18px}
+  #content .row{
+    display:grid; grid-template-columns:minmax(0,15em) minmax(0,1fr); gap:6px 28px;
+    padding:17px 0; border-top:1px solid rgba(143,212,222,.14);
+  }
+  #content .dl .row:last-child{border-bottom:1px solid rgba(143,212,222,.14)}
+  #content dt{font-size:12.5px; letter-spacing:.03em; color:var(--bone); line-height:1.9}
+  #content dd{font-size:12.5px; line-height:2.05; letter-spacing:.03em; color:rgba(222,240,242,.80)}
+  /* 特に見せたい項目(ホームページ制作 / AI導入)だけ、罫ではなく面で立てる */
+  #content .row.is-key{
+    border-top:1px solid rgba(143,212,222,.30);
+    padding-left:16px; margin-left:-16px;
+    box-shadow:inset 2px 0 0 rgba(143,212,222,.30);
+  }
+  #content .row.is-key dt{color:#fff}
+  @media (max-width:760px){
+    #content .row{grid-template-columns:minmax(0,1fr); gap:5px}
+    #content .row.is-key{padding-left:13px; margin-left:-13px}
+  }
+
+  /* 下書きの印。<html data-draft="1"> の間だけ出る。
+     事業上の約束が地の文に紛れたまま公開されるのを防ぐための保険で、
+     確定したら html の属性を1つ外すだけで全部消える。 */
+  #content [data-provisional]{position:relative}
+  :root[data-draft] #content [data-provisional]{
+    padding-left:15px; margin-left:-15px;
+    box-shadow:inset 2px 0 0 rgba(232,168,86,.55);
+  }
+  :root[data-draft] #content [data-provisional]::before{
+    content:"要確認"; display:block; margin-bottom:9px;
+    font-family:var(--f-mono); font-size:8px; letter-spacing:.16em;
+    color:rgba(232,168,86,.9);
+  }
+
+
+  /* 本文から張るリンクと、宛先がまだ無い連絡先の表示 */
+  #content .go{
+    display:inline-flex; align-items:center; gap:8px;
+    padding-bottom:4px; border-bottom:1px solid var(--line-dim); color:var(--bone);
+    transition:border-color .35s var(--ease), gap .35s var(--ease);
+  }
+  #content .go:hover{border-color:var(--line); gap:12px}
+  #content .go em{font-style:normal}
+  /* 押せるのに何も起きないボタンは置かない。用意できていないことを書く */
+  #content .soon{
+    margin-left:9px; padding:2px 7px; font-size:8px; letter-spacing:.16em;
+    border:1px solid rgba(143,212,222,.28); color:var(--hud); vertical-align:2px;
+  }
+  #content .row.is-soon dd{color:rgba(222,240,242,.58)}
+
+  #contentFoot{border-top:1px solid rgba(143,212,222,.16); padding:26px 0 40px; font-size:9px; letter-spacing:.2em; color:rgba(196,224,228,.42)}
+
+  /* 本文を読んでいる間は潜航の計器を引っ込め、描画も止める。
+     絵が変わらない区間なので、最低FPSはむしろ上がる。 */
+  html[data-reading="1"] #hud,
+  html[data-reading="1"] #vig,
+  html[data-reading="1"] #grain,
+  html[data-reading="1"] #legibility{opacity:0; pointer-events:none}
+  #hud,#vig,#grain,#legibility{transition:opacity .45s var(--ease)}
+
+  @media (max-width:820px){
+    .workList li{grid-template-columns:1fr; gap:4px}
+    .workList .no{grid-row:auto; padding-top:0}
+    .facts b{flex-basis:7em}
+  }
+
+  #fallback{display:none; position:fixed; inset:0; z-index:20; background:var(--abyss); color:var(--bone);
+    padding:40vh var(--gut) 0; text-align:center; font-size:13px; line-height:2.2}
+  #fallback.on{display:block}
+
+  /* ============================ モバイル ============================
+     デスクトップの縮小版にしない。密度を落とし、情報の優先順位を組み替える。
+     消すのは「補助的な計器」だけで、世界観(深度・現在地・作品名)は残す。 */
+  @media (max-width:820px){
+    :root{--gut:20px}
+    header{padding:20px var(--gut) 0}
+    nav{gap:20px}
+    #sim,#vert,#ruler{display:none}
+    #meter{top:88px}
+    #meter .v{font-size:13px}
+    #hero{left:var(--gut); right:var(--gut); max-width:none; top:20vh}
+    #lockup b{font-size:clamp(54px,16.5vw,92px); letter-spacing:.04em; text-indent:.04em}
+    #lockup span{margin-top:12px; font-size:9.5px; letter-spacing:.34em; text-indent:.34em}
+    #hero p{margin-top:22px; font-size:11.5px; line-height:2.05; max-width:none}
+    #cta{margin-top:24px}
+    /* 章インデックスは #counter と重複するので出さない。
+       作品名もカード自身が読めるので隠し、「作品を見る」導線だけ残す。 */
+    #dive{display:none}
+    #work{bottom:calc(74px + env(safe-area-inset-bottom)); left:50%; width:auto; text-align:center}
+    #work .k,#work .t,#work .m{display:none}
+    #work .go{margin-top:0}
+    #foot{left:var(--gut); bottom:calc(24px + env(safe-area-inset-bottom))}
+    #foot .track{width:120px}
+    #foot .loc{font-size:11.5px}
+    #counter{right:var(--gut); bottom:calc(24px + env(safe-area-inset-bottom))}
+    #counter .n{font-size:11.5px}
+    #counter .seg{width:18px}
+    #diveBtn{bottom:calc(74px + env(safe-area-inset-bottom))}
+    #diveBtn i{width:40px; height:40px}
+    #diveBtn::after{width:40px; height:40px; margin-left:-20px}
+    #legibility{background:linear-gradient(180deg, rgba(2,14,20,.42) 0%, rgba(2,14,20,.12) 30%, transparent 55%, rgba(2,14,20,.5) 100%)}
+  }
+  /* 背の低い横向き */
+  @media (max-height:520px){
+    #hero{top:16vh}
+    #lockup b{font-size:clamp(34px,8.4vh,56px)}
+    #lockup span{margin-top:9px; font-size:9px}
+    #hero p{display:none}
+    #diveBtn{display:none}
+    #ruler{display:none}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    body,#cta,#cta em,#diveBtn i,nav a,nav a::after{transition:none}
+    #diveBtn::after{animation:none}
+    #hero .eyebrow,#hero h1,#hero p,#cta{transition:none!important; opacity:1!important; transform:none!important}
+  }
+
+  /* ヒーローの入場。1回だけ、重さのある stagger */
+  html.js #hero .eyebrow,html.js #hero h1,html.js #hero p,html.js #cta{
+    opacity:0; transform:translateY(28px);
+    transition:opacity 1.1s var(--ease), transform 1.25s var(--ease);
+  }
+  html.js body.ready #hero .eyebrow{opacity:1; transform:none; transition-delay:.20s}
+  html.js body.ready #hero h1{opacity:1; transform:none; transition-delay:.34s}
+  html.js body.ready #hero p{opacity:1; transform:none; transition-delay:.56s}
+  html.js body.ready #cta{opacity:1; transform:none; transition-delay:.74s}
+</style>
+
+<style>
+  /* 実績ページはヒーローの canvas を持たないので、本文だけで成立させる */
+  html.worksPage body{background:var(--abyss); overflow-x:hidden}
+  html.worksPage #content{
+    border-top:0; padding-top:clamp(120px,14vw,190px); min-height:100vh;
+  }
+  /* 実績ページのヘッダは通常フローに置く。
+     absolute のままだと、#content(z-index:15・不透明な地色)が
+     #hud(z-index:10)の上に乗ってヘッダを塗り潰す —— TOPでは
+     #content がヒーローの下に流れるので起きないが、このページは
+     本文が最上部から始まるので重なる(実際に消えた)。 */
+  html.worksPage #hud{position:static; inset:auto; z-index:20; pointer-events:auto}
+  html.worksPage #hud header{position:static; opacity:1; transform:none;
+    max-width:940px; margin:0 auto; padding:clamp(30px,4vw,46px) var(--gut) 0}
+  html.worksPage .brand{color:var(--bone)}
+  html.worksPage #content{padding-top:clamp(52px,6vw,86px)}
+  html.worksPage #content .blk{max-width:860px}
+</style>
+</head>
+<body>
+<!-- 制作実績。TOPで潜った人が「情報を取りに来る」場所なので、
+     ここでは潜る体験を繰り返さない。3Dは載せず、読みやすさを優先する。 -->
+<div id="hud">
+  <header>
+    <a class="brand" href="../"><b>汀ノ庭</b><em>MIGIWA STUDIO</em><i></i></a>
+    <nav class="mono">
+      <a href="../">トップ</a>
+      <a href="../#contact">お問い合わせ</a>
+    </nav>
+  </header>
+</div>
+
+<main id="content">
+        <div class="blk" id="works-header" data-provisional="トップページ側の設計値として草案段階の数字。実装が確定した時点で実際の値に合わせる。">
+          <p class="eyebrow mono">WORKS</p>
+          <h2>制作実績</h2>
+          <p class="blead">3件と、このサイト。</p>
+          <p>これまでにつくったサイトを、1件ずつ載せています。件数は多くありません。そのぶん、何を考えてその形にしたのかまで書きます。</p>
+          <p>数字や感想は、確かめられたものだけを載せます。書けるようになったら足します。</p>
+          <p>トップページのような動きはありません。読むためのページなので、上から下へそのまま読み進められます。</p>
+          <p class="glabel mono">各ページの読み方</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>どんな会社か</dt>
+              <dd>業種と、どこで仕事をしているか。</dd>
+            </div>
+            <div class="row">
+              <dt>つくったもの</dt>
+              <dd>サイトの種類と、ページの構成。</dd>
+            </div>
+            <div class="row">
+              <dt>実装した表現</dt>
+              <dd>画面で何が起きるか。なぜそうしたか。</dd>
+            </div>
+            <div class="row">
+              <dt>使った技術</dt>
+              <dd>何で組んだか。専門的な名前は、その場で言い換えます。</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="blk" id="works-index" data-provisional="ランディングページであること以外、内容が分かっていない。初稿では枠だけの詳細ブロックを置いていたが、書ける中身が無いまま他2件と並べると不信を招くため取り下げた。施主から情報が出たら、他2件と同じ形の詳細ブロックを足して WORKS の番号を振り直す。 / LINE公式アカウントが未取得、メールアドレスが未確定、フォームの送信先も未確定。公開前に確定させて差し替える箇所として管理する。 / 屋号と画面を載せる範囲は先方の意向が要る。確認が取れるまでは、リンク無し・キャプチャ最小で組めるようにしておく。">
+          <p class="eyebrow mono">INDEX</p>
+          <h3>一覧</h3>
+          <p>詳しく書いているのは、GARAGE BeCool、T-REX CO., LTD.、そしてこのサイトの3つです。L tAq はいまのところ、屋号と種別だけを載せています。</p>
+          <p class="glabel mono">一覧</p>
+          <dl class="dl">
+            <div class="row">
+              <dt><a class="go" href="../becool/">GARAGE BeCool <em>↗</em></a></dt>
+              <dd>コーポレートサイト｜中古車販売・整備店｜福岡県北九州市</dd>
+            </div>
+            <div class="row">
+              <dt><a class="go" href="../">T-REX CO., LTD. <em>↗</em></a></dt>
+              <dd>コーポレートサイト｜板金塗装・荷台換装・修理・出張修理｜福岡・山口</dd>
+            </div>
+            <div class="row">
+              <dt>L tAq</dt>
+              <dd>ランディングページ</dd>
+            </div>
+            <div class="row is-key">
+              <dt>汀ノ庭</dt>
+              <dd>このサイト｜ホームページ制作｜福岡県北九州市</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="blk" id="work-becool">
+          <p class="eyebrow mono">WORKS 01</p>
+          <h3>GARAGE BeCool</h3>
+          <p class="blead">コーポレートサイト｜中古車販売・整備店｜福岡県北九州市</p>
+          <p>車を買う人も、整備を頼む人も、値段や在庫より先に「どんな店か」を知りたいはずだと考えました。だからトップの一番上は、店舗の写真とブランドロゴだけにして、説明の文章を置いていません。</p>
+          <p>動きは、サイト全体で1種類に揃えました。見出しの現れ方、写真の出方、カードの並び方——速さと間の取り方を、すべて同じ設定から取っています。演出ごとに速さを変えると、動きの多いサイトはすぐに散らかって見えるためです。</p>
+          <p>写真の上に文字を重ねないことも、最初に決めました。車と店の写真は、それ自体が見せるものです。文字はいつも写真の下に置いています。</p>
+          <p>動きが止まっても困らない作りにしました。動きを減らす設定の端末、通信量を節約する設定の端末、性能の低い端末では、演出だけが出ずに、写真と文章はそのまま残ります。</p>
+          <p class="glabel mono">どんな会社か</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>中古車の販売と整備</dt>
+              <dd>福岡県北九州市の中古車販売・整備店。車の販売と、整備・車検を扱う。</dd>
+            </div>
+          </dl>
+          <p class="glabel mono">つくったもの</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>コーポレートサイト</dt>
+              <dd>トップ、整備・車検、在庫車両、お問い合わせ。整備と在庫を独立したページにして、来た目的から最短でたどり着けるようにした。</dd>
+            </div>
+          </dl>
+          <p class="glabel mono">実装した表現</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>設計図がめくれて、写真になる</dt>
+              <dd>店舗の写真は、上に重ねた青い設計図が斜めにめくれて完成写真が出る。一度出たら、もう繰り返さない。</dd>
+            </div>
+            <div class="row">
+              <dt>粒が集まって、在庫車になる</dt>
+              <dd>在庫車の写真は、砂のような細かい粒が集まって像を結ぶ。ここも一度だけ。</dd>
+            </div>
+            <div class="row">
+              <dt>立体で描くブランドマーク</dt>
+              <dd>ページの終わりに置いたマークは、画像を貼っているのではなく、細かい光の粒で立体的に描いている。</dd>
+            </div>
+            <div class="row">
+              <dt>1つの速さに揃えたスクロール</dt>
+              <dd>見出しは英字、下線、和文の順に現れ、写真は少し大きい状態から実寸に戻る。どのページでも同じ速さ。</dd>
+            </div>
+            <div class="row">
+              <dt>サービスは1枚に1件</dt>
+              <dd>パソコンはタブで、スマホは横にスワイプして4件を読む。切り替えは文字と枠だけで作ってあるので、動きが無くても4件すべて読める。</dd>
+            </div>
+            <div class="row">
+              <dt>面の色は2色だけ</dt>
+              <dd>白と濃紺を交互に敷く。3色目を作らないことで、ページが長くなっても散らからない。</dd>
+            </div>
+          </dl>
+          <p class="glabel mono">使った技術</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>Next.js(React)とTypeScript</dt>
+              <dd>ページを組み立てる仕組み。書き出したあとは静かなHTMLとして置ける形にしている。</dd>
+            </div>
+            <div class="row">
+              <dt>演出のほとんどはCSS</dt>
+              <dd>めくれる設計図も、見出しの動きも、動画や画像ではなくブラウザに元からある機能で描いている。</dd>
+            </div>
+            <div class="row">
+              <dt>WebGL(three.js)</dt>
+              <dd>ブランドマークの粒だけ、立体をその場で計算して描く仕組みを使っている。動画の再生ではない。</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="blk" id="work-trex">
+          <p class="eyebrow mono">WORKS 02</p>
+          <h3>T-REX CO., LTD.</h3>
+          <p class="blead">コーポレートサイト｜板金塗装・荷台換装・修理・出張修理｜福岡・山口</p>
+          <p>現場が止まって困っている人が開く——そう想定して設計を始めました。ゆっくり読んでいる状況ではない、という前提です。</p>
+          <p>トップページでは、エンジンを分解して組み直す工程を、スクロールに合わせて4つの場面で見せています。鉄の塊、透視、手で組む、始動。仕事の中身が外から見えにくい業種なので、工程そのものを見せることが説明になると考えました。</p>
+          <p>ただし、体験を優先しすぎると急いでいる人を取りこぼします。画面上部の電話ボタンは、どこまでスクロールしても押せます。最初の画面の電話ボタンは演出の対象から外し、開いた瞬間から出しています。演出を丸ごと飛ばして事業内容へ行くボタンも、同じ画面に置きました。狭い画面では、章の番号を隠して電話ボタンの場所を空けています。何を先に消すかまで決めておく、という考え方です。</p>
+          <p>対応車両のセクションでは、対応できる車種のイメージとして、クレーン付き特装車を立体で表示しています。同社の車両そのものではありません。光と映り込みは屋外で撮った光のデータから取っているので、車体の見え方が写真に近くなります。通信量を節約する設定の端末、性能の低い端末、動きを減らす設定の端末では立体を出さず、同じ角度の静止画のままにしています。</p>
+          <p class="glabel mono">どんな会社か</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>トラックと現場の車を直す</dt>
+              <dd>板金塗装、荷台換装、修理、出張修理。福岡・山口を中心に対応する会社。</dd>
+            </div>
+          </dl>
+          <p class="glabel mono">つくったもの</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>コーポレートサイト</dt>
+              <dd>トップ、サービス、施工実績、会社概要、採用情報、お問い合わせ。</dd>
+            </div>
+          </dl>
+          <p class="glabel mono">実装した表現</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>4つの場面で進むエンジン</dt>
+              <dd>スクロールに合わせてクランクが回り、外装が透けて中が見え、部品が外れて組み戻る。いま何番目の場面かは画面上部に出る。</dd>
+            </div>
+            <div class="row">
+              <dt>回して見られる車種イメージ</dt>
+              <dd>対応できる車種のイメージを立体で表示。スクロールで向きが変わり、マウスでも回せる。指では回さない——縦のスクロールを邪魔しないため。</dd>
+            </div>
+            <div class="row">
+              <dt>消えない電話ボタン</dt>
+              <dd>画面上部に固定したボタンは、演出の途中でも押せる。ここだけは何があっても残す、と決めた場所。</dd>
+            </div>
+            <div class="row">
+              <dt>演出を飛ばす道</dt>
+              <dd>最初の画面から事業内容へ直接行ける。戻ってきても演出は壊れない。</dd>
+            </div>
+            <div class="row">
+              <dt>軽くする条件、出さない条件</dt>
+              <dd>動きを減らす設定と、立体を描けない古いブラウザでは演出そのものを出さず、文章と写真だけにする。スマホや性能の低い端末では、粒や影の量を減らして軽くしたうえで動かす。車両の立体だけは、通信量を節約する設定と性能の低い端末でも静止画に切り替える。どちらも画面から外れれば描画を止める。</dd>
+            </div>
+          </dl>
+          <p class="glabel mono">使った技術</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>WebGL(three.js)</dt>
+              <dd>立体をその場で計算して描く仕組み。動画ファイルではないので、スクロールの速さにそのまま追従する。</dd>
+            </div>
+            <div class="row">
+              <dt>立体データの読み込み</dt>
+              <dd>エンジンと車両は立体データを読み込んで表示する。最初の画面を出し終えてから取りに行くので、開いた瞬間は軽い。</dd>
+            </div>
+            <div class="row">
+              <dt>Next.js(React)とTypeScript</dt>
+              <dd>ページを組み立てる仕組み。文章と見出しはHTMLとして先に出るので、動きが無くても内容は読める。</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="blk" id="work-migiwa" data-provisional="トップページ側の設計値として草案段階の数字。実装が確定した時点で実際の値に合わせる。">
+          <p class="eyebrow mono">WORKS 03</p>
+          <h3>汀ノ庭</h3>
+          <p class="blead">このサイト｜ホームページ制作｜福岡県北九州市</p>
+          <p>トップページで水面から600メートル潜っていく、あの海の答え合わせです。まだ開いていない方は、先にそちらを見てもらうのが早いと思います。</p>
+          <p>写真でも動画でもありません。ブラウザが、その場で計算しながら描いています。使っているのはthree.jsとWebGL。ブラウザに元から入っている描画の仕組みで、立体をその場で描くためのものです。動画なら、できあがった映像ファイルを再生することになりますが、この海はスクロールした位置に合わせて毎回描き直しています。だから、どの深さで止めても、その深さの絵になります。</p>
+          <p>実績が3件しかない時点で、いちばん強い証拠は自分のサイトだと考えました。潜っている時間そのものが、4件目を見ている時間になるようにしています。</p>
+          <p>深さの数字は、進み具合の表示に変えました。600という数字は、放っておくと「いつ終わるのか分からない」という不安になります。深度計を目次にして、どの深さに何があるかを出し、押せばその場所へ移動できるようにしました。読むだけの人のために、文章へ抜ける入口も常に出しています。</p>
+          <p>スマホで動くことを条件にしました。粒の数は端末の性能を見て変え、低い端末では出しません。動きを減らす設定の人にも出しません。画面から外れたら描画を止めます。凝る前に、まず止まらないこと。このサイトで自分に課した基準です。</p>
+          <p class="glabel mono">つくったもの</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>2ページ</dt>
+              <dd>トップと、この実績ページ。</dd>
+            </div>
+          </dl>
+          <p class="glabel mono">実装した表現</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>水面から600メートル</dt>
+              <dd>スクロールがそのまま深さになる。パネルは約75メートルに1枚、1枚には1つのことしか書かない。</dd>
+            </div>
+            <div class="row">
+              <dt>深度計は目次</dt>
+              <dd>いまの深さと、章の一覧を兼ねる。押せばその深さへ移動できる。</dd>
+            </div>
+            <div class="row">
+              <dt>いつでも押せる相談ボタン</dt>
+              <dd>潜っている途中で気が変わった人が、海底まで我慢しなくていいようにした。</dd>
+            </div>
+            <div class="row">
+              <dt>文章へ抜ける入口</dt>
+              <dd>体験より先に内容を知りたい人のために、いつでも本文へ飛べる。</dd>
+            </div>
+            <div class="row">
+              <dt>着底での切り替え</dt>
+              <dd>海底に着いたところで「ここから先は、文字で説明します」と書く。無言で普通の画面に変わると、終わったと思って閉じてしまうため。</dd>
+            </div>
+          </dl>
+          <p class="glabel mono">使った技術</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>three.jsとWebGL</dt>
+              <dd>ブラウザに元からある描画の仕組みと、それを扱うための道具。追加の組み込みは要らず、開けばそのまま動く。</dd>
+            </div>
+            <div class="row">
+              <dt>端末に合わせて量を変える</dt>
+              <dd>粒の数と負荷を、端末の性能を見て切り替える。性能の低い端末と、動きを減らす設定では演出を出さない。</dd>
+            </div>
+            <div class="row">
+              <dt>文章は演出の外に置く</dt>
+              <dd>演出が動かない環境でも、書いてあることは全部読める。</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="blk" id="works-cta" data-provisional="LINE公式アカウントが未取得、メールアドレスが未確定、フォームの送信先も未確定。公開前に確定させて差し替える箇所として管理する。">
+          <p class="eyebrow mono">CONTACT</p>
+          <h3>こういうものを相談する</h3>
+          <p>つくりたいものが固まっていなくても構いません。いまのサイトのURLか、やりたいことを1行だけでも。</p>
+          <p class="glabel mono">3つの入口</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>LINEで相談</dt>
+              <dd>短いやり取りに向いています。写真もそのまま送れます。</dd>
+            </div>
+            <div class="row">
+              <dt>フォームから送る</dt>
+              <dd>項目に沿って書くだけで送れます。</dd>
+            </div>
+            <div class="row">
+              <dt>メールで送る</dt>
+              <dd>資料や、すでにある原稿を渡したいときに。</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="blk" id="works-nav">
+          <h3>ほかを見る</h3>
+          <p class="glabel mono">移動</p>
+          <dl class="dl">
+            <div class="row">
+              <dt>実績一覧へ戻る</dt>
+              <dd>3件と、このサイト。</dd>
+            </div>
+            <div class="row">
+              <dt>トップへ戻る</dt>
+              <dd>潜るところから。</dd>
+            </div>
+            <div class="row">
+              <dt>相談する</dt>
+              <dd>トップの問い合わせへ。</dd>
+            </div>
+          </dl>
+        </div>
+
+  <div id="contentFoot" class="mono">© MIGIWA STUDIO</div>
+</main>
+</body>
+</html>
