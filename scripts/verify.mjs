@@ -31,7 +31,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC  = path.join(ROOT, 'public/lab/trexworks_umiatari_v6.html');
+/* 既定は lab の検証用ページ。--src= で別のページを指せる
+   (汀ノ庭のように、同じ演出を土台にした別サイトを同じ基準で測るため)。
+   隣の vendor/ をそのまま並べて配るので、検証と公開で同じファイルになる。 */
+const SRC  = path.resolve(ROOT,
+  (process.argv.slice(2).find(a => a.startsWith('--src=')) || '').split('=')[1]
+  || 'public/lab/trexworks_umiatari_v6.html');
 const ART  = path.join(ROOT, 'artifacts');
 
 const argv     = process.argv.slice(2);
@@ -121,7 +126,8 @@ const prevLoops = fs.readdirSync(ART)
 const loopNo = (prevLoops.at(-1) ?? 0) + 1;
 /* 本流(desktop・降格なし)だけが loop-NN を名乗り、差分比較の対象になる。
    モバイルや降格検証は接尾辞を付けて番号を消費しない。 */
-const suffix = [VIEW === 'desktop' ? '' : VIEW, FORCE, TIERPIN && 'tier' + TIERPIN].filter(Boolean).join('-');
+const srcTag = path.basename(path.dirname(SRC)) === 'lab' ? '' : path.basename(path.dirname(SRC));
+const suffix = [srcTag, VIEW === 'desktop' ? '' : VIEW, FORCE, TIERPIN && 'tier' + TIERPIN].filter(Boolean).join('-');
 /* 接尾辞つきの実行はループ番号を消費しないので、同じ条件で2回走らせると
    同じ名前になる。空いている名前まで送る(上書きはしない)。 */
 let outDir = path.join(ART, `loop-${String(loopNo).padStart(2, '0')}${suffix ? '-' + suffix : ''}`);
