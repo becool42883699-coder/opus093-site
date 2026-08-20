@@ -5,11 +5,14 @@
  * 改良ループ(実装 → 検証 → 判定)の「検証」を担う。主観を挟まず、
  * 数値とスクリーンショットだけを artifacts/loop-NN/ に積む。
  *
- *   node scripts/verify.mjs                  # three は CDN から読む(通常)
- *   THREE_LOCAL=1 node scripts/verify.mjs    # node_modules の three を配信する
- *                                            # (CDNが遮断された環境用。差分は
- *                                            #  import map の URL のみ)
+ *   node scripts/verify.mjs                  # 1600x900
  *   node scripts/verify.mjs --view=mobile    # 390x844 で撮る
+ *   node scripts/verify.mjs --view=iphone    # 390x664 dsf3(実機のSafariに近い)
+ *   node scripts/verify.mjs --tier=high      # 端末判定を上書きして高品質の経路を通す
+ *   node scripts/verify.mjs --force=ldr      # 降格経路(8bit / 深度テクスチャ無し)
+ *
+ * three はページの隣の vendor/ から読む。検証するファイルと公開する
+ * ファイルは完全に同一(以前は import map の URL だけが違っていた)。
  *
  * 取得するもの:
  *   - console のエラー・警告を全件(シェーダのコンパイル失敗を含む)
@@ -33,7 +36,6 @@ const ART  = path.join(ROOT, 'artifacts');
 
 const argv     = process.argv.slice(2);
 const VIEW     = (argv.find(a => a.startsWith('--view=')) || '--view=desktop').split('=')[1];
-const LOCAL3   = process.env.THREE_LOCAL === '1';
 /* 検証機は hardwareConcurrency が小さく、既定では必ず low ティアになる。
    high 側だけにある経路(水面の映り込み)を確かめるには明示的に上げる。 */
 const TIERPIN  = (argv.find(a => a.startsWith('--tier=')) || '').split('=')[1] || '';
@@ -76,22 +78,16 @@ let html = fs.readFileSync(SRC, 'utf8');
   }
 }
 
-if (LOCAL3) {
-  const tm = path.join(ROOT, 'node_modules/three');
-  if (!fs.existsSync(tm)) { console.error('THREE_LOCAL=1 だが node_modules/three が無い'); process.exit(2); }
-  const vb = path.join(serveDir, 'vendor/three/build');
-  const vj = path.join(serveDir, 'vendor/three/examples/jsm');
-  fs.mkdirSync(vb, { recursive: true });
-  fs.mkdirSync(vj, { recursive: true });
-  for (const f of ['three.module.js', 'three.core.js']) {
-    fs.copyFileSync(path.join(tm, 'build', f), path.join(vb, f));
+/* three は自前配布になったので、URLの書き換えは一切しない。
+   ページの隣にある vendor/ をそのまま並べて配る = 検証したものと
+   公開するものが同一のファイルになる(以前は importmap だけが違った)。 */
+{
+  const v = path.join(path.dirname(SRC), 'vendor');
+  if (!fs.existsSync(v)) {
+    console.error('public/lab/vendor が無い。node scripts/vendor-three.mjs を先に走らせる');
+    process.exit(2);
   }
-  for (const d of ['postprocessing', 'shaders']) {
-    fs.cpSync(path.join(tm, 'examples/jsm', d), path.join(vj, d), { recursive: true });
-  }
-  html = html
-    .replace('https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js', '/vendor/three/build/three.module.js')
-    .replace('https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/', '/vendor/three/examples/jsm/');
+  fs.cpSync(v, path.join(serveDir, 'vendor'), { recursive: true });
 }
 fs.writeFileSync(path.join(serveDir, 'index.html'), html);
 

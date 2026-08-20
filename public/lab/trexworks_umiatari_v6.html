@@ -537,11 +537,14 @@
 </script>
 
 <!-- three r185 を ESM で読む。CDN が使えない環境では import map の URL だけ差し替える -->
+<!-- three は自前で配る。CDN 依存だと、社内プロキシやオフラインで
+     モジュールが1つも読めずページが黒いまま何も出ない。
+     複製は scripts/vendor-three.mjs で作る(three を上げたら走らせ直す)。 -->
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.185.1/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.1/examples/jsm/"
+    "three": "./vendor/three/build/three.module.js",
+    "three/addons/": "./vendor/three/addons/"
   }
 }
 </script>
@@ -616,7 +619,7 @@ const TIER = (() => {
     name:'low',
     seg: 110, dpr: 1.5,
     motes: 260, bubbles: 70, fore: 26, fish: 9, shafts: 5,
-    waveDetail: 5, skyOctaves: 2, causticOctaves: 2,
+    waveDetail: 5, skyOctaves: 2, causticOctaves: 2, causticRGB: false,
     bloom: true, godray: true, dof: false, smaa: false,
     reflect: false,     // モバイルは平面反射を持たず skyFn だけに戻す
   };
@@ -624,7 +627,7 @@ const TIER = (() => {
     name:'high',
     seg: 240, dpr: 2,
     motes: 620, bubbles: 150, fore: 54, fish: 15, shafts: 9,
-    waveDetail: 5, skyOctaves: 3, causticOctaves: 3,
+    waveDetail: 5, skyOctaves: 3, causticOctaves: 3, causticRGB: true,
     bloom: true, godray: true, dof: true, smaa: true,
     reflect: true,
   };
@@ -790,10 +793,57 @@ function lightPulse(time){
   return 1 + 0.06 * (0.62 * Math.sin(time * 0.55) + 0.38 * Math.sin(time * 0.83 + 1.7));
 }
 
-const G_WATER = `
-uniform vec3 uFog;
+/* 波のスペクトル。水面の変位と、海底の集光の両方をここから生成する。
+   2箇所に数字を書くと必ずズレて、「上の波」と「下の光の網」が
+   無関係な模様になる(前版がそれだった)。 */
+const WAVES = [
+  /* 向きx, 向きz, steep, 波長 */
+  [  0.3,  1.0, 0.075, 21.00 ],
+  [  1.0,  0.3, 0.150, 10.50 ],
+  [  0.8,  1.0, 0.140,  5.20 ],
+  [ -0.6,  1.0, 0.115,  2.50 ],
+  [  1.0, -0.7, 0.085,  1.25 ],
+];
+/* GLSL ES 1.00 には int→float の暗黙変換が無い。JS の 21.00 は "21" に
+   なるので、必ず小数点を持つ形へ整形してから埋める(実際にこれで
+   「該当する関数が無い」でシェーダが落ちた)。 */
+const glf = (n) => n.toFixed(3);
+const waveCall = (fn, args) => WAVES
+  .map(w => `  ${fn}(vec2(${glf(w[0])},${glf(w[1])}), ${glf(w[2])}, ${glf(w[3])}${args});`)
+  .join('\n');
+
+/* 高さ場とそのラプラシアンを解析的に求める。
+   sin の和なので ∇²(a·sin(k·x)) = -k²·(その項) —— 差分を取る必要がない。
+   ラプラシアンが分かると、屈折した光線がどこで交差するか(=集光)が
+   そのまま出る。 */
+const G_WAVE = `
+void waveTerm(vec2 dir, float steep, float wl, vec2 p, float t, inout float h, inout float lap){
+  float k = 6.2831853 / wl;
+  float c = sqrt(9.8 / k);
+  float v = (steep / k) * sin(k * (dot(normalize(dir), p) - c * t));
+  h   += v;
+  /* 本来の曲率は k² 重み。ただしこのスペクトルは実海面ではなく5本しか
+     無く、k² だと最も短い2本(向きがほぼ平行)だけが効いて、網目ではなく
+     一方向の縞になる(実測)。k^1.5 にすると5本が均等に効いて網になる。 */
+  lap += -k * sqrt(k) * v;
+}
+void waveField(vec2 p, float t, out float h, out float lap){
+  h = 0.0; lap = 0.0;
+${waveCall('waveTerm', ', p, t, h, lap')}
+}`;
+
+/* 媒質そのものの定数。粒子のように uFog を持たない材質も、
+   吸収だけはここから引く(=同じ水の中にいることになる)。 */
+const G_MEDIUM = `
 const vec3 ABSORB  = vec3(0.115, 0.032, 0.018);   // 距離あたりの吸収
 const vec3 SCATTER = vec3(0.028, 0.115, 0.148);   // 散乱して返る色
+/* 媒質の減衰率。物体ごとに違う係数を掛けていたので、同じ距離の魚と
+   カードで霞み方が違っていた。水は1種類しか無いので係数も1つにする。 */
+const float MEDIUM_K = 0.47;
+`;
+
+const G_WATER = G_MEDIUM + `
+uniform vec3 uFog;
 
 /* 濁りの層。水は一様ではなく、水面直下に懸濁物の帯があり、
    深部ほど澄む。帯は1層だけ(2層にすると深度グレードと競合して明滅に読まれる)。
@@ -804,13 +854,40 @@ float turbidity(float y){
   return 1.0 + band * 0.42 - clear * 0.18;
 }
 
-vec3 waterFog(vec3 col, float dist, float depth01, float light, float y){
+/* 前方散乱の偏り。水中の散乱は等方ではなく、光源の方を向いた時に
+   強く返る。これが無いと「距離に比例して均一に白くなる」だけで、
+   光の来ている方向が絵から読めない。
+   物理どおりの Henyey-Greenstein は前方で等方の11倍になり、
+   そのまま掛けると画面全体が乳白色に飛ぶ(実測)。ここでは
+   平均が1に近い緩いローブに留める —— 総量は変えず、偏りだけ付ける。 */
+float phaseFwd(float cosT){
+  return 0.84 + 0.52 * pow(max(cosT, 0.0), 3.0);
+}
+
+/* V は視線(カメラ→対象の向き)、S は太陽の向き。
+   uSun を G_WATER で宣言すると、G_SKY を併用する材質で二重宣言になるので
+   引数で受け取る。 */
+vec3 waterFogV(vec3 col, float dist, float depth01, float light, float y, vec3 V, vec3 S){
   // 深いほど届く光が減り、散乱色そのものも暗くなる
   float dl = mix(1.0, 0.16, depth01);
-  vec3 t = exp(-ABSORB * turbidity(y) * dist * 6.0);
-  vec3 inscatter = SCATTER * light * dl * (1.0 - t);
+  vec3 t = exp(-ABSORB * turbidity(y) * dist * MEDIUM_K * 6.0);
+  /* 等方成分を残したまま前方のローブを足す。全部をローブにすると
+     太陽と反対側が真っ暗になり、水ではなく煙に見える。 */
+  float ph = phaseFwd(dot(V, S));
+  vec3 inscatter = SCATTER * light * dl * ph * (1.0 - t);
   return col * t + inscatter;
-}`;
+}
+/* 視線を持たない呼び出し用(方向による偏りなし) */
+vec3 waterFog(vec3 col, float dist, float depth01, float light, float y){
+  float dl = mix(1.0, 0.16, depth01);
+  vec3 t = exp(-ABSORB * turbidity(y) * dist * MEDIUM_K * 6.0);
+  return col * t + SCATTER * light * dl * (1.0 - t);
+}
+
+/* 遠景が媒質の色へ収束するまでの距離。これも媒質の性質なので1本にする
+   (以前は 4→22 / 6→18 / 8→44 / 9→30 と物体ごとにバラバラで、
+   同じ距離にある魚とカードで霞み方が違っていた)。 */
+float farFade(float d){ return smoothstep(7.0, 38.0, d); }`;
 
 /* --- 空。ドームと、水面の反射・スネルの窓が同じ関数を読む --------
    ここが1つでないと「反射に映る空」と「実際の空」がズレて嘘になる。 */
@@ -982,11 +1059,7 @@ const waterMat = new THREE.ShaderMaterial({
       vec3 T = vec3(1,0,0), B = vec3(0,0,1), off = vec3(0.0);
       /* 波長はカメラ高さ(0.95)との比で決まる。長すぎると水面ではなく
          うねる油膜に見える。5本のスペクトルを短波長側へ寄せてある。 */
-      off += gerstner(vec2( 0.3, 1.0), 0.075, 21.00, p, T, B);
-      off += gerstner(vec2( 1.0, 0.3), 0.150, 10.50, p, T, B);
-      off += gerstner(vec2( 0.8, 1.0), 0.140,  5.20, p, T, B);
-      off += gerstner(vec2(-0.6, 1.0), 0.115,  2.50, p, T, B);
-      off += gerstner(vec2( 1.0,-0.7), 0.085,  1.25, p, T, B);
+${WAVES.map(w => `      off += gerstner(vec2(${glf(w[0])},${glf(w[1])}), ${glf(w[2])}, ${glf(w[3])}, p, T, B);`).join('\n')}
       /* 外周は完全に霧へ落ちる距離。ここに変位を残すと、巨大な三角形の
          シルエットがそのまま水平線のギザギザ(黒い斑点)になる。 */
       float damp = 1.0 - smoothstep(260.0, 820.0, length(position.xz));
@@ -1134,7 +1207,9 @@ const waterMat = new THREE.ShaderMaterial({
 
         /* 全反射側は「下の水」を映す鏡。遠方の水＝霧色なので、そこへ寄せておく。
            暗いままだと水平線の少し上に暗い帯が残る。 */
-        vec3 mirror = mix(waterFog(vec3(0.006,0.028,0.040), 10.0, uDepth, 1.0, vW.y), uFog, 0.55);
+        /* 距離は MEDIUM_K で割り戻して渡す(この値は係数の一本化より前に
+           目で決めたもので、水面の裏だけは絵の意味が変わってしまうため) */
+        vec3 mirror = mix(waterFog(vec3(0.006,0.028,0.040), 10.0/MEDIUM_K, uDepth, 1.0, vW.y), uFog, 0.55);
 
         col = mix(sky, mirror, tir);
 
@@ -1145,7 +1220,7 @@ const waterMat = new THREE.ShaderMaterial({
         col += vec3(0.40,0.78,0.84) * clamp(length(g)*6.0, 0.0, 1.0) * 0.20;
 
         // 深いほど天井は遠く、暗く
-        col = waterFog(col, min(d, 30.0)*0.24, uDepth, 1.0, vW.y);
+        col = waterFog(col, min(d, 30.0)*0.24/MEDIUM_K, uDepth, 1.0, vW.y);
         col *= mix(1.0, 0.30, uDepth);
         /* 遠方は空ドームと同じ霧色へ落とす。これで水面の端と無限遠が
            同じ色になり、画面を横切る継ぎ目が消える。 */
@@ -1165,8 +1240,30 @@ scene.add(water);
 /* ================================================================
    3) 海底 — コースティクス(水面のレンズ効果で集光した光の網)
    ================================================================ */
+/* 太陽光が水面で屈折して海底へ届くまでの水平ずれ。
+   海底の1点から太陽へ逆に辿って「どの水面の点を通ってきたか」を出すのに使う。
+   屈折率は波長で僅かに違うので、RGBで3つ持つ = 集光の縁に色が出る(物理どおり)。 */
+const SEABED_Y = -10.4;
+const CAUSTIC_SHIFT = (() => {
+  const sinI = Math.hypot(SUN.x, SUN.z);            // 太陽の天頂角の正弦
+  const t = [1.3310, 1.3330, 1.3370].map(n => {     // R / G / B の屈折率
+    const sT = sinI / n;
+    return sT / Math.sqrt(1 - sT * sT);             // tan(屈折角)
+  });
+  /* 実物どおりのずれを海底まで伸ばすと、集光の細かさに対して大きすぎて
+     虹色の縁になる(=色収差に見える)。緑へ 3/4 寄せて縁の色だけ残す。 */
+  const t2 = t.map(v => t[1] + (v - t[1]) * 0.25);
+  return { dir: new THREE.Vector2(SUN.x / sinI, SUN.z / sinI), tan: new THREE.Vector3(t2[0], t2[1], t2[2]) };
+})();
 const sandUniforms = {
   uTime:{value:0}, uSun:{value:SUN}, uDepth:{value:0}, uFog:{value:fogCol}, uPulse:pulseU,
+  uSunH:{value:CAUSTIC_SHIFT.dir},      // 太陽の方位(水平の単位ベクトル)
+  uCTan:{value:CAUSTIC_SHIFT.tan},      // RGBごとの tan(屈折角)
+  uFloorY:{value:SEABED_Y},
+  /* 光芒が海底へ落ちる位置。xz と 半径 を詰めて渡す。
+     板が届かない最後の1mを消す代わりに、床側に光だまりを置いて着地させる。 */
+  uShaft:{value:Array.from({length:12}, () => new THREE.Vector3())},
+  uShaftN:{value:0},
 };
 const sandMat = new THREE.ShaderMaterial({
   uniforms: sandUniforms,
@@ -1179,29 +1276,34 @@ const sandMat = new THREE.ShaderMaterial({
     }`,
   fragmentShader:`
     #define C_OCT ${TIER.causticOctaves}
+    #define C_RGB ${TIER.causticRGB ? 1 : 0}
     uniform float uTime;
     uniform float uDepth;
     uniform float uPulse;
     uniform vec3  uSun;
+    uniform vec2  uSunH;
+    uniform vec3  uCTan;
+    uniform float uFloorY;
+    uniform vec3  uShaft[12];
+    uniform int   uShaftN;
     varying vec3 vW;
     ${G_NOISE}
+    ${G_WAVE}
     ${G_WATER}
 
-    /* 稜線ノイズ(1-|2n-1|)を2枚掛け合わせると、水面の集光に似た
-       網目ができる。pow で締めて芯と裾を分ける。 */
-    float causticLayer(vec2 p, float t){
-      float n1 = vnoise(p*1.00 + vec2(t*0.62, t*0.44));
-      float n2 = vnoise(p*1.31 - vec2(t*0.53, t*0.71) + 3.7);
-      float c  = (1.0 - abs(n1*2.0-1.0)) * (1.0 - abs(n2*2.0-1.0));
-      return pow(c, 3.2)*1.25 + pow(c, 9.0)*1.35;
-    }
-    /* RGBを僅かにずらして採ると、実際の水中と同じ色の縁が出る */
-    vec3 caustics(vec2 p, float t){
-      // RGBのずれは控えめに。強いと海底が緑と青に分離して見える
-      float r = causticLayer(p*0.9975, t);
-      float g = causticLayer(p*1.0000, t + 0.10);
-      float b = causticLayer(p*1.0025, t + 0.20);
-      return vec3(r,g,b);
+    /* 集光は「水面のレンズ効果」そのものなので、模様を別に作らず
+       上の波の高さ場から導く。海底の点から太陽へ逆に辿った水面の点で、
+       屈折した光線束がどれだけ縮んだか(ヤコビアン)を見る。
+       行列式が 0 を横切る所が焦線 = 明るい網目の芯。 */
+    float causticAt(vec2 floorP, float tanT, float t, float q){
+      vec2 sfc = floorP - uSunH * (tanT * (0.0 - uFloorY));
+      float h, lap;
+      waveField(sfc, t, h, lap);
+      float det = 1.0 + q * lap;
+      /* 下限を下げるほど焦線が細く強くなる。0.055 まで下げるとピークが
+         18倍になり、ネオンの線に見えた。 */
+      float c = 1.0 / max(abs(det), 0.12);
+      return max(c - 0.95, 0.0);
     }
 
     void main(){
@@ -1215,18 +1317,40 @@ const sandMat = new THREE.ShaderMaterial({
       float grain = vnoise(p*38.0);
       vec3 sand = mix(vec3(0.052,0.050,0.041), vec3(0.098,0.093,0.076), rip*0.55 + grain*0.45);
 
-      // 集光。深いほど網目は大きく、弱くなる
-      float scale = mix(1.60, 0.85, uDepth);
-      vec3 ca = caustics(p*scale, uTime*0.85);
+      /* 集光。q は「水面の曲率がどれだけ光を寄せるか」の係数で、
+         これを上げるほど焦線が細く鋭くなる。 */
       float reach = mix(1.0, 0.30, uDepth) * uPulse;   // 光の脈を共有
-      sand += vec3(0.40,0.52,0.51) * ca * reach * 0.22;
+      const float Q = 2.6;
+      vec3 ca;
+    #if C_RGB
+      ca = vec3(causticAt(p, uCTan.r, uTime, Q),
+                causticAt(p, uCTan.g, uTime, Q),
+                causticAt(p, uCTan.b, uTime, Q));
+    #else
+      ca = vec3(causticAt(p, uCTan.g, uTime, Q));
+    #endif
+      /* 芯だけを残して裾を切る。切らないと海底全体が一様に持ち上がって
+         「明るい砂」になり、網目に見えない。 */
+      ca = ca / (1.0 + ca * 0.85);
+      sand += vec3(0.40,0.52,0.51) * ca * reach * 0.16;
 
       // 海底の起伏の代わりの大きな陰影。周期が長すぎるとオーロラ状の塊になる
       float macro = fbm(p*0.55 + 11.0, C_OCT);
       sand *= 0.80 + 0.34*macro;
 
-      vec3 col = waterFog(sand, dd*0.62, uDepth, reach, vW.y);
-      col = mix(col, uFog, smoothstep(8.0, 44.0, dd));
+      /* 光芒の着地。板は床の1m手前で消しているので、代わりにここへ
+         光だまりを置く。これが無いと光の柱が宙で途切れて見える。 */
+      for (int i = 0; i < 12; i++){
+        if (i >= uShaftN) break;
+        vec3 sh = uShaft[i];
+        float rr = length(p - sh.xy) / max(sh.z, 0.001);
+        float pool = 1.0 - smoothstep(0.0, 1.0, rr);
+        sand += vec3(0.30,0.52,0.58) * pool * pool * reach * 0.16;
+      }
+
+      vec3 V = normalize(vW - cameraPosition);
+      vec3 col = waterFogV(sand, dd, uDepth, reach, vW.y, V, uSun);
+      col = mix(col, uFog, farFade(dd));
       gl_FragColor = vec4(col, 1.0);
     }`,
 });
@@ -1245,7 +1369,7 @@ scene.add(seabed);
 const shaftUniforms = { uTime:{value:0}, uDepth:{value:0}, uSun:{value:SUN}, uPulse:pulseU };
 const shaftMat = new THREE.ShaderMaterial({
   transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
-  uniforms: { ...shaftUniforms, uGain:{value:1} },
+  uniforms: { ...shaftUniforms, uGain:{value:1}, uFloorY:{value:SEABED_Y} },
   vertexShader:`
     varying vec2 vUv; varying vec3 vW;
     void main(){
@@ -1256,6 +1380,7 @@ const shaftMat = new THREE.ShaderMaterial({
     }`,
   fragmentShader:`
     uniform float uTime; uniform float uDepth; uniform float uGain; uniform float uPulse;
+    uniform float uFloorY;
     varying vec2 vUv; varying vec3 vW;
     ${G_NOISE}
     void main(){
@@ -1263,8 +1388,12 @@ const shaftMat = new THREE.ShaderMaterial({
       float x = abs(vUv.x - 0.5) * 2.0;
       // 裾を長く取る。指数を上げるほど"光の板"に近づいてしまう
       float across = pow(1.0 - clamp(x,0.0,1.0), 1.5);
-      // 縦: 上(水面側)が濃く、下へ吸われて消える
-      float along = pow(clamp(vUv.y, 0.0, 1.0), 1.5) * (1.0 - smoothstep(0.75, 1.0, vUv.y));
+      /* 縦: 上(水面側)が濃く、下へ吸われて消える。
+         ただし床の直前で急に切らない —— 板は縦の billboard なので、
+         海底の板と交差すると深度テストで切られ、交差線がそのまま
+         直線の切り口として見える。床の1m上でゼロになるよう世界Yで殺す。 */
+      float along = pow(clamp(vUv.y, 0.0, 1.0), 1.35) * (1.0 - smoothstep(0.78, 1.0, vUv.y));
+      along *= smoothstep(uFloorY, uFloorY + 1.35, vW.y);
       // 流れる濃淡。これが無いと"板"に見える
       float n = fbm(vec2(vUv.x*3.0, vUv.y*2.2 - uTime*0.05), 3);
       float body = across * along * (0.45 + 0.85*n);
@@ -1285,14 +1414,25 @@ const shafts = [];
     m.material.uniforms.uSun.value = SUN;
     m.material.uniforms.uPulse = pulseU;
     m.material.uniforms.uGain = { value: 0.45 + Math.random()*0.75 };
+    m.material.uniforms.uFloorY = { value: SEABED_Y };
     const w = 1.1 + Math.random()*2.4;
     /* 水面より上へ出すと、水面ジオメトリに切られて板の断面が線として見える。
        上端が水面のすぐ下に来るよう、丈と高さを合わせてある。 */
-    m.scale.set(w, 9.2, 1);
-    m.position.set(-8 + Math.random()*16, -4.90, -4.0 - Math.random()*10);
+    /* 下端が海底のすぐ上に来るまで伸ばす。着地は床側の光だまりで作る。 */
+    m.scale.set(w, 10.1, 1);
+    m.position.set(-8 + Math.random()*16, -5.35, -4.0 - Math.random()*10);
     m.renderOrder = 5;
     scene.add(m); shafts.push(m);
   }
+  /* 床の光だまりの位置は動かないので1回だけ詰める。
+     半径は板の幅より少し広く取る(光は床で散るため)。 */
+  const slots = sandUniforms.uShaft.value;
+  const n = Math.min(shafts.length, slots.length);
+  for (let i = 0; i < n; i++){
+    const m = shafts[i];
+    slots[i].set(m.position.x, m.position.z, m.scale.x * 0.95 + 0.5);
+  }
+  sandUniforms.uShaftN.value = n;
 }
 
 /* ================================================================
@@ -1580,8 +1720,8 @@ const cards = [];
           col += vec3(1.0,0.94,0.82) * pow(max(dot(N,H),0.0), 260.0) * 0.85;
 
           float d = length(vW - cameraPosition);
-          col = waterFog(col, d*0.30, uDepth, mix(1.0, 0.25, uDepth), vW.y);
-          col = mix(col, uFog, smoothstep(9.0, 30.0, d) * uDepth);
+          col = waterFogV(col, d, uDepth, mix(1.0, 0.25, uDepth), vW.y, -V, uSun);
+          col = mix(col, uFog, farFade(d) * uDepth);
 
           /* 背景は自分で読んで合成済みなので、板の内側は不透明でよい。
              端の消え際と、水面より上のカードが潜水時に消える分だけ alpha を使う。 */
@@ -1625,13 +1765,14 @@ const cards = [];
         gl_Position = projectionMatrix * viewMatrix * wp;
       }`,
     fragmentShader:`
-      uniform float uDepth;   /* uFog は G_WATER が宣言しているので重ねない */
+      uniform float uDepth; uniform vec3 uSun;   /* uFog は G_WATER が宣言しているので重ねない */
       varying vec3 vW;
       ${G_WATER}
       void main(){
         float d = length(vW - cameraPosition);
-        vec3 col = waterFog(vec3(0.055,0.075,0.085), d*0.42, uDepth, mix(1.0,0.3,uDepth), vW.y);
-        col = mix(col, uFog, smoothstep(4.0, 22.0, d));
+        vec3 V = normalize(vW - cameraPosition);
+        vec3 col = waterFogV(vec3(0.055,0.075,0.085), d, uDepth, mix(1.0,0.3,uDepth), vW.y, V, uSun);
+        col = mix(col, uFog, farFade(d));
         /* 背骨は「水中の深さの基準」なので、水面より上へ出したままだと
            夕景の空に細い線が1本引かれたように見える(モバイルでは見出しを
            横切って特に目立つ)。水面の手前で消す。 */
@@ -1703,16 +1844,23 @@ function makeMotes(count, opt){
     fragmentShader:`
       uniform float uGain, uSoft, uDepth, uTime;
       varying float vFade, vSeed, vDist;
+      ${G_MEDIUM}
       void main(){
         vec2 q = gl_PointCoord - 0.5;
         float r = length(q)*2.0;
         if (r > 1.0) discard;
-        // テクスチャを使わない円。uSoft で"ボケ"の強さを変える(=擬似DOF)
-        float a = pow(1.0 - r, uSoft);
+        /* 近い粒ほどボケる(擬似DOF)。層ごとの固定値だと、同じ層の粒が
+           手前へ流れてきても輪郭が硬いままで、奥行きが読めない。 */
+        float soft = uSoft * mix(0.55, 1.75, 1.0 - smoothstep(0.6, 6.0, vDist));
+        float a = pow(1.0 - r, soft);
         // わずかな明滅。全部が同じ明るさだと"点の集合"に見える
         float tw = 0.72 + 0.28*sin(uTime*1.6 + vSeed*3.1);
         float depthDim = mix(1.0, 0.34, uDepth);
-        gl_FragColor = vec4(vec3(0.62,0.88,0.92) * a * uGain * tw * vFade * depthDim, 1.0);
+        /* 粒も水の中にある。他の物と同じ吸収を通すと、遠い粒は赤が先に
+           死んで青く沈み、近い粒だけが白く残る = 層が距離で分かれる。
+           以前は距離に関係なく同じ色だったので、全部が同じ面に見えていた。 */
+        vec3 tint = vec3(0.62,0.88,0.92) * exp(-ABSORB * vDist * MEDIUM_K * 2.6);
+        gl_FragColor = vec4(tint * a * uGain * tw * vFade * depthDim, 1.0);
       }`,
   });
   const pts = new THREE.Points(geo, mat);
@@ -1755,7 +1903,7 @@ const fishMat = new THREE.ShaderMaterial({
       gl_Position = projectionMatrix * viewMatrix * wp;
     }`,
   fragmentShader:`
-    uniform float uDepth;
+    uniform float uDepth; uniform vec3 uSun;
     varying vec2 vUv; varying vec3 vW;
     ${G_WATER}
     void main(){
@@ -1770,8 +1918,9 @@ const fishMat = new THREE.ShaderMaterial({
       float belly = smoothstep(0.62, 0.38, vUv.y);
       vec3 col = mix(vec3(0.020,0.055,0.075), vec3(0.16,0.30,0.33), belly);
       float d = length(vW - cameraPosition);
-      col = waterFog(col, d*0.55, uDepth, mix(1.0,0.3,uDepth), vW.y);
-      col = mix(col, uFog, smoothstep(6.0, 18.0, d));
+      vec3 Vv = normalize(vW - cameraPosition);
+      col = waterFogV(col, d, uDepth, mix(1.0,0.3,uDepth), vW.y, Vv, uSun);
+      col = mix(col, uFog, farFade(d));
       gl_FragColor = vec4(col, m * 0.86 * (1.0 - smoothstep(12.0, 22.0, d)));
     }`,
 });
@@ -2481,6 +2630,8 @@ function setParticleFraction(f){
 function setShaftFraction(f){
   const keep = Math.max(2, Math.round(shafts.length * f));
   shafts.forEach((sh, i) => { sh.visible = i < keep; });
+  /* 床の光だまりも一緒に減らす。残すと「光の柱が無いのに床だけ光る」 */
+  sandUniforms.uShaftN.value = Math.min(keep, sandUniforms.uShaft.value.length);
 }
 function setQuality(step){
   const target = Math.max(0, Math.min(LADDER.length, step));
