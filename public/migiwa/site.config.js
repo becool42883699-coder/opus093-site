@@ -12,23 +12,46 @@ export const SITE = {
   studio:    'MIGIWA STUDIO',
   studioJa:  'ミギワスタジオ',
 
-  /* PENDING: 独立ドメインが決まったら差し替える。
-     canonical / OGP / JSON-LD / sitemap が全部ここを見る */
-  origin:    'https://becool42883699-coder.github.io/opus093-site/migiwa',
+  /* PENDING: ドメイン未定。Cloudflare Pages へ載せる想定。
+     決まったらここだけ差し替えれば canonical / OGP / JSON-LD / sitemap が追従する。
+     空文字の間は相対パスで組み、絶対URLが要る所(OGP)は出力しない。 */
+  origin:    '',
 
   /* 問い合わせ導線。電話番号は載せない(ご指示) */
   contact: {
-    /* PENDING: Formspree 等のエンドポイント。
-       空のままだと送信ボタンは押せず、代わりにLINEとメールへ誘導する */
+    /* PENDING: 送信先。Cloudflare Pages なら functions/api/contact.js を置いて
+       '/api/contact' を指すだけで動く。外部サービス(Formspree等)のURLでも可。
+       空の間はフォームを「準備中」として出し、押せないボタンにはしない。 */
     formAction: '',
-    /* PENDING: LINE公式アカウントのURL */
+    /* PENDING: LINE公式アカウントは未取得。取得したらURLを入れる */
     line:       '',
     /* PENDING: 公開してよいメールアドレス */
     mail:       '',
   },
 
-  /* PENDING: 地域SEOとGoogleビジネスプロフィールに効くので、
-     市区町村までは出したい。番地まで出すかは要確認 */
-  area:      { region: '', locality: '', visitRange: '' },
-  founded:   '',   // PENDING
+  /* 地域SEO と Googleビジネスプロフィールに効く。番地は出さない */
+  area: {
+    region:     '福岡県',
+    locality:   '北九州市小倉北区',
+    /* PENDING: 現地訪問に応じる範囲。未確定なので本文では範囲を断定しない */
+    visitRange: '',
+  },
+
+  /* 法人未設立。設立年・代表者名・価格は出さない(いずれもご指示)。
+     出さないことを明示しておかないと、後で「入れ忘れ」と誤解される */
+  show: { founded: false, representative: false, price: false },
 };
+
+/* 本文に埋めた仮の内容。実際に公開する前に、ここが全部埋まっているか確認する。
+   FAQの答えは「適当に作っておいて」というご指示で草案を書いたものなので、
+   事業上の約束として通用するかは必ず本人の確認が要る。 */
+export const PROVISIONAL = [
+  'FAQ の回答すべて(納期・修正回数・遠方対応・予算の下限)',
+  '制作実績3件の詳細(課題・コンセプト・使用技術・制作期間・Before)',
+  'L tAq が何の案件か',
+  'LINE公式アカウントのURL',
+  '公開するメールアドレス',
+  'フォームの送信先',
+  'ドメイン',
+  '現地訪問に応じる範囲',
+];
