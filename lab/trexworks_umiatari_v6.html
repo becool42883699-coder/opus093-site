@@ -212,6 +212,20 @@
   #boot .bar{width:132px; height:1px; background:rgba(143,212,222,.2)}
   #boot .bar span{display:block; height:1px; width:0%; background:var(--line); transition:width .3s linear}
 
+  /* ---------- 診断オーバーレイ (?diag=1 のときだけ) ---------- */
+  #diag{
+    position:fixed; left:0; top:0; z-index:40; max-width:min(560px,94vw); max-height:100vh;
+    overflow:auto; padding:14px 16px; margin:8px;
+    background:rgba(2,14,20,.90); border:1px solid rgba(143,212,222,.34);
+    font-family:var(--f-mono); font-size:10.5px; line-height:1.75; color:var(--bone);
+    -webkit-overflow-scrolling:touch; white-space:pre-wrap; word-break:break-word;
+  }
+  #diag b{color:var(--line); font-weight:500}
+  #diag .ok{color:#7fe3a4}
+  #diag .ng{color:#ff8f7a}
+  #diag h4{margin:10px 0 3px; font-size:10px; letter-spacing:.2em; color:var(--line); font-weight:500}
+  #diag h4:first-child{margin-top:0}
+
   #fallback{display:none; position:fixed; inset:0; z-index:20; background:var(--abyss); color:var(--bone);
     padding:40vh var(--gut) 0; text-align:center; font-size:13px; line-height:2.2}
   #fallback.on{display:block}
@@ -286,7 +300,7 @@
   <div id="sim" class="mono">
     OCEAN — <b>LIVE</b><br>
     GERSTNER 05 / SKY REFLECT<br>
-    DPR ×<span id="dprv">2.0</span> — <span id="fpsv">60</span> FPS
+    DPR ×<span id="dprv">2.0</span> — <span id="fpsv">60</span>/<span id="fpsmin">60</span> FPS
   </div>
 
   <div id="meter">
@@ -353,6 +367,8 @@
   <div class="bar"><span id="bootFill"></span></div>
 </div>
 
+<div id="diag" hidden></div>
+
 <div id="fallback">
   この端末ではWebGL2が起動できませんでした。<br>
   別のブラウザ、または最新版でお試しください。
@@ -391,6 +407,17 @@ import { SMAAPass }       from 'three/addons/postprocessing/SMAAPass.js';
       この1点だけで「青く塗った画面」と「水の中」が分かれる。
    3) 手前・中景・奥に必ず別レイヤーの粒子と霧を置き、視差を持たせる。
    ================================================================ */
+
+/* ---- URLフラグ ----------------------------------------------------
+   ?diag=1 … 能力検出の結果・採用した設定・実測FPS・パス別コストを画面に出す。
+             併せて preserveDrawingBuffer を有効にする(検証スクリプトが
+             canvas を読み出せるようにするため。通常表示には影響しない)。 */
+const QS   = new URLSearchParams(location.search);
+const DIAG = QS.get('diag') === '1';
+/* 降格経路を実機で確かめるための強制フラグ。
+   ?force=ldr(8bitへ降格) / nodepth(深度テクスチャ無し) / both
+   能力があっても無いものとして扱う。通常表示には影響しない。 */
+const FORCE = QS.get('force') || '';
 
 const stageEl = document.getElementById('stage');
 const bootEl  = document.getElementById('boot');
@@ -444,17 +471,102 @@ function probeWebGL2(){
 let renderer = null;
 if (!probeWebGL2()){ fail(); await HALT(); }
 try {
-  renderer = new THREE.WebGLRenderer({ antialias:false, powerPreference:'high-performance', stencil:false });
+  renderer = new THREE.WebGLRenderer({
+    antialias:false, powerPreference:'high-performance', stencil:false,
+    preserveDrawingBuffer: DIAG,
+  });
 } catch {
   fail(); await HALT();
 }
+
+/* ================================================================
+   能力検出 — 「申告」ではなく「実際に組めるか」で判定する
+   ----------------------------------------------------------------
+   iOS の一部は拡張を"ある"と申告しつつ、実際にフレームバッファを
+   組むと不完全になる。そのため拡張名の照会に加えて、小さなRTを
+   本当に作って checkFramebufferStatus まで通す実地プローブを行う。
+   ================================================================ */
+const CAPS = (() => {
+  const gl = renderer.getContext();
+  const rep = { webgl2:true, ext:{}, probe:{}, failed:[], error:null };
+
+  for (const name of [
+    'EXT_color_buffer_half_float', 'EXT_color_buffer_float',
+    'OES_texture_float_linear', 'EXT_float_blend',
+  ]) {
+    const got = !!gl.getExtension(name);
+    rep.ext[name] = got;
+    if (!got) rep.failed.push(name);
+  }
+
+  /* 4x4 のRTを実際に作り、フレームバッファが完全になるかを見る。
+     depth を付けた場合／付けない場合を別々に試す。 */
+  const tryTarget = (type, withDepth) => {
+    let rt = null;
+    try {
+      rt = new THREE.WebGLRenderTarget(4, 4, { type, depthBuffer:true, samples:0 });
+      if (withDepth){
+        rt.depthTexture = new THREE.DepthTexture(4, 4);
+        rt.depthTexture.type = THREE.UnsignedIntType;
+      }
+      renderer.setRenderTarget(rt);
+      const status = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+      renderer.setRenderTarget(null);
+      return status === gl.FRAMEBUFFER_COMPLETE;
+    } catch (e) {
+      rep.error = String(e && e.message || e);
+      return false;
+    } finally {
+      renderer.setRenderTarget(null);
+      if (rt) rt.dispose();
+    }
+  };
+
+  rep.probe.halfFloat      = tryTarget(THREE.HalfFloatType,   false);
+  rep.probe.halfFloatDepth = tryTarget(THREE.HalfFloatType,   true);
+  rep.probe.byte           = tryTarget(THREE.UnsignedByteType, false);
+  rep.probe.byteDepth      = tryTarget(THREE.UnsignedByteType, true);
+  return rep;
+})();
+
+/* 採用する構成。半精度が組めなければ8bitへ降格し、深度テクスチャが
+   組めなければ深度に依存する演出だけを落とす。シーンの描画自体は
+   どちらの場合も止めない。 */
+const forceLdr   = FORCE === 'ldr'     || FORCE === 'both';
+const forceNoDep  = FORCE === 'nodepth' || FORCE === 'both';
+const HDR      = CAPS.probe.halfFloat && !forceLdr;
+const DEPTH_OK = (HDR ? CAPS.probe.halfFloatDepth : CAPS.probe.byteDepth) && !forceNoDep;
+
+/* 8bitも組めない = WebGLが実質使えない。ここだけはフォールバック文言 */
+if (!HDR && !CAPS.probe.byte){ fail(); await HALT(); }
+
+const RENDER = {
+  bufferType: HDR ? THREE.HalfFloatType : THREE.UnsignedByteType,
+  hdr: HDR,
+  depth: DEPTH_OK,
+  /* 8bitでは線形値が1.0で頭打ちになる。太陽の芯を55倍のまま持つと
+     全部クリップしてBloomが一切効かず、平坦で暗い絵になる。
+     光量の内訳とBloomの閾値・露出をセットで差し替える。 */
+  sunCore:  HDR ? 55.0 : 1.30,
+  sunHalo:  HDR ? 0.50 : 0.55,
+  sunBroad: HDR ? 0.09 : 0.11,
+  snellSun: HDR ? 2.60 : 1.20,
+  bloomThreshold: HDR ? 1.00 : 0.60,
+  bloomBase:      HDR ? 0.30 : 0.42,
+  exposure:       HDR ? 0.94 : 1.15,
+  /* 深度が無いとき: 被写界深度は完全に落とす。画面空間の散乱は
+     遮蔽判定だけを失うので、閾値を上げて強度を下げた縮退版で残す
+     (落とすと光条そのものが消えて絵が別物になるため)。 */
+  dof: DEPTH_OK,
+  godrayOcclusion: DEPTH_OK,
+};
 
 let DPR = Math.min(devicePixelRatio || 1, TIER.dpr);
 renderer.setPixelRatio(DPR);
 renderer.setSize(innerWidth, innerHeight);
 /* トーンマップは OutputPass が担当する。ここで掛けると最終パスと二重になる */
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 0.94;
+renderer.toneMappingExposure = RENDER.exposure;
 stageEl.appendChild(renderer.domElement);
 document.getElementById('dprv').textContent = DPR.toFixed(1);
 
@@ -552,9 +664,9 @@ vec3 skyFn(vec3 dir){
 
   // 太陽。芯は鋭く、広い散乱は狭める(旧版はこれで空全体が乳白色になっていた)
   float occ = 1.0 - dens*0.80;
-  sky += vec3(1.00,0.70,0.42) * pow(s, 3000.0) * 55.0 * occ;
-  sky += vec3(1.00,0.58,0.30) * pow(s, 190.0)  * 0.50 * occ;
-  sky += vec3(0.80,0.42,0.24) * pow(s, 15.0)   * 0.09 * occ;
+  sky += vec3(1.00,0.70,0.42) * pow(s, 3000.0) * ${RENDER.sunCore.toFixed(3)} * occ;
+  sky += vec3(1.00,0.58,0.30) * pow(s, 190.0)  * ${RENDER.sunHalo.toFixed(3)} * occ;
+  sky += vec3(0.80,0.42,0.24) * pow(s, 15.0)   * ${RENDER.sunBroad.toFixed(3)} * occ;
 
   vec3 below = mix(vec3(0.018,0.065,0.088), vec3(0.0015,0.011,0.023), smoothstep(0.0,0.5,-h));
   return mix(below, sky, smoothstep(-0.02, 0.02, h));
@@ -801,7 +913,7 @@ const waterMat = new THREE.ShaderMaterial({
         vec3 sky = skyFn(Rr);
         // 窓の中の太陽。滲ませて「眩しさ」にする
         // 指数を上げて芯を締める。緩いと波面ごとの太陽像が大きな楕円として並ぶ
-        sky += vec3(1.0,0.90,0.74) * pow(max(dot(Rr, uSun),0.0), 70.0) * 2.6;
+        sky += vec3(1.0,0.90,0.74) * pow(max(dot(Rr, uSun),0.0), 70.0) * ${RENDER.snellSun.toFixed(3)};
 
         /* 全反射側は「下の水」を映す鏡。遠方の水＝霧色なので、そこへ寄せておく。
            暗いままだと水平線の少し上に暗い帯が残る。 */
@@ -1361,12 +1473,14 @@ const fishGroup = new THREE.Group();
    アンチエイリアスは最終段の SMAA で取る。 */
 function makeTarget(w,h){
   const rt = new THREE.WebGLRenderTarget(w, h, {
-    type: THREE.HalfFloatType,
+    type: RENDER.bufferType,     // 半精度が組めない端末では 8bit へ降格
     samples: 0,
     depthBuffer: true,
   });
-  rt.depthTexture = new THREE.DepthTexture(w, h);
-  rt.depthTexture.type = THREE.UnsignedIntType;
+  if (RENDER.depth){
+    rt.depthTexture = new THREE.DepthTexture(w, h);
+    rt.depthTexture.type = THREE.UnsignedIntType;
+  }
   return rt;
 }
 const composer = new EffectComposer(renderer, makeTarget(innerWidth*DPR|0, innerHeight*DPR|0));
@@ -1382,7 +1496,7 @@ composer.setSize(innerWidth, innerHeight);
    毎フレーム read/write の割り当てを固定し直して、
    シーンが必ず renderTarget2 へ描かれるようにする。 */
 composer.renderTarget1.depthTexture = null;   // 書き込み先には深度を貼らない
-const sceneDepth = composer.renderTarget2.depthTexture;
+const sceneDepth = composer.renderTarget2.depthTexture || null;
 
 function renderComposer(){
   // パス数が偶数か奇数かで割り当てが揺れないよう、毎フレーム明示的に戻す
@@ -1396,7 +1510,7 @@ composer.addPass(renderPass);
 
 /* 閾値を1.0まで上げ、太陽と水面のきらめきだけを滲ませる。
    下げると空全体が滲んで乳白色になる(実測) */
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.34, 0.70, 1.00);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), RENDER.bloomBase, 0.70, RENDER.bloomThreshold);
 if (TIER.bloom) composer.addPass(bloom);
 
 /* --- ATMOS: 光の散乱と被写界深度 --------------------------------
@@ -1415,7 +1529,8 @@ const ATMOS = {
   vertexShader:`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader:`
     #define RAY_SAMPLES ${TIER.name==='high' ? 26 : 12}
-    #define DOF ${TIER.dof ? 1 : 0}
+    #define DOF  ${(TIER.dof && RENDER.dof) ? 1 : 0}
+    #define OCCL ${RENDER.godrayOcclusion ? 1 : 0}
     uniform sampler2D tDiffuse, tDepth;
     uniform vec2 uSunUV, uRes;
     uniform float uRay, uDepth01, uFocus, uAperture, uNear, uFar, uTime;
@@ -1430,9 +1545,9 @@ const ATMOS = {
 
     void main(){
       vec3 col;
-      float z = linZ(vUv);
 
     #if DOF
+      float z = linZ(vUv);
       /* 12点の黄金角ディスク。錯乱円は |z-focus| から作り、
          手前側は弱める(前ボケが背景に滲むのを避ける) */
       float coc = abs(z - uFocus) / max(z, 0.3);
@@ -1480,11 +1595,18 @@ const ATMOS = {
           float fi = float(i) + jit;
           vec2 c = vUv - dir * fi + perp * (jit2 - 0.5) * fi * 0.0030;
           vec3 s = texture2D(tDiffuse, c).rgb;
-          float sz = linZ(c);
+        #if OCCL
           /* 光源になるのは水面・空といった遠景だけ。近景は完全に遮蔽物に
              する(ここを緩めるとカードやパーティクルが光条に載って尾を引く) */
+          float sz = linZ(c);
           float farMask = smoothstep(18.0, 45.0, sz);
           float b = max(luma(s) - 0.16, 0.0);
+        #else
+          /* 深度テクスチャが無い環境。遮蔽判定ができないぶん、
+             閾値を上げて「本当に明るい所(スネルの窓)」だけを拾う。 */
+          float farMask = 1.0;
+          float b = max(luma(s) - 0.45, 0.0);
+        #endif
           acc += s * b * farMask * decay;
           decay *= 0.955;
         }
@@ -1609,6 +1731,7 @@ const secNoEl = document.getElementById('secNo');
 const splashEl= document.getElementById('splash');
 const diveBtn = document.getElementById('diveBtn');
 const fpsEl   = document.getElementById('fpsv');
+const fpsMinEl= document.getElementById('fpsmin');
 const workEl  = document.getElementById('work');
 const workKind= document.getElementById('workKind');
 const workTitle=document.getElementById('workTitle');
@@ -1623,10 +1746,114 @@ function ss(a,b,x){ x = Math.min(1, Math.max(0, (x-a)/(b-a))); return x*x*(3-2*x
    11) ループ
    ================================================================ */
 let prevNow = performance.now();
-function tick(){ const n = performance.now(); const d = (n - prevNow)/1000; prevNow = n; return d; }
+let rawDt = 0;   // 丸める前の実フレーム時間(秒)。FPS計測とコスト計測はこちらを使う
+function tick(){ const n = performance.now(); const d = (n - prevNow)/1000; prevNow = n; rawDt = d; return d; }
 let t = 0, running = true, visible = true;
 /* 自発的な動き(波・粒子・魚・揺らぎ)は止め、スクロール連動だけ残す */
 const timeScale = reduced ? 0 : 1;
+
+/* ---- 実測FPS(直近5秒の平均と最低) --------------------------------
+   最低FPSは「一番重かった1フレーム」の逆数。平均だけ見ていると
+   時々刺さるカクつきを見落とすので、両方を出す。 */
+const FPS_WIN = [];
+let framesTotal = 0;
+function pushFrame(now, dt){
+  framesTotal++;
+  FPS_WIN.push([now, dt]);
+  const cut = now - 5000;
+  while (FPS_WIN.length && FPS_WIN[0][0] < cut) FPS_WIN.shift();
+}
+function fpsStats(){
+  if (!FPS_WIN.length) return { avg:0, min:0, n:0 };
+  let span = 0, worst = 0;
+  for (const f of FPS_WIN){ span += f[1]; if (f[1] > worst) worst = f[1]; }
+  return { avg: span > 0 ? FPS_WIN.length/span : 0, min: worst > 0 ? 1/worst : 0, n: FPS_WIN.length };
+}
+
+/* ---- パス別の概算コスト -------------------------------------------
+   GPUタイマー拡張は Safari で使えないので、構成を切り替えながら
+   実測して差分を取る。?diag=1 のときだけ、起動直後に一度走る。
+   1:全部 → 2:ATMOS無し → 3:ATMOS+Bloom無し → 4:直描画(ポスト無し) */
+const CAL_WARM = 6, CAL_MIN_FRAMES = 8, CAL_MIN_MS = 400, CAL_MAX_FRAMES = 60;
+const CAL = DIAG ? { step:0, frames:0, acc:0, result:null } : null;
+function calibrate(dt){
+  const c = CAL;
+  if (c.step === 0){
+    renderComposer();
+    if (++c.frames >= CAL_WARM){ c.step = 1; c.frames = 0; c.acc = 0; }
+    return;
+  }
+  if (c.step === 1){ renderComposer(); }
+  else if (c.step === 2){ atmosPass.enabled = false; renderComposer(); }
+  else if (c.step === 3){ atmosPass.enabled = false; bloom.enabled = false; renderComposer(); }
+  else if (c.step === 4){ renderer.setRenderTarget(null); renderer.render(scene, camera); }
+  c.acc += dt;
+  c.frames++;
+  /* 速い環境ではフレーム数、遅い環境では時間で打ち切る */
+  if ((c.frames >= CAL_MIN_FRAMES && c.acc * 1000 >= CAL_MIN_MS) || c.frames >= CAL_MAX_FRAMES){
+    c['t' + c.step] = c.acc / c.frames * 1000;
+    c.frames = 0; c.acc = 0; c.step++;
+    if (c.step === 5){
+      atmosPass.enabled = true;
+      bloom.enabled = TIER.bloom;
+      c.result = {
+        scene:  +c.t4.toFixed(2),                        // シーン本体(水面が主)
+        post:   +Math.max(0, c.t3 - c.t4).toFixed(2),    // Output/SMAA/Grade
+        bloom:  +Math.max(0, c.t2 - c.t3).toFixed(2),
+        atmos:  +Math.max(0, c.t1 - c.t2).toFixed(2),    // 散乱+被写界深度
+        total:  +c.t1.toFixed(2),
+      };
+      renderDiag();
+    }
+  }
+}
+
+/* ---- 診断オーバーレイ ---------------------------------------------
+   ?diag=1 のときだけ表示する。window.__diag は常に生やしておく
+   (検証スクリプトが構造化データとして読むため)。 */
+const diagEl = document.getElementById('diag');
+function glInfo(){
+  try {
+    const gl = renderer.getContext();
+    const d = gl.getExtension('WEBGL_debug_renderer_info');
+    return d ? String(gl.getParameter(d.UNMASKED_RENDERER_WEBGL)) : String(gl.getParameter(gl.RENDERER));
+  } catch { return 'n/a'; }
+}
+function renderDiag(){
+  if (!DIAG || !diagEl) return;
+  const f = fpsStats();
+  const yn = b => b ? '<span class="ok">OK</span>' : '<span class="ng">NG</span>';
+  const ext = Object.entries(CAPS.ext).map(([k,v]) => `  ${k} … ${yn(v)}`).join('\n');
+  const cal = CAL && CAL.result
+    ? `  シーン本体 ${CAL.result.scene} ms\n  Bloom      ${CAL.result.bloom} ms\n  ATMOS      ${CAL.result.atmos} ms\n  その他post ${CAL.result.post} ms\n  合計       ${CAL.result.total} ms`
+    : '  計測中… (画面が数秒ちらつきます)';
+  diagEl.innerHTML =
+    `<h4>DEVICE</h4>  ${navigator.userAgent}\n  GPU: ${glInfo()}\n  画面 ${innerWidth}×${innerHeight} / devicePixelRatio ${(devicePixelRatio||1).toFixed(2)}` +
+    `<h4>EXTENSIONS (申告)</h4>${ext}` +
+    `<h4>PROBE (実際にRTを組めたか)</h4>` +
+      `  half-float          … ${yn(CAPS.probe.halfFloat)}\n` +
+      `  half-float + depth  … ${yn(CAPS.probe.halfFloatDepth)}\n` +
+      `  8bit                … ${yn(CAPS.probe.byte)}\n` +
+      `  8bit + depth        … ${yn(CAPS.probe.byteDepth)}` +
+      (CAPS.error ? `\n  <span class="ng">error: ${CAPS.error}</span>` : '') +
+    `<h4>採用した構成</h4>` +
+      `  バッファ型   <b>${RENDER.hdr ? 'HalfFloat' : 'UnsignedByte (降格)'}</b>\n` +
+      `  深度テクスチャ <b>${RENDER.depth ? '有効' : '無効 (降格)'}</b>\n` +
+      `  被写界深度   <b>${(TIER.dof && RENDER.dof) ? 'ON' : 'OFF'}</b>\n` +
+      `  光条の遮蔽   <b>${RENDER.godrayOcclusion ? 'ON' : 'OFF (縮退版)'}</b>\n` +
+      `  Bloom閾値/露出 <b>${RENDER.bloomThreshold} / ${RENDER.exposure}</b>` +
+    (FORCE ? `<h4>FORCE</h4>  <span class="ng">?force=${FORCE} で降格を強制中</span>` : '') +
+    `<h4>TIER</h4>  ${TIER.name} / DPR ×${DPR.toFixed(2)} / 粒子 ${TIER.motes}+${TIER.bubbles}+${TIER.fore} / 光芒 ${TIER.shafts}` +
+    `<h4>FPS (直近5秒)</h4>  平均 <b>${f.avg.toFixed(1)}</b> / 最低 <b>${f.min.toFixed(1)}</b>  (${f.n} フレーム, 累計 ${framesTotal})` +
+    `<h4>PASS COST (1フレームあたり)</h4>${cal}`;
+}
+window.__diag = {
+  caps: CAPS, render: RENDER, tier: TIER,
+  get dpr(){ return DPR; },
+  get frames(){ return framesTotal; },
+  get fps(){ return fpsStats(); },
+  get cost(){ return CAL && CAL.result; },
+};
 
 /* 適応DPR。品質を落とすのは"実測で遅い時だけ" */
 let frameAcc = 0, frameN = 0, fpsShown = 0;
@@ -1772,7 +1999,8 @@ function frame(){
   const inFront = camFwd.dot(SUN) > 0.02;
   atmosPass.uniforms.uSunUV.value.set(tmpV.x*0.5+0.5, tmpV.y*0.5+0.5);
   // 水中でだけ強く出す(水上は空の描画そのものが眩しさを持っている)
-  const rayAmt = inFront ? (0.10 + 0.62*ss(0.03,0.34,depth01)) * (1 - ss(0.80,1.0,depth01)*0.55) : 0;
+  const rayAmt = (inFront ? (0.10 + 0.62*ss(0.03,0.34,depth01)) * (1 - ss(0.80,1.0,depth01)*0.55) : 0)
+                 * (RENDER.godrayOcclusion ? 1 : 0.55);   // 遮蔽できないぶん控えめに
   atmosPass.uniforms.uRay.value += (rayAmt - atmosPass.uniforms.uRay.value) * Math.min(1, dt*2.5);
   atmosPass.uniforms.uDepth01.value = depth01;
   atmosPass.uniforms.uTime.value = t;
@@ -1782,7 +2010,7 @@ function frame(){
   atmosPass.uniforms.uAperture.value = 0.16 + 0.42*depth01;
   gradePass.uniforms.uDepth01.value = depth01;
   gradePass.uniforms.uTime.value = t;
-  bloom.strength = 0.30 + 0.24*ss(0.05,0.55,depth01);
+  bloom.strength = RENDER.bloomBase + 0.24*ss(0.05,0.55,depth01);
 
   /* --- HUD ---------------------------------------------------- */
   const hop = 1 - ss(0.035, 0.17, sp);
@@ -1834,14 +2062,23 @@ function frame(){
   }
   if (camera.position.y > 0.55) splashed = false;
 
-  renderComposer();
+  if (CAL && CAL.step < 5) calibrate(rawDt);
+  else renderComposer();
+
+  pushFrame(performance.now(), rawDt);
 
   /* --- 実測にもとづく適応 --- */
   frameAcc += dt; frameN++;
   if (frameN >= 45){
     const avg = frameAcc / frameN;
-    const fps = Math.round(1/avg);
-    if (fps !== fpsShown){ fpsShown = fps; fpsEl.textContent = Math.min(fps, 120); }
+    const st = fpsStats();
+    const fps = Math.round(st.avg);
+    if (fps !== fpsShown){
+      fpsShown = fps;
+      fpsEl.textContent = Math.min(fps, 120);
+      fpsMinEl.textContent = Math.min(Math.round(st.min), 120);
+    }
+    renderDiag();
     if (avg > 0.024) applyDPR(DPR - 0.25);       // 42fps を下回ったら解像度を落とす
     else if (avg < 0.0135) applyDPR(DPR + 0.25); // 74fps 以上なら戻す
     frameAcc = 0; frameN = 0;
@@ -1892,6 +2129,7 @@ requestAnimationFrame(()=>{
   renderComposer();
   requestAnimationFrame(()=>{
     document.body.classList.add('ready');
+    if (DIAG) renderDiag();
     bootEl.classList.add('gone');
     setTimeout(()=> bootEl.remove(), 1000);
     frame();
