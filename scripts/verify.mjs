@@ -34,6 +34,9 @@ const ART  = path.join(ROOT, 'artifacts');
 const argv     = process.argv.slice(2);
 const VIEW     = (argv.find(a => a.startsWith('--view=')) || '--view=desktop').split('=')[1];
 const LOCAL3   = process.env.THREE_LOCAL === '1';
+/* 検証機は hardwareConcurrency が小さく、既定では必ず low ティアになる。
+   high 側だけにある経路(水面の映り込み)を確かめるには明示的に上げる。 */
+const TIERPIN  = (argv.find(a => a.startsWith('--tier=')) || '').split('=')[1] || '';
 /* 降格経路の検証用。--force=ldr / nodepth / both */
 const FORCE    = (argv.find(a => a.startsWith('--force=')) || '').split('=')[1] || '';
 const CHROME   = process.env.PW_CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
@@ -106,7 +109,8 @@ await new Promise(r => server.listen(0, '127.0.0.1', r));
 /* q=full で自動品質調整を止める。遅い環境だと梯子が底まで降りてしまい、
    毎回違う品質の絵を撮ることになって差分判定が意味を失う。 */
 const BASE = `http://127.0.0.1:${server.address().port}/index.html?diag=1&q=full`
-  + (FORCE ? `&force=${FORCE}` : '');
+  + (FORCE ? `&force=${FORCE}` : '')
+  + (TIERPIN ? `&tier=${TIERPIN}` : '');
 
 /* ---------------- 出力先 (連番・上書きしない) ---------------- */
 fs.mkdirSync(ART, { recursive: true });
@@ -116,9 +120,14 @@ const prevLoops = fs.readdirSync(ART)
 const loopNo = (prevLoops.at(-1) ?? 0) + 1;
 /* 本流(desktop・降格なし)だけが loop-NN を名乗り、差分比較の対象になる。
    モバイルや降格検証は接尾辞を付けて番号を消費しない。 */
-const suffix = [VIEW === 'desktop' ? '' : VIEW, FORCE].filter(Boolean).join('-');
-const outDir = path.join(ART, `loop-${String(loopNo).padStart(2, '0')}${suffix ? '-' + suffix : ''}`);
-fs.mkdirSync(outDir);
+const suffix = [VIEW === 'desktop' ? '' : VIEW, FORCE, TIERPIN && 'tier' + TIERPIN].filter(Boolean).join('-');
+/* 接尾辞つきの実行はループ番号を消費しないので、同じ条件で2回走らせると
+   同じ名前になる。空いている名前まで送る(上書きはしない)。 */
+let outDir = path.join(ART, `loop-${String(loopNo).padStart(2, '0')}${suffix ? '-' + suffix : ''}`);
+for (let k = 2; fs.existsSync(outDir); k++) {
+  outDir = path.join(ART, `loop-${String(loopNo).padStart(2, '0')}${suffix ? '-' + suffix : ''}-${k}`);
+}
+fs.mkdirSync(outDir, { recursive: true });
 
 /* ---------------- 実行 ---------------- */
 const browser = await chromium.launch({
@@ -189,7 +198,14 @@ const signature = async () => page.evaluate(() => {
 
 const sigs = {};
 let hudOverlap = null;
-const maxScroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+let effects = null;
+/* 潜航の進行度はページ側と同じく #spacer の高さで正規化する。
+   document 全体の高さで割ると、本文DOMを足した分だけ「深部」が
+   本文の途中を指してしまい、深部の絵を一度も撮らないまま通る。 */
+const maxScroll = await page.evaluate(() => {
+  const sp = document.getElementById('spacer');
+  return (sp ? sp.offsetHeight : document.documentElement.scrollHeight) - innerHeight;
+});
 for (const stop of STOPS) {
   await page.evaluate(y => scrollTo(0, y), Math.round(maxScroll * stop.p));
   for (let i = 0; i < 90; i++) {
@@ -218,6 +234,9 @@ for (const stop of STOPS) {
       out.card = { y: Math.round(card.y), h: Math.round(card.h), visible: card.visible };
       return out;
     });
+    /* 水面の映り込みとガラスの屈折が水面で実際に効いているか。
+       絵だけで見ると、シェーダが黙って落ちても気付けない。 */
+    effects = await page.evaluate(() => window.__diag.effects);
   }
 }
 
@@ -273,9 +292,18 @@ const verdict = {
   '診断オーバーレイが可視':    { pass: overlayOk, value: JSON.stringify(overlay) },
   'HUDと3Dの重なり無し':      { pass: hudOk, value: hudOverlap ? JSON.stringify(hudOverlap) : 'n/a' },
   '本文が実テキストで存在':    { pass: !!(contentInfo.exists && contentInfo.chars > 300), value: JSON.stringify(contentInfo) },
+  /* デスクトップは反射が動いていること。モバイルは"切れていること"が正解なので
+     同じ基準では測らない(値だけ残す)。 */
+  '水面の映り込みが有効':      { pass: effects ? (effects.reflectAvailable
+                                  ? (effects.reflectOn && effects.reflectStrength > 0 && !!effects.reflectSize)
+                                  : (!effects.reflectOn && effects.reflectStrength === 0))
+                                 : null, value: JSON.stringify(effects) },
+  'ガラスの屈折が有効':        { pass: effects ? (effects.glassOn && !!effects.glassRefract
+                                  && effects.glassRefract[0] > 2) : null,
+                               value: effects ? JSON.stringify(effects.glassRefract) : 'n/a' },
 };
 
-const report = { loop: loopNo, view: VIEW, url: BASE, diag, overlay, hudOverlap, contentInfo, ctxLost, messages, diff, verdict };
+const report = { loop: loopNo, view: VIEW, url: BASE, diag, overlay, hudOverlap, effects, contentInfo, ctxLost, messages, diff, verdict };
 fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 
 console.log(`\n=== loop-${String(loopNo).padStart(2, '0')} (${VIEW} ${V.w}x${V.h}) ===`);
@@ -288,4 +316,7 @@ if (diag.cost) console.log(`  コスト: シーン ${diag.cost.scene}ms / Bloom 
 if (errors.length) { console.log('  --- エラー ---'); errors.slice(0, 10).forEach(m => console.log(`   ${m.type}: ${m.text}`)); }
 console.log(`  → ${path.relative(ROOT, outDir)}/`);
 
-process.exit(errors.length === 0 && ctxLost === 0 && overlayOk && hudOk ? 0 : 1);
+const fxOk = Object.entries(verdict)
+  .filter(([k]) => k.endsWith('が有効'))
+  .every(([, v]) => v.pass !== false);
+process.exit(errors.length === 0 && ctxLost === 0 && overlayOk && hudOk && fxOk ? 0 : 1);
