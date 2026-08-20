@@ -4,3 +4,6 @@ node_modules/
 .DS_Store
 out/
 .claude/settings.local.json
+
+# 検証ループの出力（スクリーンショット等・リポジトリには入れない）
+artifacts/
