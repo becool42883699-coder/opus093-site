@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="ja" data-draft="1" class="worksPage">
 <head>
-<!-- className= で代入すると worksPage クラスまで消える。
-     消すと html.worksPage の指定が全部効かなくなり、さらに
-     html.js body{opacity:0} を解除する .ready を付ける者がいないので
+<!-- className= で代入すると worksPage クラスまで消える。消すと
+     html.js body{opacity:0} を解除する .ready を付ける者がいなくなり、
      ページが白いまま何も出なくなる(実際に踏んだ)。
-     このページは3Dを待つ必要が無いので、その場で ready にする。 -->
+     このページは3Dを待たないので、その場で ready にする。 -->
 <script>
   document.documentElement.classList.add('js');
   addEventListener('DOMContentLoaded', function(){ document.body.classList.add('ready'); });
@@ -13,7 +12,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>制作実績 — 汀ノ庭 / MIGIWA STUDIO</title>
-<meta name="description" content="MIGIWA STUDIO の制作実績。3件の画面と、このサイト自体の制作記。">
+<meta name="description" content="MIGIWA STUDIO の制作実績。2件の画面と、このサイト自体の制作記。">
 <meta name="theme-color" content="#03141b">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2303141b'/%3E%3Cpath d='M6 13h20M16 13v13' stroke='%238FD4DE' stroke-width='2'/%3E%3C/svg%3E">
 <style>
@@ -390,6 +389,8 @@
     padding-left:15px; margin-left:-15px;
     box-shadow:inset 2px 0 0 rgba(232,168,86,.55);
   }
+  /* 印は本文の外へ出さない。画面の左端からはみ出して読めなくなるため
+     (幅1280pxの実績ページで実際にはみ出した)。本文の上に1行として置く。 */
   :root[data-draft] #content [data-provisional]::before{
     content:"要確認"; display:block; margin-bottom:9px;
     font-family:var(--f-mono); font-size:8px; letter-spacing:.16em;
@@ -494,25 +495,19 @@
 <style>
   /* 実績ページはヒーローの canvas を持たないので、本文だけで成立させる */
   html.worksPage body{background:var(--abyss); overflow-x:hidden}
-  html.worksPage #content{
-    border-top:0; padding-top:clamp(120px,14vw,190px); min-height:100vh;
-  }
-  /* 実績ページのヘッダは通常フローに置く。
-     absolute のままだと、#content(z-index:15・不透明な地色)が
-     #hud(z-index:10)の上に乗ってヘッダを塗り潰す —— TOPでは
-     #content がヒーローの下に流れるので起きないが、このページは
-     本文が最上部から始まるので重なる(実際に消えた)。 */
+  html.worksPage #content{border-top:0; padding-top:clamp(52px,6vw,86px); min-height:100vh}
+  /* ヘッダは通常フローに置く。absolute のままだと #content(z-index:15・
+     不透明な地色)が #hud(z-index:10)を塗り潰してヘッダが消える。 */
   html.worksPage #hud{position:static; inset:auto; z-index:20; pointer-events:auto}
   html.worksPage #hud header{position:static; opacity:1; transform:none;
     max-width:940px; margin:0 auto; padding:clamp(30px,4vw,46px) var(--gut) 0}
   html.worksPage .brand{color:var(--bone)}
-  html.worksPage #content{padding-top:clamp(52px,6vw,86px)}
   html.worksPage #content .blk{max-width:860px}
 </style>
 </head>
 <body>
 <!-- 制作実績。TOPで潜った人が「情報を取りに来る」場所なので、
-     ここでは潜る体験を繰り返さない。3Dは載せず、読みやすさを優先する。 -->
+     ここでは潜る体験を繰り返さない。3Dは載せず読みやすさを優先する。 -->
 <div id="hud">
   <header>
     <a class="brand" href="../"><b>汀ノ庭</b><em>MIGIWA STUDIO</em><i></i></a>
@@ -527,7 +522,7 @@
         <div class="blk" id="works-header" data-provisional="トップページ側の設計値として草案段階の数字。実装が確定した時点で実際の値に合わせる。">
           <p class="eyebrow mono">WORKS</p>
           <h2>制作実績</h2>
-          <p class="blead">3件と、このサイト。</p>
+          <p class="blead">2件と、このサイト。</p>
           <p>これまでにつくったサイトを、1件ずつ載せています。件数は多くありません。そのぶん、何を考えてその形にしたのかまで書きます。</p>
           <p>数字や感想は、確かめられたものだけを載せます。書けるようになったら足します。</p>
           <p>トップページのような動きはありません。読むためのページなので、上から下へそのまま読み進められます。</p>
@@ -551,27 +546,22 @@
             </div>
           </dl>
         </div>
-        <div class="blk" id="works-index" data-provisional="ランディングページであること以外、内容が分かっていない。初稿では枠だけの詳細ブロックを置いていたが、書ける中身が無いまま他2件と並べると不信を招くため取り下げた。施主から情報が出たら、他2件と同じ形の詳細ブロックを足して WORKS の番号を振り直す。 / LINE公式アカウントが未取得、メールアドレスが未確定、フォームの送信先も未確定。公開前に確定させて差し替える箇所として管理する。 / 屋号と画面を載せる範囲は先方の意向が要る。確認が取れるまでは、リンク無し・キャプチャ最小で組めるようにしておく。">
+        <div class="blk" id="works-index" data-provisional="LINE公式アカウントが未取得、メールアドレスが未確定、フォームの送信先も未確定。公開前に確定させて差し替える箇所として管理する。 / 屋号と画面を載せる範囲は先方の意向が要る。確認が取れるまでは、リンク無し・キャプチャ最小で組めるようにしておく。">
           <p class="eyebrow mono">INDEX</p>
           <h3>一覧</h3>
-          <p>詳しく書いているのは、GARAGE BeCool、T-REX CO., LTD.、そしてこのサイトの3つです。L tAq はいまのところ、屋号と種別だけを載せています。</p>
-          <p class="glabel mono">一覧</p>
+          
           <dl class="dl">
             <div class="row">
-              <dt><a class="go" href="../becool/">GARAGE BeCool <em>↗</em></a></dt>
-              <dd>コーポレートサイト｜中古車販売・整備店｜福岡県北九州市</dd>
+              <dt><a class="go" href="../../becool/">GARAGE BeCool <em>↗</em></a></dt>
+              <dd>コーポレートサイト / 中古車販売・整備 / 福岡県北九州市</dd>
             </div>
             <div class="row">
-              <dt><a class="go" href="../">T-REX CO., LTD. <em>↗</em></a></dt>
-              <dd>コーポレートサイト｜板金塗装・荷台換装・修理・出張修理｜福岡・山口</dd>
+              <dt><a class="go" href="../../">T-REX CO., LTD. <em>↗</em></a></dt>
+              <dd>コーポレートサイト / 板金塗装・荷台換装・修理・出張修理 / 福岡・山口</dd>
             </div>
             <div class="row">
-              <dt>L tAq</dt>
-              <dd>ランディングページ</dd>
-            </div>
-            <div class="row is-key">
-              <dt>汀ノ庭</dt>
-              <dd>このサイト｜ホームページ制作｜福岡県北九州市</dd>
+              <dt><a class="go" href="../">汀ノ庭 <em>↗</em></a></dt>
+              <dd>このサイト。水面から海底までをブラウザ上でその場で描いている。</dd>
             </div>
           </dl>
         </div>
@@ -707,7 +697,7 @@
           <p class="blead">このサイト｜ホームページ制作｜福岡県北九州市</p>
           <p>トップページで水面から600メートル潜っていく、あの海の答え合わせです。まだ開いていない方は、先にそちらを見てもらうのが早いと思います。</p>
           <p>写真でも動画でもありません。ブラウザが、その場で計算しながら描いています。使っているのはthree.jsとWebGL。ブラウザに元から入っている描画の仕組みで、立体をその場で描くためのものです。動画なら、できあがった映像ファイルを再生することになりますが、この海はスクロールした位置に合わせて毎回描き直しています。だから、どの深さで止めても、その深さの絵になります。</p>
-          <p>実績が3件しかない時点で、いちばん強い証拠は自分のサイトだと考えました。潜っている時間そのものが、4件目を見ている時間になるようにしています。</p>
+          <p>実績が2件しかない時点で、いちばん強い証拠は自分のサイトだと考えました。潜っている時間そのものが、3件目を見ている時間になるようにしています。</p>
           <p>深さの数字は、進み具合の表示に変えました。600という数字は、放っておくと「いつ終わるのか分からない」という不安になります。深度計を目次にして、どの深さに何があるかを出し、押せばその場所へ移動できるようにしました。読むだけの人のために、文章へ抜ける入口も常に出しています。</p>
           <p>スマホで動くことを条件にしました。粒の数は端末の性能を見て変え、低い端末では出しません。動きを減らす設定の人にも出しません。画面から外れたら描画を止めます。凝る前に、まず止まらないこと。このサイトで自分に課した基準です。</p>
           <p class="glabel mono">つくったもの</p>
@@ -762,16 +752,16 @@
           <p>つくりたいものが固まっていなくても構いません。いまのサイトのURLか、やりたいことを1行だけでも。</p>
           <p class="glabel mono">3つの入口</p>
           <dl class="dl">
-            <div class="row">
-              <dt>LINEで相談</dt>
+            <div class="row is-soon">
+              <dt>LINEで相談 <span class="soon mono">準備中</span></dt>
               <dd>短いやり取りに向いています。写真もそのまま送れます。</dd>
             </div>
-            <div class="row">
-              <dt>フォームから送る</dt>
+            <div class="row is-soon">
+              <dt>フォームから送る <span class="soon mono">準備中</span></dt>
               <dd>項目に沿って書くだけで送れます。</dd>
             </div>
-            <div class="row">
-              <dt>メールで送る</dt>
+            <div class="row is-soon">
+              <dt>メールで送る <span class="soon mono">準備中</span></dt>
               <dd>資料や、すでにある原稿を渡したいときに。</dd>
             </div>
           </dl>
@@ -781,15 +771,15 @@
           <p class="glabel mono">移動</p>
           <dl class="dl">
             <div class="row">
-              <dt>実績一覧へ戻る</dt>
-              <dd>3件と、このサイト。</dd>
+              <dt><a class="go" href="../works/#works-index">実績一覧へ戻る <em>↗</em></a></dt>
+              <dd>2件と、このサイト。</dd>
             </div>
             <div class="row">
-              <dt>トップへ戻る</dt>
+              <dt><a class="go" href="../">トップへ戻る <em>↗</em></a></dt>
               <dd>潜るところから。</dd>
             </div>
             <div class="row">
-              <dt>相談する</dt>
+              <dt><a class="go" href="../#contact">相談する <em>↗</em></a></dt>
               <dd>トップの問い合わせへ。</dd>
             </div>
           </dl>
