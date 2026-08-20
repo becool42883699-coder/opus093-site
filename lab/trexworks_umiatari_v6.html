@@ -214,6 +214,7 @@
 
   /* ---------- 診断オーバーレイ (?diag=1 のときだけ) ---------- */
   #diag{
+    display:block;
     position:fixed; left:0; top:0; z-index:40; max-width:min(560px,94vw); max-height:100vh;
     overflow:auto; padding:14px 16px; margin:8px;
     background:rgba(2,14,20,.90); border:1px solid rgba(143,212,222,.34);
@@ -1821,6 +1822,9 @@ function glInfo(){
 }
 function renderDiag(){
   if (!DIAG || !diagEl) return;
+  /* hidden 属性は UA の [hidden]{display:none} で効いている。
+     ここで外さないとオーバーレイは永久に出ない(実際に出なかった)。 */
+  if (diagEl.hasAttribute('hidden')) diagEl.removeAttribute('hidden');
   const f = fpsStats();
   const yn = b => b ? '<span class="ok">OK</span>' : '<span class="ng">NG</span>';
   const ext = Object.entries(CAPS.ext).map(([k,v]) => `  ${k} … ${yn(v)}`).join('\n');
@@ -1847,8 +1851,31 @@ function renderDiag(){
     `<h4>FPS (直近5秒)</h4>  平均 <b>${f.avg.toFixed(1)}</b> / 最低 <b>${f.min.toFixed(1)}</b>  (${f.n} フレーム, 累計 ${framesTotal})` +
     `<h4>PASS COST (1フレームあたり)</h4>${cal}`;
 }
+/* カードの画面上の位置。HUDとの重なりを目視ではなく数値で検証するため。 */
+const _b3 = new THREE.Box3(), _v3 = new THREE.Vector3();
+function cardScreenRects(){
+  return cards.map((m, i) => {
+    _b3.setFromObject(m);
+    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9, behind = false;
+    for (let k = 0; k < 8; k++){
+      _v3.set(k & 1 ? _b3.max.x : _b3.min.x,
+              k & 2 ? _b3.max.y : _b3.min.y,
+              k & 4 ? _b3.max.z : _b3.min.z).project(camera);
+      if (_v3.z > 1) behind = true;
+      const x = (_v3.x * 0.5 + 0.5) * innerWidth;
+      const y = (1 - (_v3.y * 0.5 + 0.5)) * innerHeight;
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    }
+    return { i, behind, visible: m.userData.uni.uVis.value,
+             x: Math.round(minX), y: Math.round(minY),
+             w: Math.round(maxX - minX), h: Math.round(maxY - minY) };
+  });
+}
+
 window.__diag = {
   caps: CAPS, render: RENDER, tier: TIER,
+  get cardRects(){ return cardScreenRects(); },
   get dpr(){ return DPR; },
   get frames(){ return framesTotal; },
   get fps(){ return fpsStats(); },
