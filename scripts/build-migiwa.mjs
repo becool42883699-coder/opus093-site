@@ -130,6 +130,53 @@ const href = (title) => {
   return BASE + v.replace(/^\.\//, '');
 };
 
+/* 実績の画面。scripts/shrink-shots.mjs が作る。
+   ポートフォリオなので、文字より先にこれを見せる。
+   幅を明示して読み込み中のガタつきを止める。 */
+const SHOTS = {
+  'work-becool': { key:'becool', alt:'GARAGE BeCool のトップページ' },
+  'work-trex':   { key:'trex',   alt:'T-REX CO., LTD. のトップページ' },
+  'work-migiwa': { key:'migiwa', alt:'汀ノ庭 のトップページ' },
+};
+/* PCの画面(横長)を枠に収めて出す。スマホの実機スクショは縦1688pxあり、
+   端末の幅いっぱいに出すと1枚で約1900pxになる。並べるとそれだけで
+   ページが数万pxになるので、一覧と大見出しでは使わない。
+   スマホ表示は各実績の詳細で、電話機の形の小さい枠に入れて見せる。 */
+const pic = (base, key, alt, cls) => `
+            <figure class="${cls}">
+              <img src="${base}shots/${key}-pc.webp" width="1720" height="1075"
+                   alt="${esc(alt)}" loading="lazy" decoding="async">
+            </figure>`;
+const picSp = (base, key, alt) => `
+            <figure class="shot-sp">
+              <img src="${base}shots/${key}-sp.webp" width="780" height="1688"
+                   alt="${esc(alt)}" loading="lazy" decoding="async">
+              <figcaption class="mono">スマートフォン</figcaption>
+            </figure>`;
+function shot(id, base){
+  /* TOPの実績は2件を並べて見せる。文字だけの一覧より、
+     何を作る人なのかが1画面で伝わる。 */
+  if (id === 'works-header'){
+    return `\n          <div class="shots shots-3">`
+      + pic(base, 'becool', 'GARAGE BeCool のトップページ', 'shot')
+      + pic(base, 'trex',   'T-REX CO., LTD. のトップページ', 'shot')
+      + pic(base, 'migiwa', '汀ノ庭 のトップページ', 'shot')
+      + `\n          </div>`;
+  }
+  if (id === 'works-lead'){
+    return `\n          <div class="shots">`
+      + pic(base, 'becool', 'GARAGE BeCool のトップページ', 'shot')
+      + pic(base, 'trex',   'T-REX CO., LTD. のトップページ', 'shot')
+      + `\n          </div>`;
+  }
+  const s = SHOTS[id];
+  if (!s) return '';
+  return `\n          <div class="shot-pair">`
+    + pic(base, s.key, s.alt, 'shot shot-lead')
+    + picSp(base, s.key, s.alt.replace('トップページ', 'トップページ(スマートフォン)'))
+    + `\n          </div>`;
+}
+
 const ALL_PROV = [];
 function renderBlock(key, ref, level){
   const b = blk(ref);
@@ -144,6 +191,7 @@ function renderBlock(key, ref, level){
   let out = `\n        <div class="blk" id="${esc(b.id)}"${attr}>`;
   if (b.eyebrow) out += `\n          <p class="eyebrow mono">${esc(b.eyebrow)}</p>`;
   out += `\n          <${H}>${t(b.heading, w)}</${H}>`;
+  out += shot(b.id, BASE || './');
   if (b.lead) out += `\n          <p class="blead">${t(b.lead, w)}</p>`;
   if (b.body) out += `\n          ${paras(b.body, w)}`;
   if (b.items?.length) out += `\n          ${defList(b, w)}`;

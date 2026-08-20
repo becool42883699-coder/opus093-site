@@ -1,13 +1,12 @@
-node_modules/
-.next/
-*.tsbuildinfo
-.DS_Store
-out/
-.claude/settings.local.json
-
-# 検証ループの出力（スクリーンショット等・リポジトリには入れない）
-artifacts/
 
 # migiwa: ビルドの中間生成物（copy.json から作り直せる）
+# 検証ループの出力（スクリーンショット等・リポジトリには入れない）
+*.tsbuildinfo
+.DS_Store
+.claude/settings.local.json
+.next/
+artifacts/
+node_modules/
+out/
 public/migiwa/.content.html
 public/migiwa/.works.html
