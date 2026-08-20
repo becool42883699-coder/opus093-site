@@ -230,6 +230,26 @@
     → 属性セレクタを重ねて詳細度を明示的に上回らせる。**`!important` を付けたから
     勝つ、と思い込まない。**
 
+16. **Tailwind の @layer は globals.css に必ず負ける**（`/tomoshibi` で踏んだ）
+    Tailwind v4 は既定で全部を `@layer theme/base/utilities` に入れる。CSS の
+    カスケードレイヤーは**「レイヤー無しの宣言が、レイヤー内の宣言に詳細度と無関係で勝つ」**
+    ため、素の `h1{color:#fff}` / `main{background:#000}` / `body{…}` を
+    レイヤー無しで持っている `globals.css` に、`bg-[#F4F0E8]` も `text-[#211D19]` も
+    **一切効かない**。黒地に白文字のまま出て、しかもビルドもlintも通るので気付きにくい。
+    → ユーティリティだけレイヤーの外へ出す（`app/tomoshibi/tomoshibi.css` 参照）。
+    ```css
+    @layer theme, base;
+    @import "tailwindcss/theme.css" layer(theme);
+    @import "tailwindcss/preflight.css" layer(base);
+    @import "tailwindcss/utilities.css" source(none);   /* ← レイヤー指定なし */
+    ```
+
+17. **framer-motion の `onError` は hydration 前に404した画像を取りこぼす**
+    SSRのHTMLを受け取ったブラウザは hydration より前に読み込みを始めるので、
+    `<img onError>` が張られる頃には error が終わっている。遅延読み込みの画像
+    （画面外）だけ拾えて、`eager` なヒーローの3枚だけプレースホルダにならなかった。
+    → マウント時に `img.complete && img.naturalWidth === 0` を見て拾い直す。
+
 ## 4. 今後の作業で守るべきルール
 
 - **変更後は必ずモバイル幅（390px前後）で検証してから完了報告する**（最重要）。
@@ -464,3 +484,68 @@ LCPと帯域を食い合わせないため。読み込み中は**黒いcanvas＋
 `scripts/postprocess-pages.mjs` が `out/engine/index.html` の `<head>` 先頭に
 `<meta http-equiv="refresh">` を挿す。canonical は `app/engine/page.tsx` 側で `/` を指す。
 JS無効でも転送される。**sitemap.xml / llms.txt に `/engine` を復活させない。**
+
+## 9. `/tomoshibi` — 灯家 -TOMOSHIBI- 注文住宅LP（2026-08-20 追加）
+
+ユーザー提供の「注文住宅LP デザインプロンプト」を、要綱指定のスタックのまま
+実装したサンプルLP。**架空ブランドのデザイン確認用**で、T-REX / BeCool /
+汀ノ庭の実サイトとは無関係。
+
+### ファイル
+| ファイル | 役割 |
+|---|---|
+| `app/tomoshibi/page.tsx` | サーバーコンポーネントの包み。metadata と **noindex** だけ |
+| `app/tomoshibi/layout.tsx` | このルート専用のCSSと Google Fonts の `<link>` |
+| `app/tomoshibi/tomoshibi.css` | Tailwind の入口 + レイヤー調整 + reduced-motion |
+| `app/tomoshibi/TomoshibiLP.tsx` | **LP本体。要綱の「単一ファイルで完結」に従い1枚** |
+| `postcss.config.mjs` | Tailwind v4 の PostCSS プラグイン（新規） |
+
+### 依存の追加（§4「新規npm依存は追加しない」の例外）
+要綱の Tech stack で明示指定されているため、§7 の `postprocessing` と同じ扱いで追加した。
+`framer-motion` 13.1.1 / `lucide-react` 1.33.0 / `tailwindcss` 4.3.3（devDep）/
+`@tailwindcss/postcss` 4.3.3（devDep）。**他のページからは一切参照していない。**
+
+### 他サイトへ漏らさないための作り（触る前に必ず読む）
+- Tailwind の CSS は `app/tomoshibi/layout.tsx` からしか import しない。App Router は
+  そのセグメントのルートにだけCSSを配るので、**preflight は `/tomoshibi` の外に出ない**。
+  ビルド後に `grep -rl <tailwindのchunk> out --include="*.html"` が
+  `/tomoshibi/index.html` の1件だけであることを確認すること。
+- `@import "tailwindcss/utilities.css" source(none)` + `@source "./TomoshibiLP.tsx"` で
+  走査対象をLP1ファイルに固定。自動検出のままだと `bc-svc-card` 等まで拾う。
+- **ユーティリティはレイヤーの外に置く**（理由は §3-16。戻すと配色が全部死ぬ）。
+- `globals.css` の `html/body/main` を打ち消すため `html:has([data-tomoshibi])` で上書き。
+- `a:focus-visible{outline:…var(--color-primary)}` が効くと T-REXのブルー(#298dff)という
+  **6色目**が入るので、`html:has([data-tomoshibi]) :focus-visible` で真鍮に固定している。
+
+### 配色5色とコントラスト（実測・AA基準）
+胡粉 `#F4F0E8` / 墨 `#211D19` / 真鍮 `#8A7355` / 灰白 `#E4DDD1` / 深緑 `#3E4A3D` のみ。
+- 墨 on 胡粉 14.7:1、墨 on 灰白 12.4:1 → 本文・見出し
+- 深緑 on 胡粉 8.2:1 → 英字ラベル・注記・流れの番号・カルーセルの非選択ダッシュ
+- **真鍮は小さい文字に使わない**（対胡粉 3.96:1）。使うのは罫・線画・進行インジケータ・
+  CTAの面のみ。CTA主ボタンのラベルだけ 19px/bold（AAの「大きい文字」= 3:1）で成立させている。
+- 灰白を非選択ダッシュに使うと対胡粉 **1.19:1** で本数すら見えない。**状態は太さで示す。**
+
+### 検証（`node scripts/…` は無い。スクラッチに置いて回す）
+PC1440 / 1920 / 1024、SP 390×844（isMobile・hasTouch・DPR3）、reduced-motion、
+JS無効、既存3ページへの影響、コントラスト実測 ─ すべて通してある。
+- Playwright は `newContext({ reducedMotion: 'no-preference' })` を忘れない（§3-9）。
+- **この環境にはミンチョの和文フォントが無い**。素のままだと `serif` が
+  WenQuanYi Zen Hei（中文）に落ち、**縦組みの字が重なって「壊れている」ように見える**。
+  実際の見た目を見るときは Google Fonts の TTF を落として fontconfig に入れる:
+  ```
+  curl -s "https://fonts.googleapis.com/css?family=Shippori+Mincho+B1:400,500,600&subset=japanese" \
+    | grep -oE 'url\((https://[^)]+)\)' | sed 's/url(//;s/)//' \
+    | while read u; do curl -s "$u" -o /usr/local/share/fonts/$RANDOM.ttf; done; fc-cache -f
+  ```
+  ブラウザからは `fonts.googleapis.com` へ出られない（プロキシ経由が必要）ので、
+  検証時のフォント未適用は**ページの不具合ではない**。
+
+### 決まっていること
+- 見出し「暮らしに合わせて、住まいを仕立てる。」とサブコピーは**一字一句変えない**（要綱）。
+- 写真は生成せず `/images/hero-0*.jpg` `/images/works-0*.jpg` を参照するだけ。
+  **ファイルは置かない**。404したら灰白の下地にパス名を出す仕様。
+- 縦書きは lg 以降のみ。縦組みの高さ `lg:h-[23rem]` は「1列9字＝読点で折り返す」ための実測値。
+  詰めると「住/まい」のように語中で切れる。
+- 施工事例・お客様の声・性能値・住所はすべて仮。**フッターにその旨を明記してあるので消さない。**
+  実在の工務店として拾われないよう `robots: { index: false }` も外さない。
+- sitemap.xml / llms.txt には**載せない**。

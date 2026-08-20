@@ -1,0 +1,64 @@
+/* ============================================================
+   灯家 -TOMOSHIBI- LP 専用のスタイル入口
+   このファイルは app/tomoshibi/layout.tsx からのみ import する。
+   App Router は import した階層のルートにだけ CSS を配るので、
+   Tailwind の preflight が T-REX / BeCool / 汀ノ庭へ漏れることはない。
+   ============================================================ */
+
+/* ★ ユーティリティだけカスケードレイヤーの外に出す。
+   Tailwind の既定は全体を @layer に入れるが、レイヤー内の宣言は
+   「レイヤー無しの宣言」に詳細度と無関係で必ず負ける。
+   親の globals.css は素の h1{color:#fff} / main{background:#000} /
+   body{color/background} をレイヤー無しで持っているため、既定のままだと
+   bg-[#F4F0E8] も text-[#211D19] も一切効かず、黒地に白文字のままになる
+   (実際にそうなった)。ユーティリティを外に出せば
+   クラス(0,1,0) > 要素(0,0,1) で素直に勝てる。 */
+@layer theme, base;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css" source(none);
+
+/* 走査対象を LP 1ファイルに限定する。自動検出のままだと app/ 配下の
+   CSS Modules 用クラス名(bc-svc-card 等)まで拾って余計な CSS が生える。 */
+@source "./TomoshibiLP.tsx";
+
+/* globals.css が html / body / main を黒地・白文字で固定しているので、
+   このルートだけ胡粉へ戻す。:has() で詳細度を上げ、読み込み順に依存させない。 */
+html:has([data-tomoshibi]) {
+  background: #f4f0e8;
+  color-scheme: light;
+}
+html:has([data-tomoshibi]) body {
+  margin: 0;
+  background: #f4f0e8;
+  color: #211d19;
+}
+html:has([data-tomoshibi]) main {
+  background: #f4f0e8;
+}
+
+/* フォーカスリング。globals.css の
+   a:focus-visible,button:focus-visible{outline:2px solid var(--color-primary)}
+   が効くと T-REX のブランドブルー(#298dff)という6色目が入ってくる。
+   このルート配下は必ず真鍮にする(対胡粉 3.96:1 ＝ 非テキストの 3:1 を満たす)。 */
+html:has([data-tomoshibi]) :focus-visible {
+  outline: 2px solid #8a7355;
+  outline-offset: 3px;
+}
+
+/* prefers-reduced-motion: 全演出を止める。
+   framer-motion がSSRで書き出すインラインの opacity/transform より
+   !important の方が強いので、JSの状態に関係なく必ず読める状態になる。 */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  [data-plan] path {
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+  [data-slide] {
+    transition: none !important;
+  }
+}
