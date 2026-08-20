@@ -60,6 +60,19 @@ const STOPS = [
 const serveDir = fs.mkdtempSync(path.join(process.env.TMPDIR || '/tmp', 'verify-'));
 let html = fs.readFileSync(SRC, 'utf8');
 
+/* git のコンフリクトマーカーが残ったまま配信・コミットされる事故を止める。
+   一度これで公開版を落としている(stash pop の衝突を出力ごと捨てていた)。 */
+{
+  const bad = html.split('\n')
+    .map((l, i) => ({ l, n: i + 1 }))
+    .filter(x => /^(<{7}|={7}|>{7})( |$)/.test(x.l));
+  if (bad.length){
+    console.error('コンフリクトマーカーが残っている:');
+    bad.slice(0, 10).forEach(x => console.error(`  ${x.n}: ${x.l.slice(0, 60)}`));
+    process.exit(3);
+  }
+}
+
 if (LOCAL3) {
   const tm = path.join(ROOT, 'node_modules/three');
   if (!fs.existsSync(tm)) { console.error('THREE_LOCAL=1 だが node_modules/three が無い'); process.exit(2); }
@@ -90,7 +103,9 @@ const server = http.createServer((req, res) => {
   fs.createReadStream(file).pipe(res);
 });
 await new Promise(r => server.listen(0, '127.0.0.1', r));
-const BASE = `http://127.0.0.1:${server.address().port}/index.html?diag=1`
+/* q=full で自動品質調整を止める。遅い環境だと梯子が底まで降りてしまい、
+   毎回違う品質の絵を撮ることになって差分判定が意味を失う。 */
+const BASE = `http://127.0.0.1:${server.address().port}/index.html?diag=1&q=full`
   + (FORCE ? `&force=${FORCE}` : '');
 
 /* ---------------- 出力先 (連番・上書きしない) ---------------- */
@@ -206,6 +221,19 @@ for (const stop of STOPS) {
   }
 }
 
+/* 本文セクション。実テキストが読める状態かを撮って残す */
+await page.evaluate(() => document.getElementById('content')?.scrollIntoView());
+await page.waitForTimeout(1500);
+await page.screenshot({ path: path.join(outDir, 'content.png'), timeout: 180000 });
+const contentInfo = await page.evaluate(() => {
+  const el = document.getElementById('content');
+  if (!el) return { exists:false };
+  return { exists:true, chars:(el.innerText||'').trim().length,
+           h2:[...el.querySelectorAll('h2')].map(n=>n.textContent.trim()),
+           links:[...el.querySelectorAll('a[href]')].length,
+           reading: document.documentElement.dataset.reading };
+});
+
 const ctxLost = await page.evaluate(() => window.__ctxLost || 0);
 await browser.close();
 server.close();
@@ -244,9 +272,10 @@ const verdict = {
   'FPS 平均':                { pass: null, value: `${diag.fps.avg.toFixed(1)} (最低 ${diag.fps.min.toFixed(1)}, ${diag.frames} フレーム)` },
   '診断オーバーレイが可視':    { pass: overlayOk, value: JSON.stringify(overlay) },
   'HUDと3Dの重なり無し':      { pass: hudOk, value: hudOverlap ? JSON.stringify(hudOverlap) : 'n/a' },
+  '本文が実テキストで存在':    { pass: !!(contentInfo.exists && contentInfo.chars > 300), value: JSON.stringify(contentInfo) },
 };
 
-const report = { loop: loopNo, view: VIEW, url: BASE, diag, overlay, hudOverlap, ctxLost, messages, diff, verdict };
+const report = { loop: loopNo, view: VIEW, url: BASE, diag, overlay, hudOverlap, contentInfo, ctxLost, messages, diff, verdict };
 fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 
 console.log(`\n=== loop-${String(loopNo).padStart(2, '0')} (${VIEW} ${V.w}x${V.h}) ===`);
