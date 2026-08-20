@@ -124,40 +124,26 @@ const VOICES = [
 
 const PLAN_ROOMS = [
   "M40 40 H440 V320 H40 Z",
-  "M40 200 H250",
-  "M250 200 V320",
-  "M300 40 V200",
-  "M300 120 H440",
-  "M250 200 V244",
-  "M250 244 A44 44 0 0 0 294 200",
-  "M120 36 H200",
-  "M120 44 H200",
-  "M348 212 H440",
-  "M348 230 H440",
-  "M348 248 H440",
-  "M348 266 H440",
-  "M348 212 V284",
-  "M40 344 H440",
-  "M40 337 V351",
-  "M440 337 V351",
+  "M40 200 H250 M250 200 V320 M300 40 V200 M300 120 H440",
+  "M250 200 V244 A44 44 0 0 0 294 200",
+  "M120 36 H200 M120 44 H200",
+  "M348 212 H440 M348 230 H440 M348 248 H440 M348 266 H440 M348 212 V284",
+  "M40 344 H440 M40 337 V351 M440 337 V351",
 ];
 
 const PLAN_RULE = [
-  "M0 56 H470",
-  "M470 56 V2",
-  "M470 2 A54 54 0 0 1 524 56",
-  "M524 56 H1200",
-  "M700 52 H820",
-  "M700 60 H820",
-  "M150 48 V64",
-  "M1010 48 V64",
+  "M0 56 H470 M524 56 H1200",
+  "M470 56 V2 A54 54 0 0 1 524 56",
+  "M700 52 H820 M700 60 H820",
+  "M150 48 V64 M1010 48 V64",
 ];
 
+/* 描き終わりまで 1.2 + 0.06 x 5 = 1.5秒(A1の「合計1.6秒以内」) */
 const DRAW: Variants = {
   hidden: { pathLength: 0 },
-  shown: { pathLength: 1, transition: { duration: 1.6, ease: "easeInOut" } },
+  shown: { pathLength: 1, transition: { duration: 1.2, ease: "easeInOut" } },
 };
-const DRAW_GROUP: Variants = { hidden: {}, shown: { transition: { staggerChildren: 0.05 } } };
+const DRAW_GROUP: Variants = { hidden: {}, shown: { transition: { staggerChildren: 0.06 } } };
 
 function PlanLines({ paths, viewBox, className }: { paths: string[]; viewBox: string; className: string }) {
   return (
@@ -178,7 +164,7 @@ function PlanLines({ paths, viewBox, className }: { paths: string[]; viewBox: st
           key={d}
           d={d}
           stroke="currentColor"
-          strokeWidth="1"
+          strokeWidth="1.4"
           strokeLinecap="square"
           vectorEffect="non-scaling-stroke"
           variants={DRAW}
@@ -333,9 +319,9 @@ function Nav() {
           <motion.div
             id="tomoshibi-menu"
             key="menu"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ clipPath: "inset(0 0 100% 0)", opacity: 0 }}
+            animate={{ clipPath: "inset(0 0 0% 0)", opacity: 1 }}
+            exit={{ clipPath: "inset(0 0 100% 0)", opacity: 0 }}
             transition={still ? { duration: 0 } : { duration: 0.4, ease: EASE }}
             className="overflow-hidden border-t border-[#E4DDD1] bg-[#F4F0E8]/95 backdrop-blur-md md:hidden"
           >
@@ -469,11 +455,12 @@ function Hero() {
                 className="group py-3 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#8A7355]"
               >
                 {/* 非選択を灰白にすると対胡粉 1.19:1 で「何本あるか」すら見えない。
-                    状態は色ではなく太さで示し、非選択も深緑(8.2:1)で必ず見えるようにする。 */}
+                    状態は色ではなく太さで示し、非選択も深緑(8.2:1)で必ず見えるようにする。
+                    太さは height ではなく scaleY で出す(レイアウトを動かさない)。 */}
                 <span
                   aria-hidden="true"
-                  className={`block w-10 transition-all duration-500 md:w-14 ${
-                    i === index ? "h-[3px] bg-[#8A7355]" : "h-px bg-[#3E4A3D] group-hover:h-[3px]"
+                  className={`block h-[3px] w-10 origin-center transition-[transform,background-color] duration-500 md:w-14 ${
+                    i === index ? "scale-y-100 bg-[#8A7355]" : "scale-y-[0.34] bg-[#3E4A3D] group-hover:scale-y-100"
                   }`}
                 />
               </button>

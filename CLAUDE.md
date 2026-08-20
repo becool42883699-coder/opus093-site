@@ -250,6 +250,15 @@
     （画面外）だけ拾えて、`eager` なヒーローの3枚だけプレースホルダにならなかった。
     → マウント時に `img.complete && img.naturalWidth === 0` を見て拾い直す。
 
+18. **framer-motion の `pathLength` は `stroke-dashoffset` を触らない**
+    線画ドローの完了判定を `getComputedStyle(path).strokeDashoffset` で書いたら、
+    framer が動かすのは `stroke-dasharray`(0→1)の方なので **常に 0 が返り、
+    検証が無条件で素通り**していた。「58本すべて描画完了」と報告していたが、
+    実際には何も測れていない。
+    → 進捗は `strokeDasharray.split(',')[0]` を見る（`none` なら演出なし＝描画済み）。
+    reduced-motion / JS無効 側の打ち消しも `stroke-dasharray: none !important` が
+    効いている方で、`stroke-dashoffset` の指定は保険。
+
 ## 4. 今後の作業で守るべきルール
 
 - **変更後は必ずモバイル幅（390px前後）で検証してから完了報告する**（最重要）。
@@ -260,6 +269,10 @@
   (d) モバイルのタッチスクロール、の4点をPlaywrightで検証してからデプロイする。
 - コンソールエラー・TypeScriptエラー・lintエラー（新規追加分）はゼロが前提。
   既存の pre-existing なエラー（`MobileMenu` / `TrmMenu` のsetState警告2件）は触らない。
+- **演出を選ぶ・足す・変えるときは、先に `.claude/skills/signature-effects/` を読む。**
+  業種→演出の逆引き表、1ページ1点の原則、共通実装ルール（動かしてよいCSSプロパティ、
+  reduced-motion、一回発火、禁じ手）がまとまっている。`/tomoshibi` はこの A1
+  「線画ドロー」を採用した実装例。
 - デザインルール（配色5色・禁止演出リスト）は毎回のレビュー基準にする。
 - 既存の演出（Ripple・Grid・Particle Object・Particle Scroll・Peel・ScrollAnim）は、
   明示的に依頼が無い限り削除・全面書き換えしない。
@@ -549,3 +562,17 @@ JS無効、既存3ページへの影響、コントラスト実測 ─ すべて
 - 施工事例・お客様の声・性能値・住所はすべて仮。**フッターにその旨を明記してあるので消さない。**
   実在の工務店として拾われないよう `robots: { index: false }` も外さない。
 - sitemap.xml / llms.txt には**載せない**。
+
+### signature-effects スキルへの適合（2026-08-20 に当てて直した）
+シグネチャは **A1 線画ドロー(間取り図)**。スキルの注意事項に合わせて次を直してある。
+- **path数は1図あたり10本まで** → 図は1pxも変えず、意味のまとまりごとに
+  1本の `d` へ統合した（外壁 / 間仕切り / 建具 / 開口 / 階段 / 寸法 の6本。
+  仕切りは4本）。1つの `d` に複数サブパスを書いても `pathLength` は全体で
+  正規化されるので、順番に描かれて見た目は同じ。**バラすと本数超過に戻る。**
+- **描画は合計1.6秒以内** → `duration 1.2s` + `staggerChildren 0.06s`＝設計値1.5秒。
+  実測 1163ms（描き始め408ms → 6本完了1571ms）。
+- **線幅1.4px前後** → `strokeWidth="1.4"` + `vectorEffect="non-scaling-stroke"`。
+- **動かすのは transform / opacity / clip-path / stroke-dashoffset のみ** →
+  height を動かしていた2箇所を潰した。モバイルメニューは `height:0→auto` をやめて
+  `clip-path: inset()` で開く（ヘッダーが `fixed` なのでページはリフローしない）。
+  カルーセルのダッシュは太さを `height` ではなく `scaleY` で出す。
