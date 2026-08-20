@@ -554,6 +554,7 @@ import { ShaderPass }     from 'three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass }from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass }     from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass }       from 'three/addons/postprocessing/SMAAPass.js';
+import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
 /* ================================================================
    T-REX WORKS — Surface → Depth
@@ -582,6 +583,11 @@ const FORCE = QS.get('force') || '';
    検証で「毎回同じ絵」を撮るために要る(遅い環境では梯子が必ず底まで
    降りてしまい、何を検証しているのか分からなくなる)。 */
 const QPIN = QS.get('q') || '';
+/* ?tier=high|low … 端末性能の自動判定を上書きする。
+   検証機は hardwareConcurrency が小さく、放っておくと必ず low になるため、
+   high 側の経路(水面の映り込みなど)が一度も動かないまま
+   「通った」ことになってしまう。実際にそれで見落とした。 */
+const TPIN = QS.get('tier') || '';
 
 const stageEl = document.getElementById('stage');
 const bootEl  = document.getElementById('boot');
@@ -606,12 +612,13 @@ const lowEnd = saveData || cores <= 4 || mem <= 2;
 /* ティアは「粒子の数」ではなく「どのパスを回すか」で分ける。
    量を増やすより、パスを1つ落とす方が体感のFPSに効く。 */
 const TIER = (() => {
-  if (isMobile || lowEnd) return {
+  if (TPIN !== 'high' && (TPIN === 'low' || isMobile || lowEnd)) return {
     name:'low',
     seg: 110, dpr: 1.5,
     motes: 260, bubbles: 70, fore: 26, fish: 9, shafts: 5,
     waveDetail: 5, skyOctaves: 2, causticOctaves: 2,
     bloom: true, godray: true, dof: false, smaa: false,
+    reflect: false,     // モバイルは平面反射を持たず skyFn だけに戻す
   };
   return {
     name:'high',
@@ -619,6 +626,7 @@ const TIER = (() => {
     motes: 620, bubbles: 150, fore: 54, fish: 15, shafts: 9,
     waveDetail: 5, skyOctaves: 3, causticOctaves: 3,
     bloom: true, godray: true, dof: true, smaa: true,
+    reflect: true,
   };
 })();
 
@@ -906,6 +914,11 @@ const waterUniforms = {
   uSun:   { value: SUN },
   uDepth: { value: 0 },
   uFog:   { value: fogCol },
+  /* 平面反射。太陽と空は skyFn が既に返しているので、ここに入れるのは
+     「水上に浮いているカード」だけ。空を二重に映すと水が白く濁る。 */
+  tReflect:  { value: null },
+  uReflMtx:  { value: new THREE.Matrix4() },
+  uReflect:  { value: 0 },                     // 0 のときは完全に skyFn だけ
 };
 /* 一様な格子(PlaneGeometry)は、水中から浅い角度で見たときに
    三角形の並びがそのまま格子模様として見える(実測で確認)。
@@ -941,6 +954,8 @@ const waterMat = new THREE.ShaderMaterial({
   side: THREE.DoubleSide,
   uniforms: waterUniforms,
   vertexShader:`
+    uniform mat4 uReflMtx;
+    varying vec4 vRefl;
     uniform float uTime;
     uniform vec2 uOrigin;
     varying vec3 vW;
@@ -981,12 +996,16 @@ const waterMat = new THREE.ShaderMaterial({
       vCrest = off.y;
       vec4 wp = modelMatrix * vec4(np, 1.0);
       vW = wp.xyz;
+      vRefl = uReflMtx * vec4(wp.xyz, 1.0);
       gl_Position = projectionMatrix * viewMatrix * wp;
     }`,
   fragmentShader:`
     #define DETAIL ${TIER.waveDetail}
     #define SKY_OCT ${TIER.skyOctaves}
     uniform float uDepth;
+    uniform sampler2D tReflect;
+    uniform float uReflect;
+    varying vec4 vRefl;
     varying vec3 vW;
     varying vec3 vN;
     varying float vCrest;
@@ -1038,6 +1057,22 @@ const waterMat = new THREE.ShaderMaterial({
            skyFn は h<0 で水中側の色を返すので、そのまま渡す。 */
         vec3 R = normalize(reflect(-V, Nv));
         vec3 refl = skyFn(R);
+
+        /* ---- 平面反射(水上のカードだけ) ----------------------------
+           鏡像カメラで撮った1枚を、この画素のワールド座標から射影で
+           引く。UVは波の勾配 g でずらす —— ずらさないと水面に
+           「切り抜きを貼った」ように平らな像が乗る。 */
+        if (uReflect > 0.001 && vRefl.w > 0.0){
+          vec2 ruv = vRefl.xy / vRefl.w + g * 0.085;
+          /* 縁を外挿すると画面外の像が伸びて筋になるので、内側だけ使う */
+          vec2 inb = step(vec2(0.002), ruv) * step(ruv, vec2(0.998));
+          vec4 rc = texture2D(tReflect, ruv) * (inb.x * inb.y);
+          /* 遠景では反射像が1画素以下になり、ちらつくだけなので消す */
+          float rf = uReflect * (1.0 - smoothstep(26.0, 72.0, d));
+          /* 透明へ描き込んだ結果なので rgb は alpha 乗算済み。
+             mix ではなく通常の合成式で足す(mix だと縁が黒く沈む)。 */
+          refl = refl * (1.0 - clamp(rc.a, 0.0, 1.0) * rf) + rc.rgb * rf;
+        }
 
         // 水中側の色。夕景では水そのものはほとんど光を返さない
         vec3 body = mix(vec3(0.0022,0.0125,0.0205), vec3(0.0075,0.0360,0.0470), exp(-d*0.055));
@@ -1413,6 +1448,10 @@ const WORKS = [
 ];
 
 const CARD_GEO = new THREE.PlaneGeometry(3.05, 1.72, 1, 1);
+/* カードは本編と別のシーンに置く。本編を描き終えた「背後の絵」を
+   縮小コピーしてから、その上にカードだけを重ねて描く。
+   こうするとシーンを2度描かずに、背景をガラス越しに歪ませられる。 */
+const cardScene = new THREE.Scene();
 const cards = [];
 {
   /* 水中の縦一列に配置する。カメラはこの列を降りていく = camera journey。
@@ -1432,9 +1471,13 @@ const cards = [];
     const uni = {
       uTime:{value:0}, uSun:{value:SUN}, uDepth:{value:0}, uFog:{value:fogCol},
       uMap:{value:cardTexture(WORKS[i])},
+      tRefract:{value:null},                  // 背後の絵(半解像度)
+      uRes:{value:new THREE.Vector2(1,1)},
       uVis:{value:1},          // 水面越しに見えなくなる分の可視度
       uFocus:{value:0},                       // 0..1 その作品に寄っているか
       uHover:{value:0},                       // 0..1 ポインタが乗っているか
+      uGlass:{value:1},        // 1=屈折あり / 0=素の半透明へ退避(品質の梯子)
+      uReflPass:{value:0},     // 1=水面の鏡像を描いている最中
     };
     const mat = new THREE.ShaderMaterial({
       transparent:true, depthWrite:false, side:THREE.DoubleSide,
@@ -1451,7 +1494,10 @@ const cards = [];
       fragmentShader:`
         #define SKY_OCT ${TIER.skyOctaves}
         uniform sampler2D uMap;
+        uniform sampler2D tRefract;
+        uniform vec2 uRes;
         uniform float uDepth; uniform float uFocus; uniform float uVis; uniform float uHover;
+        uniform float uGlass; uniform float uReflPass;
         varying vec2 vUv; varying vec3 vW; varying vec3 vN;
         ${G_NOISE}
         ${G_SKY}
@@ -1463,9 +1509,44 @@ const cards = [];
           float ndv = clamp(dot(N, V), 0.0, 1.0);
           float F = 0.04 + 0.96 * pow(1.0 - ndv, 5.0);
 
-          /* 板厚による屈折。視線が斜めなほど中身がずれる = ガラスの厚み */
-          vec2 par = (V.xy - N.xy) * 0.016 * (1.0 - ndv);
-          vec4 content = texture2D(uMap, vUv + par);
+          /* --- 板厚と面取りによる屈折 --------------------------------
+             平らな板は法線が一定なので、そのまま屈折させても画像が平行移動
+             するだけでガラスに見えない。実際のガラス板は「小口(面取り)」で
+             最も曲がるので、縁へ向かって法線を寝かせてから屈折させる。 */
+          vec2 ec2 = abs(vUv - 0.5) * 2.0;
+          vec2 bev = vec2(sign(vUv.x-0.5) * smoothstep(0.72, 1.0, ec2.x),
+                          sign(vUv.y-0.5) * smoothstep(0.72, 1.0, ec2.y));
+          float bevAmt = max(abs(bev.x), abs(bev.y));
+
+          vec2 suv = gl_FragCoord.xy / uRes;
+          /* 屈折量。斜めから見るほど、また縁ほど大きい */
+          vec2 refr = (bev * 0.055 + (V.xy - N.xy) * 0.020) * (1.0 - ndv * 0.55);
+
+          /* 板が透かしている背景。屈折を止めている時は tRefract が空なので
+             読まない —— 読むと板が真っ黒になる(梯子を降りた端末で実際に起きる)。 */
+          vec3 bg = vec3(0.0);
+          if (uReflPass > 0.5){
+            /* 鏡像には「背後の絵」が無い。真っ黒のまま映すと水面に
+               板の影が落ちたように見えるので、板が透かしている空を
+               skyFn から引いて代わりに敷く。 */
+            bg = skyFn(normalize(-V)) * 0.82;
+          } else if (uGlass > 0.5){
+            /* RGBで屈折率を僅かにずらす = 色分散。強くすると虹色の縁に
+               なるので 1.5% 以内に留める。 */
+            bg.r = texture2D(tRefract, suv + refr * 0.985).r;
+            bg.g = texture2D(tRefract, suv + refr * 1.000).g;
+            bg.b = texture2D(tRefract, suv + refr * 1.015).b;
+            /* 小口は粗いのでぼかす(4タップ)。中央は素通しのまま */
+            if (bevAmt > 0.02){
+              vec2 bl = vec2(2.2, 2.2) / uRes * bevAmt;
+              bg = (bg
+                  + texture2D(tRefract, suv + refr + bl).rgb
+                  + texture2D(tRefract, suv + refr - bl).rgb
+                  + texture2D(tRefract, suv + refr + vec2(bl.x,-bl.y)).rgb) * 0.25;
+            }
+          }
+
+          vec4 content = texture2D(uMap, vUv + refr * 0.35 * uGlass);
 
           /* 環境の映り込み。水面反射と同じ skyFn を読むので世界が繋がる */
           vec3 R = reflect(-V, N);
@@ -1482,7 +1563,12 @@ const cards = [];
           vec3 glass = env * (0.10 + F*0.55);
           glass += vec3(0.10,0.24,0.28) * (1.0 - ndv) * 0.5;
 
-          vec3 col = glass + content.rgb * content.a * (0.85 + uFocus*0.5);
+          /* 背景をガラス越しに透かす。板の色ガラス(青緑)を1枚掛ける。
+             "opacity を下げただけ"に見えないのは、ここが平行移動ではなく
+             縁で曲がっているため。 */
+          vec3 tint = mix(vec3(1.0), vec3(0.62,0.86,0.92), 0.55);
+          vec3 col = bg * tint * (0.86 - bevAmt * 0.18) + glass;
+          col = mix(col, col * 0.55 + content.rgb * (0.95 + uFocus*0.45), content.a);
           col += env * F * 0.30;
           col += vec3(0.55,0.86,0.92) * rim * (0.10 + uFocus*0.16 + uHover*0.14);
           /* ホバーは「縁が一段はっきりする」だけに留める。
@@ -1497,9 +1583,13 @@ const cards = [];
           col = waterFog(col, d*0.30, uDepth, mix(1.0, 0.25, uDepth), vW.y);
           col = mix(col, uFog, smoothstep(9.0, 30.0, d) * uDepth);
 
-          float a = clamp(0.30 + content.a*0.78 + rim*0.55, 0.0, 1.0);
-          a *= 1.0 - smoothstep(15.0, 26.0, d);
+          /* 背景は自分で読んで合成済みなので、板の内側は不透明でよい。
+             端の消え際と、水面より上のカードが潜水時に消える分だけ alpha を使う。 */
+          float a = 1.0 - smoothstep(15.0, 26.0, d);
           a *= uVis;
+          /* 屈折を止めた時だけ、背景は自前で持たないので通常のアルファ合成に戻す。
+             文字の所は濃く残して可読性を落とさない。 */
+          a *= mix(mix(0.55, 0.93, content.a), 1.0, max(uGlass, uReflPass));
           gl_FragColor = vec4(col, a);
         }`,
     });
@@ -1510,7 +1600,7 @@ const cards = [];
     if (isMobile) m.scale.setScalar(0.66);
     m.userData = { base:new THREE.Vector3(L[0],L[1],L[2]), baseRotY:L[3], uni, i, sway:Math.random()*6.28 };
     m.renderOrder = 4;
-    scene.add(m); cards.push(m);
+    cardScene.add(m); cards.push(m);
   }
 }
 
@@ -1542,7 +1632,11 @@ const cards = [];
         float d = length(vW - cameraPosition);
         vec3 col = waterFog(vec3(0.055,0.075,0.085), d*0.42, uDepth, mix(1.0,0.3,uDepth), vW.y);
         col = mix(col, uFog, smoothstep(4.0, 22.0, d));
-        gl_FragColor = vec4(col, (1.0 - smoothstep(14.0, 24.0, d)) * 0.55);
+        /* 背骨は「水中の深さの基準」なので、水面より上へ出したままだと
+           夕景の空に細い線が1本引かれたように見える(モバイルでは見出しを
+           横切って特に目立つ)。水面の手前で消す。 */
+        float aboveW = 1.0 - smoothstep(-0.55, 0.35, vW.y);
+        gl_FragColor = vec4(col, (1.0 - smoothstep(14.0, 24.0, d)) * 0.55 * aboveW);
       }`,
   });
   const spine = new THREE.Mesh(g, mat);
@@ -1733,14 +1827,153 @@ composer.renderTarget1.depthTexture = null;   // 書き込み先には深度を�
 const sceneDepth = composer.renderTarget2.depthTexture || null;
 
 function renderComposer(){
+  renderReflection();
   // パス数が偶数か奇数かで割り当てが揺れないよう、毎フレーム明示的に戻す
   composer.writeBuffer = composer.renderTarget1;
   composer.readBuffer  = composer.renderTarget2;
   composer.render();
 }
 
+/* ================================================================
+   水面の平面反射 — 映すのは「水上に出ているカード」だけ
+   ----------------------------------------------------------------
+   太陽・空・水平線の霞は skyFn が既に反射として返しているので、
+   ここへ入れると二重になって水が白く濁る。中景(魚・粒子・光芒)も
+   映さない —— 水面下の物は本来ほとんど反射に寄与しないうえ、
+   低解像度の鏡像ではノイズにしかならない。
+   低解像度1枚・描くのは板1〜3枚なので、追加コストはブリット未満。
+   ================================================================ */
+const REFL_W = 512, REFL_H = 288;
+let reflectRT = null, reflectCam = null;
+let reflectOn = !!TIER.reflect;
+const REFL_BIAS = new THREE.Matrix4().set(
+  0.5, 0.0, 0.0, 0.5,
+  0.0, 0.5, 0.0, 0.5,
+  0.0, 0.0, 0.5, 0.5,
+  0.0, 0.0, 0.0, 1.0);
+/* y=0 面の鏡映。lookAt で「位置と向きを反転」させるやり方は、
+   左右が反転した像になる(lookAt が右手系で x 軸を組み直すため)。
+   行列を直接前から掛けるのが唯一正しい。 */
+const REFL_MIRROR = new THREE.Matrix4().makeScale(1, -1, 1);
+const _rcol = new THREE.Color();
+
+function ensureReflect(){
+  if (reflectRT) return;
+  reflectRT = new THREE.WebGLRenderTarget(REFL_W, REFL_H, {
+    type: RENDER.bufferType, depthBuffer:false,
+    minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter,
+  });
+  reflectCam = new THREE.PerspectiveCamera();
+  /* matrixWorld を自分で入れるので、three に上書きさせない */
+  reflectCam.matrixAutoUpdate = false;
+  reflectCam.matrixWorldAutoUpdate = false;
+}
+
+function renderReflection(){
+  /* 水中に潜ったら水面は下から見ているので、上の鏡像は要らない */
+  if (!reflectOn || camera.position.y < 0.02){
+    waterUniforms.uReflect.value = 0;
+    return;
+  }
+  /* 水上に出ているカードが1枚も無ければ描かない */
+  let any = false;
+  for (const c of cards){
+    const half = 0.86 * c.scale.y;
+    c.userData.reflVis = (c.position.y - half > -0.25) && c.userData.uni.uVis.value > 0.02;
+    if (c.userData.reflVis) any = true;
+  }
+  if (!any){ waterUniforms.uReflect.value = 0; return; }
+
+  ensureReflect();
+
+  /* y=0 の面に対する鏡像カメラ */
+  reflectCam.fov = camera.fov; reflectCam.aspect = camera.aspect;
+  reflectCam.near = camera.near; reflectCam.far = camera.far;
+  reflectCam.updateProjectionMatrix();
+  camera.updateMatrixWorld();
+  reflectCam.matrixWorld.copy(camera.matrixWorld).premultiply(REFL_MIRROR);
+  reflectCam.matrixWorldInverse.copy(reflectCam.matrixWorld).invert();
+
+  waterUniforms.uReflMtx.value
+    .copy(REFL_BIAS)
+    .multiply(reflectCam.projectionMatrix)
+    .multiply(reflectCam.matrixWorldInverse);
+
+  /* 鏡像には屈折を掛けない(背後の絵が無い)。素の半透明で描く */
+  const shown = [];
+  for (const c of cards){
+    shown.push(c.visible);
+    c.visible = !!c.userData.reflVis;
+    c.userData.uni.uGlass.value = 0;
+    c.userData.uni.uReflPass.value = 1;
+  }
+  const pt = renderer.getRenderTarget(), pa = renderer.getClearAlpha();
+  renderer.getClearColor(_rcol);
+  renderer.setRenderTarget(reflectRT);
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear(true, true, false);
+  renderer.render(cardScene, reflectCam);
+  renderer.setRenderTarget(pt);
+  renderer.setClearColor(_rcol, pa);
+  for (let i=0;i<cards.length;i++){
+    cards[i].visible = shown[i];
+    cards[i].userData.uni.uGlass.value = glassOn ? 1 : 0;
+    cards[i].userData.uni.uReflPass.value = 0;
+  }
+
+  waterUniforms.tReflect.value = reflectRT.texture;
+  /* 1.0 にすると鏡像がフレネルのまま素で出て、板が水面に"焼き付いて"
+     見える。水は完全な鏡ではないので少し引く。 */
+  waterUniforms.uReflect.value = 0.82;
+}
+
 const renderPass = new RenderPass(scene, camera);
 composer.addPass(renderPass);
+
+/* ---- ガラスのパス --------------------------------------------------
+   本編を描いた直後の絵を半解像度へ縮小コピーし、それを屈折の元にして
+   カードだけを重ねて描く。追加バッファは1枚、追加の描画はブリット1回と
+   カード3枚ぶんだけで、シーンを2度描く必要がない。 */
+let refractRT = new THREE.WebGLRenderTarget(2, 2, { depthBuffer:false });
+refractRT.texture.minFilter = THREE.LinearFilter;
+refractRT.texture.magFilter = THREE.LinearFilter;
+
+const blitQuad = new FullScreenQuad(new THREE.ShaderMaterial({
+  uniforms:{ tSrc:{value:null} },
+  vertexShader:'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader:'uniform sampler2D tSrc; varying vec2 vUv; void main(){ gl_FragColor = texture2D(tSrc, vUv); }',
+}));
+
+class GlassPass extends Pass {
+  constructor(){ super(); this.needsSwap = false; }
+  render(renderer, writeBuffer, readBuffer){
+    if (!glassOn){
+      /* ガラスを止めている時も、カードは描かないと消えてしまう */
+      renderer.setRenderTarget(readBuffer);
+      const pa = renderer.autoClear; renderer.autoClear = false;
+      renderer.render(cardScene, camera);
+      renderer.autoClear = pa;
+      return;
+    }
+    blitQuad.material.uniforms.tSrc.value = readBuffer.texture;
+    renderer.setRenderTarget(refractRT);
+    blitQuad.render(renderer);
+
+    for (const c of cards){
+      c.userData.uni.tRefract.value = refractRT.texture;
+      c.userData.uni.uRes.value.set(readBuffer.width, readBuffer.height);
+    }
+    renderer.setRenderTarget(readBuffer);
+    const prev = renderer.autoClear; renderer.autoClear = false;   // 色も深度も消さない
+    renderer.render(cardScene, camera);
+    renderer.autoClear = prev;
+  }
+}
+let glassOn = QS.get('glass') !== '0';   /* ?glass=0 でA/B比較できる */
+function applyGlass(){ for (const c of cards) c.userData.uni.uGlass.value = glassOn ? 1 : 0; }
+applyGlass();
+const glassPass = new GlassPass();
+composer.addPass(glassPass);
 
 /* 閾値を1.0まで上げ、太陽と水面のきらめきだけを滲ませる。
    下げると空全体が滲んで乳白色になる(実測) */
@@ -2156,6 +2389,8 @@ function renderDiag(){
       `  深度テクスチャ <b>${RENDER.depth ? '有効' : '無効 (降格)'}</b>\n` +
       `  被写界深度   <b>${(TIER.dof && RENDER.dof) ? 'ON' : 'OFF'}</b>\n` +
       `  光条の遮蔽   <b>${RENDER.godrayOcclusion ? 'ON' : 'OFF (縮退版)'}</b>\n` +
+      `  水面の映り込み <b>${reflectOn ? `ON (${REFL_W}×${REFL_H})` : 'OFF'}</b>\n` +
+      `  ガラスの屈折 <b>${glassOn ? 'ON' : 'OFF'}</b>\n` +
       `  Bloom閾値/露出 <b>${RENDER.bloomThreshold} / ${RENDER.exposure}</b>` +
     (FORCE ? `<h4>FORCE</h4>  <span class="ng">?force=${FORCE} で降格を強制中</span>` : '') +
     `<h4>自動品質調整</h4>  ${QPIN === 'full' ? '<span class="ng">?q=full で固定中</span>' : qStep === 0 ? '<span class="ok">全部有効</span>' : '<span class="ng">' + LADDER.slice(0, qStep).map(l => l.name).join(' / ') + ' を停止中</span>'}` +
@@ -2193,6 +2428,14 @@ window.__diag = {
   get fps(){ return fpsStats(); },
   get cost(){ return CAL && CAL.result; },
   get quality(){ return { step: qStep, dropped: LADDER.slice(0, qStep).map(l => l.name) }; },
+  /* 水面の映り込みとガラスの屈折が「実際に効いているか」を外から読めるようにする。
+     絵を見て判断すると、シェーダが黙って落ちた時に気付けない。 */
+  get effects(){ return {
+    reflectAvailable: !!TIER.reflect,
+    reflectOn, reflectStrength: waterUniforms.uReflect.value,
+    reflectSize: reflectRT ? [reflectRT.width, reflectRT.height] : null,
+    glassOn, glassRefract: refractRT ? [refractRT.width, refractRT.height] : null,
+  }; },
 };
 
 /* ================================================================
@@ -2214,6 +2457,8 @@ const LADDER = [
                               up(){   setParticleFraction(1.0); } },
   { name:'光芒を半分',        down(){ setShaftFraction(0.5); },
                               up(){   setShaftFraction(1.0); } },
+  { name:'水面の映り込み',    down(){ reflectOn = false; }, up(){ reflectOn = !!TIER.reflect; } },
+  { name:'ガラスの屈折',      down(){ glassOn = false; applyGlass(); }, up(){ glassOn = true; applyGlass(); } },
   { name:'散乱を停止',        down(){ atmosPass.enabled = false; },
                               up(){   atmosPass.enabled = true; } },
 ];
@@ -2260,6 +2505,7 @@ function applyDPR(next){
   composer.setSize(innerWidth, innerHeight);
   atmosPass.uniforms.uRes.value.set(innerWidth*DPR, innerHeight*DPR);
   gradePass.uniforms.uRes.value.set(innerWidth*DPR, innerHeight*DPR);
+  refractRT.setSize(Math.max(2, (innerWidth*DPR*0.5)|0), Math.max(2, (innerHeight*DPR*0.5)|0));
   for (const p of [motes, bubbles, fore]) p.userData.uni.uPix.value = DPR;
   document.getElementById('dprv').textContent = DPR.toFixed(1);
 }
@@ -2636,6 +2882,7 @@ function resize(){
   applyBloomSize();
   atmosPass.uniforms.uRes.value.set(w*DPR, h*DPR);
   gradePass.uniforms.uRes.value.set(w*DPR, h*DPR);
+  refractRT.setSize(Math.max(2, (w*DPR*0.5)|0), Math.max(2, (h*DPR*0.5)|0));
   atmosPass.uniforms.uNear.value = camera.near;
   atmosPass.uniforms.uFar.value  = camera.far;
   solvePortraitLift();
