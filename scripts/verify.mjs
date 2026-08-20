@@ -50,6 +50,11 @@ const VIEWS = {
   /* 実機Safariは上下のUIぶん表示領域が低い。844だけで見ると
      HUDと3Dの重なりを見落とす(実際に見落とした)。 */
   iphone:  { w: 390,  h: 664, dsf: 3, mobile: true  },
+  /* 利用者の実機の実測値(iOS 18.7 / Safari 26.6 / dPR 3.00)。
+     390 より横に70px広く、縦も高い。想定だけで測らずここも通す。 */
+  iphone2: { w: 459,  h: 869, dsf: 3, mobile: true  },
+  /* 上のURLバーが出ている時の低い方 */
+  iphone2s:{ w: 459,  h: 822, dsf: 3, mobile: true  },
 };
 const V = VIEWS[VIEW] || VIEWS.desktop;
 
