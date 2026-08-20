@@ -70,6 +70,7 @@ function grouped(items){
 }
 
 /* 連絡の方法は、宛先が決まっていれば a、決まっていなければ準備中の表示にする */
+const isContactTitle = (s) => /^(LINE|フォーム|メール)/.test(String(s));
 function contactRow(it, w){
   const key = /LINE/i.test(it.title) ? 'line' : /メール/.test(it.title) ? 'mail'
             : /フォーム/.test(it.title) ? 'form' : '';
@@ -90,10 +91,10 @@ function defList(b, w){
   return grouped(b.items).map(g => {
     const gh = g.g ? `<p class="glabel mono">${esc(g.g)}</p>` : '';
     const isContact = /連絡の方法/.test(g.g);
-    const rows = g.items.map(it => isContact ? contactRow(it, w) : `
+    const rows = g.items.map(it => (isContact || isContactTitle(it.title)) ? contactRow(it, w) : `
             <div class="row${it.emphasis ? ' is-key' : ''}">
-              <dt>${LINKS[it.title]
-                ? `<a class="go" href="${esc(LINKS[it.title])}">${t(it.title, w)} <em>↗</em></a>`
+              <dt>${href(it.title)
+                ? `<a class="go" href="${esc(href(it.title))}">${t(it.title, w)} <em>↗</em></a>`
                 : t(it.title, w)}</dt>
               <dd>${t(it.text, w)}</dd>
             </div>`).join('');
@@ -103,13 +104,30 @@ function defList(b, w){
 }
 
 /* 本文から張るリンク。項目名で引く(本文側にURLを書かせない) */
+/* 値はTOPから見た相対パス。実績ページは1階層深いので base で寄せる。 */
 const LINKS = {
   '制作実績を見る': './works/',
   '制作実績': './works/',
   'トップ': './',
+  'トップへ戻る': './',
   'お問い合わせ': '#contact',
+  '相談する': '#contact',
+  '実績一覧へ戻る': './works/#works-index',
   'GARAGE BeCool': '../becool/',
   'T-REX CO., LTD.': '../',
+  '汀ノ庭': './',
+};
+let BASE = '';           // 実績ページを組む間だけ '../' が入る
+/* 相対パスの連結。文字列を素朴に足すと '../' + '../becool/' が
+   '.../becool/' に化ける(実際に化けて404になった)。
+   アンカーだけのリンクも、下の階層からはTOPを指し直す必要がある。 */
+const href = (title) => {
+  const v = LINKS[title];
+  if (!v) return '';
+  if (/^(https?:|mailto:)/.test(v)) return v;
+  if (v.startsWith('#')) return BASE ? BASE + v : v;
+  if (!BASE) return v;
+  return BASE + v.replace(/^\.\//, '');
 };
 
 const ALL_PROV = [];
@@ -152,8 +170,10 @@ const topHtml = TOP_SECTIONS.map(s =>
   s.refs.map((r, i) => renderBlock(s.key, r, i === 0 ? 2 : 3)).join('') +
   `\n      </section>`).join('');
 
+BASE = '../';
 const worksHtml = (by['works-page']?.blocks || [])
   .map((b, i) => renderBlock('works-page', `works-page#${b.id}`, i === 0 ? 2 : 3)).join('');
+BASE = '';
 
 fs.writeFileSync(path.join(DIR, '.content.html'), topHtml);
 fs.writeFileSync(path.join(DIR, '.works.html'), worksHtml);
