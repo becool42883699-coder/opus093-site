@@ -214,8 +214,8 @@
   #grain{position:fixed; inset:0; z-index:7; pointer-events:none; opacity:.038; mix-blend-mode:overlay;
     background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="220" height="220" filter="url(%23n)" opacity="0.6"/></svg>')}
   /* 水面を切る瞬間の一瞬の白。JSが 60ms だけ点ける */
-  #splash{position:fixed; inset:0; z-index:8; pointer-events:none; background:#dff6fa; opacity:0; transition:opacity .8s ease-out}
-  #splash.on{transition:none; opacity:.42}
+  /* 明滅はJS側で包絡線を作って毎フレーム書くので、transition は持たせない */
+  #splash{position:fixed; inset:0; z-index:8; pointer-events:none; background:#dff6fa; opacity:0}
 
   /* ---- 読み込み ---- */
   /* 読み込み板もJSがある時だけ。無いと出しっぱなしで画面を覆う */
@@ -599,6 +599,7 @@ renderer.setSize(innerWidth, innerHeight);
 /* トーンマップは OutputPass が担当する。ここで掛けると最終パスと二重になる */
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = RENDER.exposure;
+let _expInit = RENDER.exposure;   // ループ側の初期値に使う
 stageEl.appendChild(renderer.domElement);
 document.getElementById('dprv').textContent = DPR.toFixed(1);
 
@@ -646,10 +647,19 @@ uniform vec3 uFog;
 const vec3 ABSORB  = vec3(0.115, 0.032, 0.018);   // 距離あたりの吸収
 const vec3 SCATTER = vec3(0.028, 0.115, 0.148);   // 散乱して返る色
 
-vec3 waterFog(vec3 col, float dist, float depth01, float light){
+/* 濁りの層。水は一様ではなく、水面直下に懸濁物の帯があり、
+   深部ほど澄む。帯は1層だけ(2層にすると深度グレードと競合して明滅に読まれる)。
+   遷移幅は0.6世界単位以上取ってバンディングを避ける。 */
+float turbidity(float y){
+  float band  = smoothstep(-0.30, -0.95, y) * (1.0 - smoothstep(-2.90, -3.60, y));
+  float clear = smoothstep(-4.60, -5.60, y);
+  return 1.0 + band * 0.42 - clear * 0.18;
+}
+
+vec3 waterFog(vec3 col, float dist, float depth01, float light, float y){
   // 深いほど届く光が減り、散乱色そのものも暗くなる
   float dl = mix(1.0, 0.16, depth01);
-  vec3 t = exp(-ABSORB * dist * 6.0);
+  vec3 t = exp(-ABSORB * turbidity(y) * dist * 6.0);
   vec3 inscatter = SCATTER * light * dl * (1.0 - t);
   return col * t + inscatter;
 }`;
@@ -949,7 +959,7 @@ const waterMat = new THREE.ShaderMaterial({
 
         /* 全反射側は「下の水」を映す鏡。遠方の水＝霧色なので、そこへ寄せておく。
            暗いままだと水平線の少し上に暗い帯が残る。 */
-        vec3 mirror = mix(waterFog(vec3(0.006,0.028,0.040), 10.0, uDepth, 1.0), uFog, 0.55);
+        vec3 mirror = mix(waterFog(vec3(0.006,0.028,0.040), 10.0, uDepth, 1.0, vW.y), uFog, 0.55);
 
         col = mix(sky, mirror, tir);
 
@@ -960,7 +970,7 @@ const waterMat = new THREE.ShaderMaterial({
         col += vec3(0.40,0.78,0.84) * clamp(length(g)*6.0, 0.0, 1.0) * 0.20;
 
         // 深いほど天井は遠く、暗く
-        col = waterFog(col, min(d, 30.0)*0.24, uDepth, 1.0);
+        col = waterFog(col, min(d, 30.0)*0.24, uDepth, 1.0, vW.y);
         col *= mix(1.0, 0.30, uDepth);
         /* 遠方は空ドームと同じ霧色へ落とす。これで水面の端と無限遠が
            同じ色になり、画面を横切る継ぎ目が消える。 */
@@ -1039,7 +1049,7 @@ const sandMat = new THREE.ShaderMaterial({
       float macro = fbm(p*0.55 + 11.0, C_OCT);
       sand *= 0.80 + 0.34*macro;
 
-      vec3 col = waterFog(sand, dd*0.62, uDepth, reach);
+      vec3 col = waterFog(sand, dd*0.62, uDepth, reach, vW.y);
       col = mix(col, uFog, smoothstep(8.0, 44.0, dd));
       gl_FragColor = vec4(col, 1.0);
     }`,
@@ -1249,15 +1259,15 @@ const WORKS = [
   { num:'01', kind:'01 / Web site',     title:'GARAGE BeCool',   year:'2025', foot:'WEB SITE',
     tag:'LIVE / SELECTED', glow:'rgba(255,208,150,0.40)', thumbLine:'Drive your life.',
     url:'../becool/',
-    lines:['DESIGN — IMPLEMENT — SEO','FUKUOKA / KITAKYUSHU'] },
+    lines:['DESIGN — IMPLEMENT — SEO','FUKUOKA / KITAKYUSHU','PERIOD — 2025 / IN OPERATION'] },
   { num:'02', kind:'02 / Landing page', title:'L tAq',           year:'2026', foot:'LANDING PAGE',
     tag:'', glow:'rgba(150,225,240,0.42)', thumbLine:'Clear as water.',
     url:null,
-    lines:['ART DIRECTION — FRONT-END','SINGLE PAGE / MOTION'] },
+    lines:['ART DIRECTION — FRONT-END','SINGLE PAGE / MOTION','PERIOD — 2026'] },
   { num:'03', kind:'03 / Corporate',    title:'T-REX CO., LTD.', year:'2026', foot:'CORPORATE SITE',
     tag:'', glow:'rgba(255,170,150,0.34)', thumbLine:'Never stop the site.',
     url:'../',
-    lines:['STRATEGY — DESIGN — BUILD','CMS / RECRUIT / MEO'] },
+    lines:['STRATEGY — DESIGN — BUILD','CMS / RECRUIT / MEO','PERIOD — 2026 / IN OPERATION'] },
 ];
 
 const CARD_GEO = new THREE.PlaneGeometry(3.05, 1.72, 1, 1);
@@ -1342,7 +1352,7 @@ const cards = [];
           col += vec3(1.0,0.94,0.82) * pow(max(dot(N,H),0.0), 260.0) * 0.85;
 
           float d = length(vW - cameraPosition);
-          col = waterFog(col, d*0.30, uDepth, mix(1.0, 0.25, uDepth));
+          col = waterFog(col, d*0.30, uDepth, mix(1.0, 0.25, uDepth), vW.y);
           col = mix(col, uFog, smoothstep(9.0, 30.0, d) * uDepth);
 
           float a = clamp(0.30 + content.a*0.78 + rim*0.55, 0.0, 1.0);
@@ -1360,6 +1370,48 @@ const cards = [];
     m.renderOrder = 4;
     scene.add(m); cards.push(m);
   }
+}
+
+/* ================================================================
+   5.5) 降下の背骨 — 深さを測る基準になる垂直の連続体
+   ----------------------------------------------------------------
+   画面に「どれだけ降りたか」を測る物が無いと、深度計の数字だけが
+   頼りになる。実寸の係留索やシャックルは置かない —— この世界の
+   1単位はメートルではなく、600Mは演出上の数字なので、実物を置くと
+   HUDが嘘だと観客に教えることになる。発光もブランド色も使わない。
+   ================================================================ */
+{
+  const g = new THREE.CylinderGeometry(0.018, 0.018, 22, 6, 1, true);
+  const mat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, side:THREE.DoubleSide,
+    uniforms:{ uDepth:{value:0}, uFog:{value:fogCol}, uSun:{value:SUN} },
+    vertexShader:`
+      varying vec3 vW;
+      void main(){
+        vec4 wp = modelMatrix * vec4(position,1.0);
+        vW = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }`,
+    fragmentShader:`
+      uniform float uDepth;   /* uFog は G_WATER が宣言しているので重ねない */
+      varying vec3 vW;
+      ${G_WATER}
+      void main(){
+        float d = length(vW - cameraPosition);
+        vec3 col = waterFog(vec3(0.055,0.075,0.085), d*0.42, uDepth, mix(1.0,0.3,uDepth), vW.y);
+        col = mix(col, uFog, smoothstep(4.0, 22.0, d));
+        gl_FragColor = vec4(col, (1.0 - smoothstep(14.0, 24.0, d)) * 0.55);
+      }`,
+  });
+  const spine = new THREE.Mesh(g, mat);
+  /* カード列と反対側に置き、HUDの安全域に一度も重ならせない */
+  /* 縦組みHUD(右端)を横切らない位置へ。モバイルは画角が狭く、
+     -1.85 では画面外に出て一度も見えていなかった。 */
+  spine.position.set(isMobile ? -0.98 : 2.20, -6.0, isMobile ? -4.6 : -4.0);
+  spine.renderOrder = 3;
+  spine.userData.uni = mat.uniforms;
+  scene.add(spine);
+  window.__spine = spine;
 }
 
 /* ================================================================
@@ -1430,7 +1482,7 @@ function makeMotes(count, opt){
   const pts = new THREE.Points(geo, mat);
   pts.frustumCulled = false;
   pts.renderOrder = 6;
-  pts.userData = { uni, opt, count, geo };
+  pts.userData = { uni, opt, count, geo, fy:0, fx:0, fyv:{v:0}, fxv:{v:0} };
   scene.add(pts);
   return pts;
 }
@@ -1438,17 +1490,17 @@ function makeMotes(count, opt){
 /* 奥: マリンスノー。細かく、ゆっくり沈む */
 const motes = makeMotes(TIER.motes, {
   spread:[17,0,15], zNear:-1.0, yMin:-9.6, yMax:0.4,
-  size:[0.5,1.5], speed:[-0.055,-0.012], gain:0.34, soft:2.4, wobble:0.10,
+  size:[0.5,1.5], speed:[-0.055,-0.012], gain:0.34, soft:2.4, wobble:0.10, lag:0.22, drift:0.010,
 });
 /* 中景: 気泡。上へ昇り、少し大きく、輪郭が残る */
 const bubbles = makeMotes(TIER.bubbles, {
   spread:[13,0,12], zNear:-1.2, yMin:-9.6, yMax:0.2,
-  size:[0.9,2.6], speed:[0.16,0.52], gain:0.42, soft:1.5, wobble:0.16,
+  size:[0.9,2.6], speed:[0.16,0.52], gain:0.42, soft:1.5, wobble:0.16, lag:0.45, drift:0.022,
 });
 /* 手前: 大きくボケた層。視差の主役で、これが無いと画面が平らに見える */
 const fore = makeMotes(TIER.fore, {
   spread:[7,0,3.2], zNear:-0.35, yMin:-9.4, yMax:0.2,
-  size:[5.0,13.0], speed:[-0.030,0.030], gain:0.055, soft:0.85, wobble:0.05,
+  size:[5.0,13.0], speed:[-0.030,0.030], gain:0.055, soft:0.85, wobble:0.05, lag:0.85, drift:0.040,
 });
 
 /* ================================================================
@@ -1482,7 +1534,7 @@ const fishMat = new THREE.ShaderMaterial({
       float belly = smoothstep(0.62, 0.38, vUv.y);
       vec3 col = mix(vec3(0.020,0.055,0.075), vec3(0.16,0.30,0.33), belly);
       float d = length(vW - cameraPosition);
-      col = waterFog(col, d*0.55, uDepth, mix(1.0,0.3,uDepth));
+      col = waterFog(col, d*0.55, uDepth, mix(1.0,0.3,uDepth), vW.y);
       col = mix(col, uFog, smoothstep(6.0, 18.0, d));
       gl_FragColor = vec4(col, m * 0.86 * (1.0 - smoothstep(12.0, 22.0, d)));
     }`,
@@ -1730,7 +1782,11 @@ function smoothDamp(cur, target, ref, smoothTime, dt){
 
 let targetP = 0, sp = 0;               const spV = {v:0};
 let pxT = 0, pyT = 0, px = 0, py = 0;  const pxV = {v:0}, pyV = {v:0};
-let scrollVel = 0;                     let prevSp = 0;
+/* スクロール速度は「唯一の源」を1つだけ持ち、そこから pitch / roll /
+   yaw / fov へ分配する。旧実装はクランプ後の dt で割っていたため、
+   低フレーム時に速度が実際の数倍に化けていた。 */
+let scrollVel = 0, velX = 0, velV = 0;
+let prevSp = 0;
 
 /* 潜航の進行度は「spacerの高さ」で正規化する。document 全体の高さで
    割ると、下に本文を1行足しただけで潜航の振り付けが全部ずれる。 */
@@ -1829,6 +1885,12 @@ const workLink =document.getElementById('workLink');
 const legibilityEl = document.getElementById('legibility');
 
 let lastDepth='', lastLoc='', lastSec=-1, lastWork=-1, splashed=false;
+<<<<<<< Updated upstream
+=======
+let lastHop=-1, hudTextAt=0, depthShown=0;
+const SPLASH_DUR = 0.42;
+let splashT = 0, splashCool = 0, splashPow = 1, prevCamY = 0.95;
+>>>>>>> Stashed changes
 
 /* 深度の定義は1箇所に集約する。ルーラーの目盛り・針・現在地の帯名が
    別々の式を持つと、表示どうしが食い違う(実際に食い違っていた)。 */
@@ -2019,9 +2081,21 @@ function frame(){
   sp = smoothDamp(sp, targetP, spV, reduced ? 0.05 : 0.42, dt);
   px = smoothDamp(px, pxT, pxV, 0.55, dt);
   py = smoothDamp(py, pyT, pyV, 0.55, dt);
-  const rawVel = (sp - prevSp) / Math.max(dt, 5e-4);
-  scrollVel += (rawVel - scrollVel) * Math.min(1, dt*4.5);
+  /* 実フレーム時間で割る(丸めた dt で割ると低フレーム時に過大評価される)。
+     一次遅れではなく二次のばね: 行き過ぎ約10%・揺り戻し1回・収束0.7秒。
+     可変dtで積分すると低フレーム時に発散するので固定ステップで回す。 */
+  const rawVel = (sp - prevSp) / Math.max(rawDt, 5e-4);
   prevSp = sp;
+  if (rawDt > 0.08){ velX = 0; velV = 0; }          // 大きく飛んだフレームは入力を捨てる
+  else {
+    let acc = rawDt;
+    for (let n = 0; n < 4 && acc > 0; n++){
+      const h = Math.min(1/120, acc); acc -= h;
+      velV += ((rawVel - velX) * 26 - velV * 6.1) * h;
+      velX += velV * h;
+    }
+  }
+  scrollVel = Math.max(-1, Math.min(1, velX));
 
   /* --- カメラの旅程 ------------------------------------------
      単なる縦移動ではなく、俯角と画角も一緒に動かす。
@@ -2041,8 +2115,9 @@ function frame(){
                     + 0.21*ss(0.10,0.46,sp) - 0.32*ss(0.60,0.97,sp)
                     + py*-0.030
                     + Math.max(-0.055, Math.min(0.055, scrollVel*0.20));   // 速度でのけぞる
-  camera.rotation.y = -px*0.055;
-  camera.rotation.z = -px*0.014;                                            // ごく僅かなロール
+  /* 同じ速度源からヨーとロールへも分配する。モバイルにも二軸目が入る */
+  camera.rotation.y = -px*0.055 + Math.max(-0.030, Math.min(0.030, scrollVel*0.10));
+  camera.rotation.z = -px*0.014 + Math.max(-0.012, Math.min(0.012, scrollVel*0.040));
   const fov = 56 + Math.max(-1.6, Math.min(2.6, scrollVel*7.0));
   if (Math.abs(camera.fov - fov) > 0.01){ camera.fov = fov; camera.updateProjectionMatrix(); }
 
@@ -2057,6 +2132,7 @@ function frame(){
   sandUniforms.uTime.value  = T;  sandUniforms.uDepth.value  = depth01;
   shaftUniforms.uTime.value = T;  shaftUniforms.uDepth.value = depth01;
   fishUniforms.uTime.value  = T;  fishUniforms.uDepth.value  = depth01;
+  if (window.__spine) window.__spine.userData.uni.uDepth.value = depth01;
   skyDome.position.copy(camera.position);
   water.position.x = camera.position.x; water.position.z = camera.position.z;
   waterUniforms.uOrigin.value.set(water.position.x, water.position.z);
@@ -2111,22 +2187,46 @@ function frame(){
     f.rotation.z = Math.sin(t*5.4 + f.userData.ph)*0.10;
   }
 
-  /* --- 粒子。層ごとに違う速度で流す --- */
+  /* --- 粒子。層ごとに違う遅れ・違う速度で流す ---
+     海流は Gerstner の主方向と揃え、深いほど弱める。 */
+  const current = (0.55 + 0.45*Math.sin(t*0.11)) * (1 - 0.75*depth01);
+
   for (const layer of [motes, bubbles, fore]){
     const { geo, count, opt, uni } = layer.userData;
     const arr = geo.attributes.position.array;
     const spd = geo.attributes.aSpeed.array;
+    /* 折り返しは「レイヤー原点からの局所座標」ではなく「カメラから見た高さ」で
+       判定する。層ごとに追従が違うので、原点基準だと片寄って空白ができる。 */
+    const spanY = opt.yMax - opt.yMin;
+    const spanX = opt.spread[0];
+    const flow  = current * (opt.drift || 0) * dt * timeScale * 60;
+    const originY = layer.position.y, originX = layer.position.x;
     for (let i=0;i<count;i++){
       arr[i*3+1] += spd[i]*dt*timeScale;
-      if (arr[i*3+1] > opt.yMax){ arr[i*3+1] = opt.yMin; }
-      else if (arr[i*3+1] < opt.yMin){ arr[i*3+1] = opt.yMax; }
+      arr[i*3]   += flow;
+      const relY = originY + arr[i*3+1] - camY;
+      if (relY >  spanY*0.5) arr[i*3+1] -= spanY;
+      else if (relY < -spanY*0.5) arr[i*3+1] += spanY;
+      const relX = originX + arr[i*3] - camera.position.x;
+      if (relX >  spanX*0.5) arr[i*3] -= spanX;
+      else if (relX < -spanX*0.5) arr[i*3] += spanX;
     }
     geo.attributes.position.needsUpdate = true;
     uni.uTime.value = t;
     uni.uDepth.value = depth01;
-    // 粒子の層はカメラに追従させ、常に周囲に居るようにする
-    layer.position.y = camY;
-    layer.position.x = camera.position.x;
+
+    /* 層ごとに違う遅れでカメラを追う。旧実装は3層とも camY をそのまま
+       代入していたため、層間の縦方向の視差が数学的にゼロだった
+       (大きさとボケ方が違うだけだった)。遅れの差がそのまま視差になる。
+       ずれ量はレイヤーのスパンの15%で頭打ちにし、折り返しが視界に入るのを防ぐ。 */
+    const ud = layer.userData;
+    const span = opt.yMax - opt.yMin;
+    const lag = reduced ? 0 : opt.lag;
+    ud.fy = lag ? smoothDamp(ud.fy, camY, ud.fyv, lag, dt) : camY;
+    ud.fx = lag ? smoothDamp(ud.fx, camera.position.x, ud.fxv, lag, dt) : camera.position.x;
+    const cap = span * 0.15;
+    layer.position.y = camY + Math.max(-cap, Math.min(cap, ud.fy - camY));
+    layer.position.x = camera.position.x + Math.max(-cap, Math.min(cap, ud.fx - camera.position.x));
   }
 
   /* --- ポストの駆動 ------------------------------------------ */
@@ -2146,6 +2246,12 @@ function frame(){
   const targetFocus = focusAmt > 0.12 ? focusDist : 8.5;
   atmosPass.uniforms.uFocus.value += (targetFocus - atmosPass.uniforms.uFocus.value) * Math.min(1, dt*1.6);
   atmosPass.uniforms.uAperture.value = 0.16 + 0.42*depth01;
+  /* 潜水カメラの順応。深いほど僅かに開き、暗部の階調を残す
+     (黒潰れは禁止事項)。振れ幅は現行値の +10% まで、時定数0.45秒。 */
+  const expTarget = RENDER.exposure * (1 + 0.10 * ss(0.15, 0.90, depth01));
+  expShown = smoothDamp(expShown, expTarget, expVel, 0.45, dt);
+  renderer.toneMappingExposure = expShown;
+
   gradePass.uniforms.uDepth01.value = depth01;
   gradePass.uniforms.uTime.value = t;
   bloom.strength = RENDER.bloomBase + 0.24*ss(0.05,0.55,depth01);
@@ -2202,13 +2308,24 @@ function frame(){
   diveBtn.style.opacity = bop.toFixed(2);
   diveBtn.style.pointerEvents = bop < 0.1 ? 'none' : 'auto';
 
-  // 水面を切る瞬間
-  if (!splashed && camera.position.y < 0.015){
-    splashed = true;
-    splashEl.classList.add('on');
-    setTimeout(()=> splashEl.classList.remove('on'), 60);
+  /* 水面を切る瞬間。60msの一発ではなく、速度に応じた0.42秒の包絡線。
+     上下どちらの通過でも出す。1.2秒のクールダウンで連打を防ぐ。 */
+  splashCool = Math.max(0, splashCool - dt);
+  const crossed = (prevCamY > 0) !== (camera.position.y > 0);
+  if (crossed && splashCool <= 0 && !reduced){
+    splashT = SPLASH_DUR;
+    splashCool = 1.2;
+    splashPow = Math.min(1, 0.34 + Math.abs(scrollVel) * 0.9);
   }
-  if (camera.position.y > 0.55) splashed = false;
+  prevCamY = camera.position.y;
+  if (splashT > 0){
+    splashT = Math.max(0, splashT - dt);
+    const e = splashT / SPLASH_DUR;                       // 1 → 0
+    const env = Math.pow(e, 0.55) * (1 - Math.pow(1 - e, 7));   // 立ち上がり速く、引きは緩く
+    splashEl.style.opacity = (env * 0.55 * splashPow).toFixed(3);
+  } else if (splashEl.style.opacity !== '0'){
+    splashEl.style.opacity = '0';
+  }
 
   if (CAL && CAL.step < 5) calibrate(rawDt);
   else renderComposer();
@@ -2244,6 +2361,12 @@ function frame(){
    レイアウト確定後にCTAの下端を実測し、1枚目のカードがその下へ来る
    カメラの仰角を二分法で解く。カードのワールド座標は動かさない
    (下げると波の下に潜り、不透明な水面に隠れてしまうため)。 */
+<<<<<<< Updated upstream
+=======
+const depthVel = { v: 0 }, expVel = { v: 0 };
+let expShown = _expInit;
+let rulerH = 220;
+>>>>>>> Stashed changes
 let PORTRAIT_LIFT = 0.22;
 const _pcam = new THREE.PerspectiveCamera();
 const _pv = new THREE.Vector3();
