@@ -42,6 +42,9 @@ const VIEWS = {
   desktop: { w: 1600, h: 900, dsf: 1, mobile: false },
   laptop:  { w: 1280, h: 800, dsf: 1, mobile: false },
   mobile:  { w: 390,  h: 844, dsf: 2, mobile: true  },
+  /* 実機Safariは上下のUIぶん表示領域が低い。844だけで見ると
+     HUDと3Dの重なりを見落とす(実際に見落とした)。 */
+  iphone:  { w: 390,  h: 664, dsf: 3, mobile: true  },
 };
 const V = VIEWS[VIEW] || VIEWS.desktop;
 
@@ -137,10 +140,23 @@ await page.waitForFunction(() => window.__diag && window.__diag.cost, { timeout:
 /* FPSの計測窓(5秒)を満たす */
 await page.waitForTimeout(5200);
 
+/* 診断オーバーレイが「実際に見えているか」まで検証する。
+   window.__diag(JSオブジェクト)だけを見ていたため、hidden属性を
+   外し忘れてオーバーレイが一度も出ない不具合を見逃した。 */
+const overlay = await page.evaluate(() => {
+  const el = document.getElementById('diag');
+  if (!el) return { exists:false };
+  const cs = getComputedStyle(el);
+  const r = el.getBoundingClientRect();
+  return { exists:true, display:cs.display, visibility:cs.visibility,
+           hidden:el.hasAttribute('hidden'), w:Math.round(r.width), h:Math.round(r.height),
+           chars:(el.textContent||'').trim().length };
+});
+
 const diag = await page.evaluate(() => ({
   fps: window.__diag.fps, dpr: window.__diag.dpr, frames: window.__diag.frames,
   cost: window.__diag.cost, caps: window.__diag.caps, render: window.__diag.render,
-  tier: window.__diag.tier.name,
+  tier: window.__diag.tier.name, cardRects: window.__diag.cardRects,
 }));
 
 /* 撮影中は診断オーバーレイを隠す(絵の判定を邪魔しないため) */
@@ -157,6 +173,7 @@ const signature = async () => page.evaluate(() => {
 });
 
 const sigs = {};
+let hudOverlap = null;
 const maxScroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
 for (const stop of STOPS) {
   await page.evaluate(y => scrollTo(0, y), Math.round(maxScroll * stop.p));
@@ -167,6 +184,26 @@ for (const stop of STOPS) {
   }
   await page.screenshot({ path: path.join(outDir, `${stop.name}.png`), timeout: 180000 });
   sigs[stop.name] = await signature();
+
+  /* 水面ではヒーローのコピーとCTAが出ている。3Dのカードがそこへ
+     食い込んでいないかを、目視ではなく面積で測る。 */
+  if (stop.name === 'surface') {
+    hudOverlap = await page.evaluate(() => {
+      const rect = el => { const b = el.getBoundingClientRect();
+        return { x:b.x, y:b.y, w:b.width, h:b.height }; };
+      const ov = (a, b) => Math.max(0, Math.min(a.x+a.w, b.x+b.w) - Math.max(a.x, b.x))
+                         * Math.max(0, Math.min(a.y+a.h, b.y+b.h) - Math.max(a.y, b.y));
+      const card = window.__diag.cardRects[0];
+      const out = {};
+      for (const [k, sel] of [['cta','#cta'], ['lede','#hero p'], ['h1','#hero h1']]) {
+        const el = document.querySelector(sel); if (!el) continue;
+        const r = rect(el);
+        out[k] = { pct: r.w*r.h ? +(ov(card, r) / (r.w*r.h) * 100).toFixed(1) : 0 };
+      }
+      out.card = { y: Math.round(card.y), h: Math.round(card.h), visible: card.visible };
+      return out;
+    });
+  }
 }
 
 const ctxLost = await page.evaluate(() => window.__ctxLost || 0);
@@ -192,6 +229,12 @@ if (prevLoops.length) {
 }
 
 /* ---------------- 判定 ---------------- */
+const overlayOk = !!(overlay.exists && !overlay.hidden && overlay.display !== 'none'
+  && overlay.visibility !== 'hidden' && overlay.w > 0 && overlay.h > 0 && overlay.chars > 50);
+
+/* 文字の上にカードが乗ったら不合格。閾値は「1%でも重なったらアウト」 */
+const hudOk = !hudOverlap || ['cta','lede','h1'].every(k => !hudOverlap[k] || hudOverlap[k].pct < 1);
+
 const errors = messages.filter(m => m.type !== 'warning');
 const changed = diff === null ? null : Object.values(diff).some(v => v === null || v > 0);
 const verdict = {
@@ -199,9 +242,11 @@ const verdict = {
   'context lost 0回':        { pass: ctxLost === 0, value: `${ctxLost} 回` },
   '前ループとの差分 ≠ 0':     { pass: changed === null ? null : changed, value: diff ? JSON.stringify(diff) : '初回(比較対象なし)' },
   'FPS 平均':                { pass: null, value: `${diag.fps.avg.toFixed(1)} (最低 ${diag.fps.min.toFixed(1)}, ${diag.frames} フレーム)` },
+  '診断オーバーレイが可視':    { pass: overlayOk, value: JSON.stringify(overlay) },
+  'HUDと3Dの重なり無し':      { pass: hudOk, value: hudOverlap ? JSON.stringify(hudOverlap) : 'n/a' },
 };
 
-const report = { loop: loopNo, view: VIEW, url: BASE, diag, ctxLost, messages, diff, verdict };
+const report = { loop: loopNo, view: VIEW, url: BASE, diag, overlay, hudOverlap, ctxLost, messages, diff, verdict };
 fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 
 console.log(`\n=== loop-${String(loopNo).padStart(2, '0')} (${VIEW} ${V.w}x${V.h}) ===`);
@@ -214,4 +259,4 @@ if (diag.cost) console.log(`  コスト: シーン ${diag.cost.scene}ms / Bloom 
 if (errors.length) { console.log('  --- エラー ---'); errors.slice(0, 10).forEach(m => console.log(`   ${m.type}: ${m.text}`)); }
 console.log(`  → ${path.relative(ROOT, outDir)}/`);
 
-process.exit(errors.length === 0 && ctxLost === 0 ? 0 : 1);
+process.exit(errors.length === 0 && ctxLost === 0 && overlayOk && hudOk ? 0 : 1);
