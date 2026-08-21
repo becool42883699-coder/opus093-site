@@ -156,9 +156,11 @@
   }
   #ruler .tick::before{content:""; position:absolute; left:-11px; top:50%; width:6px; height:1px; background:rgba(143,212,222,.3)}
   /* 目次モード。深度の目盛りが、そのまま本文の目次になる。
-     幅の閾値は実測: 目盛り線11px + 和文4字(11px×1.16)= 約51px、
-     左端37px から x∈[37,99]。本文カラムの左端 (W-1000)/2 と
-     20px 以上あけるには W ≥ 1238px。切り上げて 1240px。 */
+     幅の閾値は実測: 目盛り線11px + 最長の行「問い合わせ」5字
+     (9.5px×1.16×5 ≒ 56px)、左端37px から x∈[37,104]。
+     本文カラムの左端 (W-1000)/2 と 20px 以上あけるには W ≥ 1248px。
+     余裕を見て 1280px。★ 行を長くしたら必ずこの数字を計算し直すこと
+     (7字の「汀ノ庭について」だと 1296px 要る)。 */
   /* display:contents なので、.idx の配置の基準は #ruler のまま */
   #rulerIndex{display:contents}
   #ruler .idx{
@@ -169,7 +171,7 @@
   }
   #ruler .idx:hover,#ruler .idx.now{color:var(--line)}
   #ruler .idx::before{content:""; position:absolute; left:-11px; top:50%; width:6px; height:1px; background:rgba(143,212,222,.3)}
-  @media (min-width:1240px){ html[data-index] #ruler{height:min(56vh,460px)} }
+  @media (min-width:1280px){ html[data-index] #ruler{height:min(56vh,460px)} }
   #rdot{
     position:absolute; left:-3px; top:0; width:5px; height:5px; border-radius:50%;
     background:var(--line); box-shadow:0 0 10px rgba(143,212,222,.9);
@@ -756,8 +758,8 @@
       <a class="idx" data-sec="flow"       href="#flow">進め方</a>
       <a class="idx" data-sec="faq"        href="#faq">FAQ</a>
       <a class="idx" data-sec="news"       href="#news">お知らせ</a>
-      <a class="idx" data-sec="contact"    href="#contact">お問い合わせ</a>
-      <a class="idx" data-sec="about"      href="#about">汀ノ庭について</a>
+      <a class="idx" data-sec="contact"    href="#contact">問い合わせ</a>
+      <a class="idx" data-sec="about"      href="#about">概要</a>
     </nav>
   </div>
 
@@ -3764,7 +3766,7 @@ let seamNameH = 14;
 function layoutRulerIndex(){
   seamNameH = seamNameEl ? (seamNameEl.offsetHeight || 14) : 14;
   if (!rIdxEls.length) return;
-  const wide = innerWidth >= 1240;
+  const wide = innerWidth >= 1280;
   document.documentElement.toggleAttribute('data-index', wide);
   if (!wide) return;
   const h = rulerEl ? (rulerEl.getBoundingClientRect().height || 460) : 460;
@@ -4392,23 +4394,9 @@ function frame(mode){
   /* ★ ヒーローが消えてから出す。前は sp>0.02 で出していたので、
      目盛りの「300M / 450M」がヒーローの本文とCTAの上に重なっていた
      (水面の1枚を撮って初めて見えた)。 */
-  const rulerOn  = ss(0.17, 0.26, sp);
-  setOp(rulerEl, wideIdx ? rulerOn : rulerOn * retire(0.30,0.50));
-  {
-    const tOn = 1 - ss(0.30,0.50,hpR), iOn = wideIdx ? ss(0.44,0.62,hpR) : 0;
-    for (const el of tickEls) setOp(el, wideIdx ? tOn : 1);
-    for (const el of rIdxEls) setOp(el, iOn);
-  }
+  setOp(rulerEl, ss(0.17, 0.26, sp) * (wideIdx ? 1 : retire(0.30,0.50)));
   footEl.classList.toggle('isIndex', hp > 0.56);
-  /* 本文が下端を通り始めたら敷き、読み終えて海が戻るところで引く。 */
-  setOp(footScrimEl, ss(0.04, 0.14, hpR) * (1 - ss(0.15, 0.55, rp)));
-  /* 狭い画面では本文が全幅なので、汀の一枚のあいだだけ下端の計器を引く。
-     画面に残すのは 線・名前・紙 の3つだけにする。
-     ★ 0.58 までに戻し切ること。0.62 で描画が止まるので、そこで薄いまま
-     凍ると本文のあいだずっと薄い計器になる。 */
-  setOp(footEl, innerWidth <= 820
-    ? 1 - 0.94*ss(0.18, 0.30, hpR)*(1 - ss(0.50, 0.58, hpR))
-    : 1);
+  writeSurvivors(wideIdx);
 
   /* 名前を、いま出来たばかりの1本の上に置く。 */
   if (seamNameEl){
@@ -4863,6 +4851,25 @@ function tickRecall(){
   }
 }
 
+/* 潜航のあとも生きている計器の見え方。frame() からも、描画を止めたあとの
+   writeReadingHud() からも同じ式で書く。
+   ★ 本文中は frame() が止まるので、ここで書かないと 0.62 の手前の
+   中途半端な値のまま凍る。 */
+function writeSurvivors(wideIdx, reading){
+  /* 汀の一枚では下端の計器を引く。画面に残すのは 線・名前・紙 の3つだけ。
+     幅で条件を変えない ―― 1280px の画面でも本文の左端は 140px しかなく、
+     計器と見出しが必ず当たる。 */
+  const fo = reading ? 1 : 1 - ss(0.18, 0.30, hpR);
+  setOp(footEl, fo);
+  /* 本文が下端を通るあいだだけ敷く。計器が引いている間は敷きも要らない。
+     第三幕では引く(戻ってきた海を汚さない)。 */
+  setOp(footScrimEl, fo * ss(0.04, 0.14, hpR) * (1 - ss(0.15, 0.55, rp)));
+  const tOn = reading ? 0 : 1 - ss(0.30, 0.50, hpR);
+  const iOn = wideIdx ? (reading ? 1 : ss(0.52, 0.62, hpR)) : 0;
+  for (const el of tickEls) setOp(el, wideIdx ? tOn : 1);
+  for (const el of rIdxEls) setOp(el, iOn);
+}
+
 function writeReadingHud(){
   /* 保険。窓は hpR=0.60 で閉じ切るので通常ここは 0 のままだが、
      万一ずれたまま凍ると本文が数pxずれた位置で固まって戻らない。 */
@@ -4879,6 +4886,7 @@ function writeReadingHud(){
     fillEl.style.transform = `scaleX(${q})`;
     rdotEl.style.transform = `translate3d(0, ${(readP*rulerH).toFixed(1)}px, 0)`;
   }
+  writeSurvivors(document.documentElement.hasAttribute('data-index'), true);
   locWant = curSecName;
   capWant = 'Reading';
   tickLabels();

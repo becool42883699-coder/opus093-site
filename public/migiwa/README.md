@@ -9,6 +9,11 @@
 ただし **連絡手段が1つも生きていない**。LINE・メール・フォームの3つとも
 宛先が未確定で、画面上は「準備中」と表示している。
 問い合わせを受けるには `site.config.js` の `contact` を1つでも埋める必要がある。
+**ここが空のままだと、サイトは本来の仕事ができない。** 公開前の唯一の必須項目。
+
+**公開ドメインが決まったら `og:image` を絶対URLに直すこと。** いまは相対パス
+（`./og.webp`）で、相対を解決しないクローラでは共有カードに画像が出ない。
+画像は `node scripts/make-og.mjs` で実際の画面から作り直せる。
 
 何を約束しているかの記録は `公開前チェック.md`。
 
@@ -38,8 +43,32 @@ NEXT_OUTPUT=export NEXT_PUBLIC_BASE_PATH=/opus093-site npm run build
 node scripts/check-links.mjs
 ```
 
+```
+# 実装中の1点確認（verify を全部回すより速い）
+node scripts/probe.mjs --view=desktop --diag=0 --script=scratch/xxx.mjs
+
+# 直書きした module スクリプトの構文チェック（ブラウザを立てる前に）
+node scripts/syntax-check.mjs public/migiwa/index.html
+
+# 撮った実フレームの画素で文字のコントラストを測る
+node scripts/measure-contrast.mjs artifacts/rects-desktop.json
+
+# 共有カード（OGP画像）を実際の画面から作り直す
+node scripts/make-og.mjs
+```
+
 リンク検査は必ず `out/` に対して行う。`public/` を配ると `/becool/` が
 無いので、生きているリンクまで404に見える。
+
+**文字のコントラストはCSSの色を見ても分からない。** 3Dの上に乗るので、
+背景は毎フレーム変わる絵になる。`measure-contrast.mjs` は各文字の
+**外側 2〜9px の帯**を背景とみなして測る。矩形の中の画素を使うと、
+白文字のアンチエイリアスを背景と誤認して、地色が暗い場面でも 1.1:1 と出る。
+
+**この環境は約1fps（SwiftShader）。** 潜航は smoothDamp で追従するので、
+スクロール位置を変えたあと収束を待つには「フレームが進んだうえで値が
+動いていない」ことを条件にする。値だけ見ると同じフレームを2回読んで
+「止まった」と誤判定する。
 
 `--tier=high` を付けないと、検証機は hardwareConcurrency が小さいため
 必ず low ティアになり、high 側にしかない経路(水面の映り込み)が
