@@ -228,6 +228,13 @@
   }
   #seamName em{font-style:normal; opacity:.62; margin-left:1.1em; letter-spacing:.3em}
 
+  /* 本文が下端の計器の下を通るときだけ敷く。第三幕では引く(海を汚さない)。 */
+  #footScrim{
+    position:absolute; left:0; right:0; bottom:0; opacity:0; pointer-events:none;
+    height:calc(96px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, rgba(3,20,27,.93) 0%, rgba(3,20,27,.70) 46%, rgba(3,20,27,0) 100%);
+  }
+
   #foot{position:absolute; left:var(--gut); bottom:calc(30px + env(safe-area-inset-bottom))}
   #foot .loc{
     display:block; margin-top:9px;
@@ -603,7 +610,7 @@
   html[data-reading="1"] #hud{pointer-events:none}
   /* 計器は全部退くが、#foot と #ruler だけは持ち場を替えて残る
      (深度を測る物から、読了を測る物へ)。 */
-  html[data-reading="1"] #hud > *:not(#foot):not(#ruler):not(.recall){opacity:0!important; pointer-events:none!important}
+  html[data-reading="1"] #hud > *:not(#foot):not(#ruler):not(#footScrim):not(.recall){opacity:0!important; pointer-events:none!important}
   /* 本文の途中で上へ戻ろうとした人にだけ、名前と行き先を返す。
      常時出す帯にはしない(15,000字の上に何かを浮かせ続けない)。 */
   /* ★ 退役のときに JS が inline で opacity と visibility を書いているので、
@@ -666,6 +673,9 @@
     #foot{left:var(--gut); bottom:calc(24px + env(safe-area-inset-bottom))}
     #foot .track{width:120px}
     #foot.isIndex .track{width:calc(100vw - var(--gut) * 2)}
+    /* 本文と場所を取り合うので、読んでいる間は見出しの1行を畳む */
+    html[data-reading="1"] #locCap{display:none}
+    #footScrim{height:calc(78px + env(safe-area-inset-bottom))}
     #foot .loc{font-size:11.5px}
     #counter{right:var(--gut); bottom:calc(24px + env(safe-area-inset-bottom))}
     #counter .n{font-size:11.5px}
@@ -781,6 +791,10 @@
     <span class="m" id="workMeta">2025 — LIVE</span>
     <a class="go mono" id="workLink" hidden>View project <em>↗</em></a>
   </div>
+
+  <!-- 本文がせり上がってきたら、下端の計器の下に敷く。
+       固定の計器と流れる本文が同じ場所を取り合うのはモバイルで必ず起きる。 -->
+  <div id="footScrim" aria-hidden="true"></div>
 
   <div id="seamName" class="mono shade" aria-hidden="true">汀ノ庭<em>MIGIWA STUDIO</em></div>
 
@@ -3706,6 +3720,7 @@ const rulerEl   = document.getElementById('ruler');
 const footEl    = document.getElementById('foot');
 const locCapEl  = document.getElementById('locCap');
 const seamNameEl= document.getElementById('seamName');
+const footScrimEl = document.getElementById('footScrim');
 const tickEls   = [...document.querySelectorAll('#ruler .tick')];
 const rIdxEls   = [...document.querySelectorAll('#ruler .idx')];
 outroOpenEl     = document.getElementById('outroOpen');
@@ -4385,6 +4400,15 @@ function frame(mode){
     for (const el of rIdxEls) setOp(el, iOn);
   }
   footEl.classList.toggle('isIndex', hp > 0.56);
+  /* 本文が下端を通り始めたら敷き、読み終えて海が戻るところで引く。 */
+  setOp(footScrimEl, ss(0.04, 0.14, hpR) * (1 - ss(0.15, 0.55, rp)));
+  /* 狭い画面では本文が全幅なので、汀の一枚のあいだだけ下端の計器を引く。
+     画面に残すのは 線・名前・紙 の3つだけにする。
+     ★ 0.58 までに戻し切ること。0.62 で描画が止まるので、そこで薄いまま
+     凍ると本文のあいだずっと薄い計器になる。 */
+  setOp(footEl, innerWidth <= 820
+    ? 1 - 0.94*ss(0.18, 0.30, hpR)*(1 - ss(0.50, 0.58, hpR))
+    : 1);
 
   /* 名前を、いま出来たばかりの1本の上に置く。 */
   if (seamNameEl){
