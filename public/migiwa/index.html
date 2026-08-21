@@ -695,7 +695,13 @@
     #diveBtn{bottom:calc(74px + env(safe-area-inset-bottom))}
     #diveBtn i{width:40px; height:40px}
     #diveBtn::after{width:40px; height:40px; margin-left:-20px}
-    #legibility{background:linear-gradient(180deg, rgba(2,14,20,.42) 0%, rgba(2,14,20,.12) 30%, transparent 55%, rgba(2,14,20,.5) 100%)}
+    /* ★ ここで background ごと差し替わるので、上端の沈みも作り直す。
+       前は .42 しかなく、明るい空にナビが重なる幅では読めなくなる。 */
+    #legibility{background:
+      linear-gradient(to bottom, rgba(2,14,20,.80) 0, rgba(2,14,20,.60) 52px,
+                                 rgba(2,14,20,.18) 112px, transparent 176px),
+      linear-gradient(to top,    rgba(2,14,20,.50) 0, rgba(2,14,20,.18) 96px, transparent 184px),
+      linear-gradient(180deg, rgba(2,14,20,.10) 0%, transparent 42%)}
   }
   /* 背の低い横向き */
   @media (max-height:520px){
@@ -3984,6 +3990,9 @@ window.__diag = {
      常に空になる。外から収束を待つには、この値を見る。 */
   get dive(){ return sp; },
   /* 汀線を外から機械的に測るための読み出し口 */
+  /* 診断用。何が写っているかを切り分けるために、魚だけ消せるようにする。 */
+  set hideFish(v){ fishMesh.visible = !v; },
+  get hideFish(){ return !fishMesh.visible; },
   /* 魚を外から数える。姿が出ているか / 何匹が濃いかを目視でなく数で見る。 */
   get fish(){
     const A = fAttr, out = [];
@@ -4624,8 +4633,11 @@ function updateFish(fdt, focusAmt){
          0.56 で止めるのは、海の時間が止まるのと同じ場所で止めないと
          尾を振らないまま滑る「硬い魚」になるから。 */
       const nx = 0.82 - 1.24*ss(0.28, 0.50, hpR) - 0.18*ss(0.50, 0.56, hpR);
-      placeNdc(_fp, nx, 0, aspect < 1 ? 0.26 : 0.115, 0.42*2.10);
-      _fp.y = cam.y;
+      /* ★ 目線とぴったり同じ高さに置くと、汀の線とシートの上端が同じ場所に
+         来るので体の下半分が紙の裏へ回り、光の滲みにしか見えない。
+         線のすぐ上（画面高の 5.5%）を泳がせて、腹が線をかすめる形にする。
+         画角に対する比で置くので、端末が変わっても同じ絵になる。 */
+      placeNdc(_fp, nx, 0.055, aspect < 1 ? 0.30 : 0.14, 0.42*2.10);
       fPos[o] = _fp.x; fPos[o+1] = _fp.y; fPos[o+2] = _fp.z;
       _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(-1);   // 真横(左向き)
       fDir[o] = _fs.x; fDir[o+2] = _fs.z;
