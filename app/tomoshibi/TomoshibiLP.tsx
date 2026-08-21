@@ -214,6 +214,11 @@ function Eyebrow({ children }: { children: ReactNode }) {
  * 写真の枠。要綱により画像は生成せずパスを参照する。
  * ファイルが無い(=404)ときは灰白の下地にパス名を小さく出す。
  */
+/* 静的エクスポートの basePath(/opus093-site) は、Next が書き換えるのは
+   自前のアセットと next/image だけで、**素の <img src> には付かない**。
+   "/images/…" のままだと公開URLで必ず404になるのでここで前置きする。 */
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 function Shot({ src, alt, className, eager }: { src: string; alt: string; className: string; eager?: boolean }) {
   const [broken, setBroken] = useState(false);
   const ref = useRef<HTMLImageElement>(null);
@@ -239,8 +244,12 @@ function Shot({ src, alt, className, eager }: { src: string; alt: string; classN
     // eslint-disable-next-line @next/next/no-img-element -- 要綱で <img src> による参照を指定
     <img
       ref={ref}
-      src={src}
+      src={`${BASE}${src}`}
       alt={alt}
+      /* <img> は既定でネイティブのドラッグが働き、カルーセルの
+         framer-motion のドラッグを奪ってスワイプが効かなくなる
+         (プレースホルダは <span> だったので気付かなかった)。 */
+      draggable={false}
       loading={eager ? "eager" : "lazy"}
       decoding="async"
       onError={() => setBroken(true)}
