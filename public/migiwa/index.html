@@ -3432,6 +3432,9 @@ window.__diag = {
   get fps(){ return fpsStats(); },
   get cost(){ return CAL && CAL.result; },
   get quality(){ return { step: qStep, dropped: LADDER.slice(0, qStep).map(l => l.name) }; },
+  /* 潜航の進捗。進捗バーは transform で動かしているので style.width は
+     常に空になる。外から収束を待つには、この値を見る。 */
+  get dive(){ return sp; },
   /* 水面の映り込みとガラスの屈折が「実際に効いているか」を外から読めるようにする。
      絵を見て判断すると、シェーダが黙って落ちた時に気付けない。 */
   get effects(){ return {

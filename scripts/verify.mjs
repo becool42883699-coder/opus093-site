@@ -217,8 +217,12 @@ for (const stop of STOPS) {
   await page.evaluate(y => scrollTo(0, y), Math.round(maxScroll * stop.p));
   for (let i = 0; i < 90; i++) {
     await page.waitForTimeout(500);
-    const w = await page.evaluate(() => parseFloat(document.getElementById('diveFill').style.width) || 0);
-    if (Math.abs(w - stop.p * 100) < 1.2) break;
+    /* 進捗バーは transform で動かすので style.width は常に空文字。
+       それを読んでいたので、この収束判定は一度も成立しておらず、
+       毎回 45秒の固定待ちに落ちていた(検証が遅かった原因)。
+       ページ側が持っている実際の進捗を読む。 */
+    const w = await page.evaluate(() => (window.__diag && window.__diag.dive) || 0);
+    if (Math.abs(w - stop.p) < 0.012) break;
   }
   await page.screenshot({ path: path.join(outDir, `${stop.name}.png`), timeout: 180000 });
   sigs[stop.name] = await signature();
