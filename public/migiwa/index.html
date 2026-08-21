@@ -6,6 +6,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>汀ノ庭 — MIGIWA STUDIO</title>
 <meta name="description" content="北九州市小倉北区のホームページ制作 MIGIWA STUDIO。その会社らしさを見つけて、デザイン・AI導入・SEOまで一緒に仕上げます。">
+<!-- 共有されたときの見え方。★ og:image は公開ドメインが決まったら
+     絶対URLに直すこと(相対パスを解決しないクローラがある)。 -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="汀ノ庭 — MIGIWA STUDIO">
+<meta property="og:title" content="汀ノ庭 — MIGIWA STUDIO">
+<meta property="og:description" content="北九州市小倉北区のホームページ制作 MIGIWA STUDIO。その会社らしさを見つけて、デザイン・AI導入・SEOまで一緒に仕上げます。">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:image" content="./og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="夕暮れの海面と、水中に浮かぶ制作実績のガラス板">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#03141b">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2303141b'/%3E%3Cpath d='M6 13h20M16 13v13' stroke='%238FD4DE' stroke-width='2'/%3E%3C/svg%3E">
 <style>
@@ -83,6 +95,7 @@
 
   /* ---- ヘッダー ---- */
   #hud header{
+    text-shadow:0 1px 12px rgba(2,14,20,.55), 0 0 2px rgba(2,14,20,.35);
     position:absolute; top:0; left:0; right:0;
     display:flex; justify-content:space-between; align-items:flex-start;
     padding:calc(26px + env(safe-area-inset-top)) var(--gut) 0;
@@ -107,7 +120,7 @@
     .brand em{font-size:7.5px; letter-spacing:.24em; text-indent:.24em}
   }
   nav{display:flex; gap:30px; padding-top:1px}
-  nav a{position:relative; opacity:.62; transition:opacity .35s var(--ease)}
+  nav a{position:relative; opacity:.74; transition:opacity .35s var(--ease)}
   nav a::after{
     content:""; position:absolute; left:0; right:100%; bottom:-6px; height:1px;
     background:var(--line); transition:right .4s var(--ease);
@@ -211,6 +224,7 @@
     position:absolute; left:0; right:0; top:0; text-align:center;
     font-size:clamp(10.5px,1.35vw,14px); letter-spacing:.34em; text-indent:.34em;
     color:var(--bone); opacity:0; pointer-events:none;
+    text-shadow:0 1px 16px rgba(2,14,20,.75), 0 0 3px rgba(2,14,20,.5);
   }
   #seamName em{font-style:normal; opacity:.62; margin-left:1.1em; letter-spacing:.3em}
 
@@ -281,6 +295,8 @@
     transition:border-color .35s var(--ease), gap .35s var(--ease);
   }
   #work .go[hidden]{display:none}
+  /* 板の明るい面に重なるので、地ではなく影で持たせる(実測 2.16:1 だった) */
+  #work{text-shadow:0 1px 14px rgba(2,14,20,.72), 0 0 3px rgba(2,14,20,.5)}
   #work .go em{font-style:normal; transition:transform .35s var(--ease)}
   #work .go:hover{border-color:var(--line); gap:12px}
   #work .go:hover em{transform:translate(2px,-2px)}
@@ -289,9 +305,15 @@
   /* 周辺減光は「1枚だけ」。3D側にもVignetteを入れると二重になるので入れていない。 */
   #vig{position:fixed; inset:0; z-index:6; pointer-events:none;
     background:radial-gradient(124% 96% at 50% 46%, transparent 54%, rgba(1,9,13,.62) 100%)}
-  /* 本文が乗る左下だけ、ごく薄く沈める(文字の可読性を影ではなく地で作る) */
+  /* 文字が乗るところだけ、ごく薄く沈める(可読性を影ではなく地で作る)。
+     ★ 上端の帯は必須。斜めの1枚だけだと右上のナビが夕焼けの空に重なり、
+     実測 1.14:1 まで落ちていた(左しか沈めていなかった)。
+     下端はロケーションと章カウンタのため。深度で薄れるので水中では消える。 */
   #legibility{position:fixed; inset:0; z-index:5; pointer-events:none;
-    background:linear-gradient(105deg, rgba(2,14,20,.5) 0%, rgba(2,14,20,.2) 34%, transparent 62%)}
+    background:
+      linear-gradient(to bottom, rgba(2,14,20,.56) 0, rgba(2,14,20,.24) 86px, transparent 152px),
+      linear-gradient(to top,    rgba(2,14,20,.44) 0, rgba(2,14,20,.16) 92px, transparent 172px),
+      linear-gradient(105deg, rgba(2,14,20,.5) 0%, rgba(2,14,20,.2) 34%, transparent 62%)}
   #grain{position:fixed; inset:0; z-index:7; pointer-events:none; opacity:.038; mix-blend-mode:overlay;
     background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="220" height="220" filter="url(%23n)" opacity="0.6"/></svg>')}
   /* 水面を切る瞬間の一瞬の白。JSが 60ms だけ点ける */
@@ -4242,7 +4264,6 @@ function frame(mode){
 
   for (const layer of [motes, bubbles, fore]){
     const { geo, count, opt, uni } = layer.userData;
-    uni.uOrigin.value.copy(layer.position);
     const arr = geo.attributes.position.array;
     const spd = geo.attributes.aSpeed.array;
     /* 折り返しは「レイヤー原点からの局所座標」ではなく「カメラから見た高さ」で
@@ -4277,6 +4298,9 @@ function frame(mode){
     const cap = span * 0.15;
     layer.position.y = camY + Math.max(-cap, Math.min(cap, ud.fy - camY));
     layer.position.x = camera.position.x + Math.max(-cap, Math.min(cap, ud.fx - camera.position.x));
+    /* 魚が押しのける計算はワールド座標で比べるので、層の原点を渡す。
+       ★ 位置を動かした「あと」に渡す(先に渡すと1フレーム古い値になる)。 */
+    uni.uOrigin.value.copy(layer.position);
   }
 
   /* --- ポストの駆動 ------------------------------------------ */
@@ -4366,7 +4390,7 @@ function frame(mode){
   if (seamNameEl){
     const on = ss(0.40,0.48,hpR) * (1 - ss(0.58,0.66,hpR));
     if (on > 0.002){
-      const ty = `translate3d(0,${Math.round(innerHeight*(1 - cEff(hpR)) - seamNameH - 14)}px,0)`;
+      const ty = `translate3d(0,${Math.round(innerHeight*(1 - cEff(hpR)) - seamNameH - 20)}px,0)`;
       if (seamNameEl.dataset.ty !== ty){ seamNameEl.dataset.ty = ty; seamNameEl.style.transform = ty; }
     }
     setOp(seamNameEl, on);
