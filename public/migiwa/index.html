@@ -2558,6 +2558,9 @@ function cardTexture(o){
   const w = 1024, h = 576;
   const pad = 34;
 
+  /* ★ 画像は後から届くので、描画はやり直せる形にしておく。
+     届くまでは地のグラデーションだけを出し、届いたら差し替える。 */
+  const paint = (shot) => {
   c.clearRect(0,0,w,h);
 
   /* --- 版面 --- */
@@ -2596,39 +2599,36 @@ function cardTexture(o){
   const sx = inner.x + inner.w*0.40, sy = inner.y+72;
   const sw = inner.w*0.60, sh = inner.h-72-58;
 
-  const sg = c.createLinearGradient(sx, sy, sx, sy+sh);
-  sg.addColorStop(0,   '#0a2b39');
-  sg.addColorStop(0.52,'#0d3d50');
-  sg.addColorStop(0.58,'#123f52');
-  sg.addColorStop(1,   '#061a24');
-  c.fillStyle = sg; c.fillRect(sx, sy, sw, sh);
-
-  // 水平線と、その上の光源
-  const hz = sy + sh*0.56;
-  const glow = c.createRadialGradient(sx+sw*0.5, hz, 0, sx+sw*0.5, hz, sw*0.46);
-  glow.addColorStop(0, o.glow);
-  glow.addColorStop(0.35,'rgba(150,215,230,0.22)');
-  glow.addColorStop(1, 'rgba(150,215,230,0)');
-  c.fillStyle = glow; c.fillRect(sx, sy, sw, sh);
-  c.fillStyle = 'rgba(214,244,250,0.5)'; c.fillRect(sx, hz, sw, 1);
-  // 水面に落ちる光の柱
-  const beam = c.createLinearGradient(sx+sw*0.5, hz, sx+sw*0.5, sy+sh);
-  beam.addColorStop(0,'rgba(220,246,250,0.34)');
-  beam.addColorStop(1,'rgba(220,246,250,0)');
-  c.fillStyle = beam; c.fillRect(sx+sw*0.40, hz, sw*0.20, sh*0.44);
-
-  // サムネイル内の小さなUI(これがあると"Webサイト"に見える)
-  c.fillStyle = 'rgba(226,246,250,0.62)';
-  c.fillRect(sx+16, sy+16, 34, 2);
-  c.fillStyle = 'rgba(226,246,250,0.30)';
-  c.fillRect(sx+sw-70, sy+16, 20, 2);
-  c.fillRect(sx+sw-44, sy+16, 20, 2);
-  c.font = '400 26px "Times New Roman", Georgia, serif';
-  c.fillStyle = 'rgba(236,250,252,0.92)';
-  c.fillText(o.thumbLine, sx+16, sy+sh-52);
-  c.fillStyle = 'rgba(226,246,250,0.28)';
-  c.fillRect(sx+16, sy+sh-36, 120, 1.5);
-  c.fillRect(sx+16, sy+sh-27, 86, 1.5);
+  /* ★ ここに「Webサイトらしい絵」を描いてはいけない。
+     以前は海のグラデーションと架空のキャッチ(Drive your life. /
+     Never stop the site.)を描いていた。実在の取引先の名前に、
+     こちらが作った英語の一行が付いている状態だった。
+     どちらも元にした試作(public/lab/trexworks_umiatari_v6.html)から
+     引き継いだ仮の文字で、先方のサイトにその一行は存在しない。
+     実写は shots/ に既にある。板は「実際に作ったもの」を見せる場所。 */
+  if (shot && shot.naturalWidth){
+    const ar = shot.naturalWidth / shot.naturalHeight;
+    let dw = sw, dh = sh, ox = 0;
+    /* cover。ただし上端を揃える —— サイトの顔は上にあるので、
+       中央合わせにすると必ずヒーローが切れる。 */
+    if (ar > sw/sh){ dw = sh*ar; ox = (sw-dw)/2; } else { dh = sw/ar; }
+    c.save();
+    c.beginPath(); c.rect(sx, sy, sw, sh); c.clip();
+    c.drawImage(shot, sx+ox, sy, dw, dh);
+    /* 水中の板なので、素のままだと明るすぎて背景から浮く */
+    const wash = c.createLinearGradient(sx, sy, sx, sy+sh);
+    wash.addColorStop(0, 'rgba(6,30,42,0.18)');
+    wash.addColorStop(1, 'rgba(4,20,30,0.46)');
+    c.fillStyle = wash; c.fillRect(sx, sy, sw, sh);
+    c.restore();
+  } else {
+    /* 届くまでの地。文字は1つも置かない。 */
+    const sg = c.createLinearGradient(sx, sy, sx, sy+sh);
+    sg.addColorStop(0,   '#0a2b39');
+    sg.addColorStop(0.62,'#0b3244');
+    sg.addColorStop(1,   '#061a24');
+    c.fillStyle = sg; c.fillRect(sx, sy, sw, sh);
+  }
 
   c.strokeStyle = 'rgba(214,244,250,0.34)'; c.lineWidth = 1;
   c.strokeRect(sx+0.5, sy+0.5, sw-1, sh-1);
@@ -2666,12 +2666,23 @@ function cardTexture(o){
     c.fillText(o.tag, inner.x+inner.w-tw-19, inner.y+82);
   }
   c.restore();
+  };
+  paint(null);
 
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   tex.generateMipmaps = true;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
+  /* 実写は後追いで届ける。潜航の開始を待たせない。
+     失敗しても地のまま続ける(console に1行だけ残す)。 */
+  if (o.shot){
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload  = () => { paint(img); tex.needsUpdate = true; };
+    img.onerror = () => console.warn('実績の画面が読めない: ' + o.shot);
+    img.src = o.shot;
+  }
   return tex;
 }
 
@@ -2679,11 +2690,11 @@ const WORKS = [
   /* url は「実在するものだけ」入れる。相対パスなので配信場所が変わっても追従する。
      url が無い作品はホバーもクリックもしない(存在しない先へ誘導しないため)。 */
   { num:'01', kind:'01 / Web site',     title:'GARAGE BeCool',   year:'2025', foot:'WEB SITE',
-    tag:'LIVE / SELECTED', glow:'rgba(255,208,150,0.40)', thumbLine:'Drive your life.',
+    tag:'LIVE / SELECTED', shot:'./shots/becool-pc.webp',
     url:'../becool/',
     lines:['DESIGN — IMPLEMENT — SEO','FUKUOKA / KITAKYUSHU','PERIOD — 2025 / IN OPERATION'] },
   { num:'02', kind:'02 / Corporate',    title:'T-REX CO., LTD.', year:'2026', foot:'CORPORATE SITE',
-    tag:'', glow:'rgba(255,170,150,0.34)', thumbLine:'Never stop the site.',
+    tag:'', shot:'./shots/trex-pc.webp',
     url:'../',
     lines:['STRATEGY — DESIGN — BUILD','CMS / RECRUIT / MEO','PERIOD — 2026 / IN OPERATION'] },
 ];
