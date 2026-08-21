@@ -67,7 +67,13 @@
 
   /* ============================ HUD ============================
      3Dの上に乗る情報層。pointer-events は原則切って、リンクだけ拾う。 */
-  #hud{position:fixed; inset:0; z-index:10; pointer-events:none}
+  /* ★ 本文のシートは z-index:15。計器を 10 のままにすると、せり上がって
+     きたシートの裏に回り、地色の透け(5.5%)ぶんしか見えない計器になる。
+     渡したあとも生きている #foot / #ruler はシートの上に居なければ
+     意味がないので、#hud ごと 16 へ上げる。
+     子の z-index では逃げられない ―― #hud 自身が積み重ねの文脈を作るため。
+     pointer-events は none のままなので、本文のリンクは塞がない。 */
+  #hud{position:fixed; inset:0; z-index:16; pointer-events:none}
   #hud a,#hud button{pointer-events:auto; color:inherit; text-decoration:none; background:none; border:0; cursor:pointer; font:inherit}
   #hud a:focus-visible,#hud button:focus-visible{outline:1px solid var(--line); outline-offset:5px}
 
@@ -140,11 +146,15 @@
      幅の閾値は実測: 目盛り線11px + 和文4字(11px×1.16)= 約51px、
      左端37px から x∈[37,99]。本文カラムの左端 (W-1000)/2 と
      20px 以上あけるには W ≥ 1238px。切り上げて 1240px。 */
+  /* display:contents なので、.idx の配置の基準は #ruler のまま */
+  #rulerIndex{display:contents}
   #ruler .idx{
     position:absolute; left:11px; transform:translateY(-50%);
     font-family:var(--f-mono); font-size:9.5px; letter-spacing:.16em;
     color:rgba(196,224,228,.42); white-space:nowrap; opacity:0;
+    transition:color .3s var(--ease);
   }
+  #ruler .idx:hover,#ruler .idx.now{color:var(--line)}
   #ruler .idx::before{content:""; position:absolute; left:-11px; top:50%; width:6px; height:1px; background:rgba(143,212,222,.3)}
   @media (min-width:1240px){ html[data-index] #ruler{height:min(56vh,460px)} }
   #rdot{
@@ -559,8 +569,10 @@
   }
   #backTop em{font-style:normal; transition:transform .35s var(--ease)}
   #backTop:hover em{transform:translateY(-3px)}
-  /* 地色0%の窓。ここには文字を置かない */
-  #outroOpen{height:var(--open-h)}
+  /* 地色0%の窓。ここには文字を置かない。
+     ★ 高さは open-h だけでなく fade-h も足す。足さないと「水面へもどる」が
+     移り変わりの途中(地色12%)に載り、集光が来た瞬間に読めなくなる。 */
+  #outroOpen{height:calc(var(--open-h) + var(--fade-h))}
 
   #contentFoot{border-top:0; padding:26px 0 14px; font-size:10px; letter-spacing:.2em; color:rgba(196,224,228,.70)}
 
@@ -569,7 +581,19 @@
   html[data-reading="1"] #hud{pointer-events:none}
   /* 計器は全部退くが、#foot と #ruler だけは持ち場を替えて残る
      (深度を測る物から、読了を測る物へ)。 */
-  html[data-reading="1"] #hud > *:not(#foot):not(#ruler){opacity:0!important; pointer-events:none!important}
+  html[data-reading="1"] #hud > *:not(#foot):not(#ruler):not(.recall){opacity:0!important; pointer-events:none!important}
+  /* 本文の途中で上へ戻ろうとした人にだけ、名前と行き先を返す。
+     常時出す帯にはしない(15,000字の上に何かを浮かせ続けない)。 */
+  /* ★ 退役のときに JS が inline で opacity と visibility を書いているので、
+     ここは !important でないと勝てない(本文中は frame() が止まっていて
+     JS 側が書き直さないため、消えたままになる)。 */
+  #hud header.recall{
+    opacity:1!important; visibility:visible!important; pointer-events:auto!important;
+    padding-bottom:22px;
+    background:linear-gradient(to bottom, rgba(3,20,27,.94) 0%, rgba(3,20,27,.82) 62%, rgba(3,20,27,0) 100%);
+    transition:opacity .35s var(--ease), transform .35s var(--ease);
+  }
+  #hud header.recall a{pointer-events:auto}
   html[data-reading="1"] #vig,
   html[data-reading="1"] #grain,
   html[data-reading="1"] #legibility{opacity:0; pointer-events:none}
@@ -682,23 +706,27 @@
     <span class="v" id="depthVal">000.0<small>M</small></span>
   </div>
 
-  <div id="ruler" aria-hidden="true">
-    <span id="rdot"></span>
-    <span class="tick" style="top:0%">000M</span>
-    <span class="tick" style="top:25%">150M</span>
-    <span class="tick" style="top:50%">300M</span>
-    <span class="tick" style="top:75%">450M</span>
-    <span class="tick" style="top:100%">600M</span>
-    <span class="idx" data-sec="philosophy">思想</span>
-    <span class="idx" data-sec="service">制作</span>
-    <span class="idx" data-sec="ai">AI</span>
-    <span class="idx" data-sec="seo">SEO</span>
-    <span class="idx" data-sec="works">実績</span>
-    <span class="idx" data-sec="flow">進め方</span>
-    <span class="idx" data-sec="faq">FAQ</span>
-    <span class="idx" data-sec="news">お知らせ</span>
-    <span class="idx" data-sec="contact">お問い合わせ</span>
-    <span class="idx" data-sec="about">汀ノ庭について</span>
+  <div id="ruler">
+    <span id="rdot" aria-hidden="true"></span>
+    <span class="tick" aria-hidden="true" style="top:0%">000M</span>
+    <span class="tick" aria-hidden="true" style="top:25%">150M</span>
+    <span class="tick" aria-hidden="true" style="top:50%">300M</span>
+    <span class="tick" aria-hidden="true" style="top:75%">450M</span>
+    <span class="tick" aria-hidden="true" style="top:100%">600M</span>
+    <!-- 深度の目盛りは、本文へ渡ったところでそのまま目次になる。
+         飾りではなく実際に飛べるリンクにする(1240px 以上でだけ出す)。 -->
+    <nav id="rulerIndex" aria-label="本文の目次">
+      <a class="idx" data-sec="philosophy" href="#philosophy">思想</a>
+      <a class="idx" data-sec="service"    href="#service">制作</a>
+      <a class="idx" data-sec="ai"         href="#ai">AI</a>
+      <a class="idx" data-sec="seo"        href="#seo">SEO</a>
+      <a class="idx" data-sec="works"      href="#works">実績</a>
+      <a class="idx" data-sec="flow"       href="#flow">進め方</a>
+      <a class="idx" data-sec="faq"        href="#faq">FAQ</a>
+      <a class="idx" data-sec="news"       href="#news">お知らせ</a>
+      <a class="idx" data-sec="contact"    href="#contact">お問い合わせ</a>
+      <a class="idx" data-sec="about"      href="#about">汀ノ庭について</a>
+    </nav>
   </div>
 
   <!-- 水面。置くのはロックアップと業種の一行、潜行の誘導だけ。
@@ -2966,7 +2994,9 @@ const fishMat = new THREE.ShaderMaterial({
          「翻る」で読ませる(過剰なブルームは要綱で禁止)。 */
       float belly = smoothstep(0.62, 0.38, vUv.y);
       belly = mix(belly, 1.0 - belly, vTurn);
-      vec3 col = mix(vec3(0.020,0.055,0.075), vec3(0.16,0.30,0.33), belly);
+      /* 背は暗く腹は明るい。★ ここを弱くすると、屋外のスマホでも暗いノートでも
+         「板が浮いている」だけになって姿が読めない。濃さではなく明暗差で読ませる。 */
+      vec3 col = mix(vec3(0.016,0.044,0.062), vec3(0.21,0.38,0.41), belly);
       col *= 1.0 + vTurn * 0.55;
       // 眼。これ1点で「紙の切り抜き」が「生き物」になる
       float eye = 1.0 - smoothstep(0.012, 0.026, length((vUv - vec2(0.175, 0.545)) * vec2(1.0, 1.9)));
@@ -2975,7 +3005,7 @@ const fishMat = new THREE.ShaderMaterial({
       vec3 Vv = normalize(vW - cameraPosition);
       col = waterFogV(col, d, uDepth, mix(1.0,0.3,uDepth), vW.y, Vv, uSun);
       col = mix(col, uFog, farFade(d));
-      gl_FragColor = vec4(col, m * 0.86 * (1.0 - smoothstep(12.0, 22.0, d)) * vAlpha);
+      gl_FragColor = vec4(col, m * 0.95 * (1.0 - smoothstep(13.0, 24.0, d)) * vAlpha);
     }`,
 });
 
@@ -3021,7 +3051,7 @@ const fScr   = new Float32Array(NF*2);   // 前フレームの画面座標(半�
 const fStart = new Float32Array(NF);     // 驚き(0..1)。近い個体へ伝わる
 const fOff   = new Float32Array(NF*3);   // 群れの中でのもち場
 for (let i=0;i<NF;i++){
-  fSize[i] = 0.75 + frnd()*1.05;
+  fSize[i] = 1.15 + frnd()*1.15;
   fBeat[i] = 6.0 + frnd()*3.4;
   fAttr.aPhase.array[i]  = frnd()*6.2831;
   fAttr.aAmp.array[i]    = 0.018 + frnd()*0.010;
@@ -3677,12 +3707,17 @@ const SEC_NAME = {
   philosophy:'思想', service:'制作', ai:'AI', seo:'SEO', works:'実績',
   flow:'進め方', faq:'FAQ', news:'お知らせ', contact:'お問い合わせ', about:'汀ノ庭について',
 };
-let curSecName = '思想';
+let curSecName = '思想', curSecId = 'philosophy';
 {
   const secs = [...document.querySelectorAll('#content section[id]')];
   if (secs.length && 'IntersectionObserver' in window){
     const io = new IntersectionObserver((es) => {
-      for (const e of es) if (e.isIntersecting && SEC_NAME[e.target.id]) curSecName = SEC_NAME[e.target.id];
+      for (const e of es){
+        if (!e.isIntersecting || !SEC_NAME[e.target.id]) continue;
+        curSecName = SEC_NAME[e.target.id];
+        curSecId = e.target.id;
+        for (const a of rIdxEls) a.classList.toggle('now', a.dataset.sec === curSecId);
+      }
     }, { rootMargin:'-45% 0px -45% 0px', threshold:0 });
     for (const el of secs) io.observe(el);
   }
@@ -3695,11 +3730,21 @@ function layoutRulerIndex(){
   const wide = innerWidth >= 1240;
   document.documentElement.toggleAttribute('data-index', wide);
   if (!wide) return;
+  const h = rulerEl ? (rulerEl.getBoundingClientRect().height || 460) : 460;
+  /* 実測の位置に置くが、短い節が続くと行が重なる(お知らせ / お問い合わせ)。
+     下から順に最小の間隔だけ空ける。順序は入れ替えない。 */
+  const GAP = 14;
+  const tops = [];
   for (const el of rIdxEls){
     const sec = document.getElementById(el.dataset.sec);
-    if (!sec) continue;
-    const top = sec.getBoundingClientRect().top + scrollY - contentTopDoc;
-    el.style.top = (Math.min(100, Math.max(0, top / contentSpan * 100))).toFixed(2) + '%';
+    const t = sec ? (sec.getBoundingClientRect().top + scrollY - contentTopDoc) / contentSpan * h : 0;
+    tops.push(Math.min(h, Math.max(0, t)));
+  }
+  for (let i = tops.length - 2; i >= 0; i--){
+    if (tops[i+1] - tops[i] < GAP) tops[i] = tops[i+1] - GAP;
+  }
+  for (let i = 0; i < rIdxEls.length; i++){
+    rIdxEls[i].style.top = (tops[i] / h * 100).toFixed(2) + '%';
   }
 }
 
@@ -4025,7 +4070,11 @@ function frame(mode){
     if (readingUI !== reading){
       reading = readingUI;
       document.documentElement.dataset.reading = reading ? '1' : '0';
-      if (!reading) resetFishState();          // 本文から戻った直後の入力は捨てる
+      if (!reading){
+        resetFishState();                      // 本文から戻った直後の入力は捨てる
+        recallUp = 0; recallOn = false;
+        if (headerEl) headerEl.classList.remove('recall');
+      }
     }
     /* 第三幕(rp>0)に入っていれば描画は続ける。海だけが戻る。 */
     if (readingUI && rp <= 0){
@@ -4304,7 +4353,7 @@ function frame(mode){
   /* ★ ヒーローが消えてから出す。前は sp>0.02 で出していたので、
      目盛りの「300M / 450M」がヒーローの本文とCTAの上に重なっていた
      (水面の1枚を撮って初めて見えた)。 */
-  const rulerOn  = ss(0.035, 0.17, sp) * ss(0.02, 0.10, sp);
+  const rulerOn  = ss(0.17, 0.26, sp);
   setOp(rulerEl, wideIdx ? rulerOn : rulerOn * retire(0.30,0.50));
   {
     const tOn = 1 - ss(0.30,0.50,hpR), iOn = wideIdx ? ss(0.44,0.62,hpR) : 0;
@@ -4551,7 +4600,7 @@ function updateFish(fdt, focusAmt){
     const gone = fScr[i*2] > 1.25 || fScr[i*2+1] > 1 || dist > 15;
     if (!fishReady || (gone && A.aAlpha.array[i] < 0.06)){
       const down = targetP >= sp ? -1 : 1;                  // 潜っている向き
-      const zd = 4.0 + frnd()*7.0;                          // 前方の距離
+      const zd = 3.5 + frnd()*6.0;                          // 前方の距離
       fPos[o]   = cam.x + (frnd()-0.5)*0.88*zd;
       fPos[o+1] = cam.y + down*(0.3 + frnd()*0.35*zd);
       fPos[o+2] = cam.z - zd;
@@ -4597,8 +4646,9 @@ function updateFish(fdt, focusAmt){
       } else _fs.normalize();
       const push = (1 - dist/rad) * (1.1 + 1.4*fStart[i]);
       tx += _fs.x * rad * push; ty += _fs.y * rad * push * 0.45; tz += _fs.z * rad * push;
-    } else if (alive && !isHero1 && idle > 0.02){
-      /* 止まっていると近づく。ただし中央の禁止帯へは踏み込ませない。 */
+    } else if (alive && !isHero1 && idle > 0.02 && dist > rad*1.7){
+      /* 止まっていると近づく。ただし警戒の半径の 1.7倍までで止める
+         (そこから内側は上の逃避が受け持つので、寄っては離れる間合いになる)。 */
       tx += (cam.x - fPos[o])   * 0.22 * idle;
       ty += (cam.y - fPos[o+1]) * 0.10 * idle;
       tz += (cam.z - fPos[o+2]) * 0.22 * idle;
@@ -4658,7 +4708,7 @@ function updateFish(fdt, focusAmt){
        (x=1.2, y=0 → r=1.2)が「端＝濃く出す」と判定され、見えない魚に
        可視予算を全部使ってしまう。 */
     const onScreen = _fp.z <= 1 && Math.abs(_fp.x) <= 1.12 && Math.abs(_fp.y) <= 1.12;
-    let want = onScreen ? 0.22 + 0.78*ss(0.18, 0.55, r) : 0;
+    let want = onScreen ? 0.34 + 0.66*ss(0.18, 0.55, r) : 0;
     cand.push([i, want, isHero1 ? 99 : (onScreen ? r : -1)]);
 
     /* 尾。位相は CPU で進める。★ timeScale を掛け忘れると、凍った海の中で
@@ -4748,6 +4798,23 @@ function renderSettledFrame(){
 /* 本文を読んでいるあいだに書いてよいのは transform と opacity と
    textContent だけ。レイアウトを触る書き込みを1つでも混ぜると
    毎フレーム強制リフローが走る。 */
+/* 本文の途中で「上へ戻ろうとした」ことを検出して、名前と行き先を返す。
+   常時出す帯にはしない。下向きに動き出したらすぐ引っ込める。 */
+let recallY = 0, recallUp = 0, recallOn = false;
+function tickRecall(){
+  const y = scrollY;
+  const d = recallY - y;                   // 正 = 上へ戻っている
+  recallY = y;
+  if (Math.abs(d) > 400){ recallUp = 0; }  // アンカー移動などの大跳びは捨てる
+  else if (d > 0) recallUp = Math.min(260, recallUp + d);
+  else recallUp = Math.max(0, recallUp + d*3);
+  const want = recallUp > 140 && y > innerHeight * 0.6;
+  if (want !== recallOn){
+    recallOn = want;
+    if (headerEl) headerEl.classList.toggle('recall', want);
+  }
+}
+
 function writeReadingHud(){
   /* 保険。窓は hpR=0.60 で閉じ切るので通常ここは 0 のままだが、
      万一ずれたまま凍ると本文が数pxずれた位置で固まって戻らない。 */
@@ -4767,6 +4834,7 @@ function writeReadingHud(){
   locWant = curSecName;
   capWant = 'Reading';
   tickLabels();
+  tickRecall();
 }
 
 /* ================================================================
