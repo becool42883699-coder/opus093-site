@@ -120,7 +120,7 @@
     .brand em{font-size:7.5px; letter-spacing:.24em; text-indent:.24em}
   }
   nav{display:flex; gap:30px; padding-top:1px}
-  nav a{position:relative; opacity:.74; transition:opacity .35s var(--ease)}
+  nav a{position:relative; opacity:.82; transition:opacity .35s var(--ease)}
   nav a::after{
     content:""; position:absolute; left:0; right:100%; bottom:-6px; height:1px;
     background:var(--line); transition:right .4s var(--ease);
@@ -320,7 +320,8 @@
      下端はロケーションと章カウンタのため。深度で薄れるので水中では消える。 */
   #legibility{position:fixed; inset:0; z-index:5; pointer-events:none;
     background:
-      linear-gradient(to bottom, rgba(2,14,20,.56) 0, rgba(2,14,20,.24) 86px, transparent 152px),
+      linear-gradient(to bottom, rgba(2,14,20,.84) 0, rgba(2,14,20,.66) 56px,
+                                 rgba(2,14,20,.20) 118px, transparent 190px),
       linear-gradient(to top,    rgba(2,14,20,.44) 0, rgba(2,14,20,.16) 92px, transparent 172px),
       linear-gradient(105deg, rgba(2,14,20,.5) 0%, rgba(2,14,20,.2) 34%, transparent 62%)}
   #grain{position:fixed; inset:0; z-index:7; pointer-events:none; opacity:.038; mix-blend-mode:overlay;
@@ -4588,9 +4589,11 @@ function updateFish(fdt, focusAmt){
 
   const tanH = Math.tan(camera.fov * Math.PI/360);
   const aspect = camera.aspect;
-  /* NDC の狙った場所へ、狙った画面幅で置く(端末と画角に依存しない) */
-  const placeNdc = (out, nx, ny, wantW) => {
-    const dist = 0.42 / Math.max(1e-4, wantW * tanH * aspect);
+  /* NDC の狙った場所へ、狙った画面幅で置く(端末と画角に依存しない)。
+     ★ 実寸は板の 0.42 ではなく「板 × その個体の倍率」。倍率を忘れると
+     狙った幅の倍以上に大きく写る(実測 3.98m のところ 8.1m が正しい)。 */
+  const placeNdc = (out, nx, ny, wantW, len) => {
+    const dist = len / Math.max(1e-4, wantW * tanH * aspect);
     _fs.copy(camFwd).cross(F_UP).normalize();                    // 右
     out.copy(cam).addScaledVector(camFwd, dist)
        .addScaledVector(_fs, nx * dist * tanH * aspect)
@@ -4612,7 +4615,7 @@ function updateFish(fdt, focusAmt){
          0.56 で止めるのは、海の時間が止まるのと同じ場所で止めないと
          尾を振らないまま滑る「硬い魚」になるから。 */
       const nx = 0.82 - 1.24*ss(0.28, 0.50, hpR) - 0.18*ss(0.50, 0.56, hpR);
-      placeNdc(_fp, nx, 0, aspect < 1 ? 0.26 : 0.115);
+      placeNdc(_fp, nx, 0, aspect < 1 ? 0.26 : 0.115, 0.42*2.10);
       _fp.y = cam.y;
       fPos[o] = _fp.x; fPos[o+1] = _fp.y; fPos[o+2] = _fp.z;
       _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(-1);   // 真横(左向き)
@@ -4658,7 +4661,7 @@ function updateFish(fdt, focusAmt){
     if (hero1T >= 0 && i === 1){
       /* 1.60秒。NDC を決め打ちして端末に依らず同じ画面位置に出す */
       const u = hero1T/1.60, e = u*u*(3-2*u);
-      placeNdc(_fs, 0.74 - 0.44*e, 0.30 - 0.18*e, aspect < 1 ? 0.24 : 0.115);
+      placeNdc(_fs, 0.74 - 0.44*e, 0.30 - 0.18*e, aspect < 1 ? 0.24 : 0.115, 0.42*fSize[i]);
       tx = _fs.x; ty = _fs.y; tz = _fs.z;
     }
 
