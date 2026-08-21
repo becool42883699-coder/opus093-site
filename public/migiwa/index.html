@@ -3012,7 +3012,12 @@ const fore = makeMotes(TIER.fore, {
 const NF = TIER.fish;
 const fishUniforms = { uTime:{value:0}, uDepth:{value:0}, uSun:{value:SUN}, uFog:{value:fogCol} };
 const fishMat = new THREE.ShaderMaterial({
-  transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  /* ★ depthWrite を切ると、被写界深度が魚の画素で「魚の奥にある景色」の
+     深さを読む。汀の魚はカメラの手前 5〜8m に居るのに、背後の砂(30m超)の
+     ボケ量が当たって永久にぼやけたままになる(実際そうなっていた)。
+     形は discard で抜いているので、深度を書いても輪郭は濁らない。
+     ついでに魚どうしの前後も正しくなる。 */
+  transparent:true, depthWrite:true, side:THREE.DoubleSide,
   uniforms: fishUniforms,
   vertexShader:`
     attribute float aPhase, aAmp, aSquash, aAlpha, aTurn;
@@ -3036,29 +3041,61 @@ const fishMat = new THREE.ShaderMaterial({
     varying vec2 vUv; varying vec3 vW; varying float vAlpha, vTurn;
     ${G_WATER}
     void main(){
-      /* 楕円の胴 + 三角の尾。テクスチャを持たない。
-         ★ 胴を細く・尾を大きく取ると、大きく写したときに尾が主役になって
-         「矢」か「彗星」に見える。胴を厚めに、尾の広がりは控えめに。 */
-      vec2 p = vUv - vec2(0.42, 0.5);
-      float body = 1.0 - smoothstep(0.16, 0.20, length(p*vec2(1.0, 2.05)));
-      vec2 t = vUv - vec2(0.80, 0.5);
-      float tail = (vUv.x > 0.66) ? 1.0 - smoothstep(0.0, 0.12, abs(t.y) - (vUv.x-0.66)*0.34) : 0.0;
-      float m = clamp(body + tail, 0.0, 1.0);
+      /* 姿は uv ではなく「実寸の比」で描く。★板は 0.42×0.20(=2.1:1)なので、
+         uv.y をそのまま高さに使うと胴が横へ 2.1 倍伸びる。以前これで
+         胴が 4.3:1 の平たい楕円になり、ぼけた途端ただの棒に見えていた。
+         X は体長を1とした前後、Y は同じ尺の上下。両方同じ単位なので
+         length() がそのまま円になる。 */
+      float X = vUv.x;
+      float Y = (vUv.y - 0.5) * 0.4762;
+      float aa = 0.011;
+
+      /* 胴。頭は丸く、尾柄へ細る。背びれと尻びれをわずかに立てる。 */
+      float u  = clamp((X - 0.03) / 0.70, 0.0, 1.0);
+      float hb = 0.118 * sin(3.14159265 * pow(u, 0.60));
+      /* 尾柄は絞り切らない。ここが 0 まで落ちると胴と尾が切り離れて
+         「2つの塊」に見える(以前の実装は 0.60〜0.66 が空白だった)。 */
+      hb = max(hb, 0.026 * smoothstep(0.03, 0.09, X) * (1.0 - smoothstep(0.70, 0.80, X)));
+      float up = step(0.0, Y);
+      hb += 0.042 * exp(-pow((X - 0.44) / 0.13,  2.0)) * up;
+      hb += 0.030 * exp(-pow((X - 0.60) / 0.085, 2.0)) * (1.0 - up);
+      float mBody = 1.0 - smoothstep(hb - aa, hb + aa, abs(Y));
+
+      /* 尾。付け根(0.72)で胴と重ねてから開く。後縁を V に切って二叉にする。 */
+      float tv   = clamp((X - 0.72) / 0.26, 0.0, 1.0);
+      /* ★ ここを tv*tv にすると鰭が軸に貼りついたまま先端だけ開き、
+         上下の葉が細い筋になって「燕の尾」に見える。0.8乗で早めに開かせる。 */
+      float ht   = mix(0.026, 0.145, pow(tv, 0.80));
+      float xEnd = 0.980 - 0.105 * (1.0 - smoothstep(0.0, 0.145, abs(Y)));
+      float mTail = (1.0 - smoothstep(ht - aa, ht + aa, abs(Y)))
+                  * smoothstep(0.68, 0.72, X)
+                  * (1.0 - smoothstep(xEnd - 0.012, xEnd + 0.012, X));
+
+      float m = clamp(max(mBody, mTail), 0.0, 1.0);
       if (m < 0.02 || vAlpha < 0.004) discard;
       /* 背は暗く腹は明るい(カウンターシェーディング)。
          身を翻すと明暗が入れ替わる。加算の発光は使わない —— 「光る」ではなく
          「翻る」で読ませる(過剰なブルームは要綱で禁止)。 */
-      float belly = smoothstep(0.62, 0.38, vUv.y);
+      /* ★ 濃淡の幅は「実際の胴の高さ」に合わせる。胴を厚くした時に
+         ここを直し忘れると、明るい腹が下端の数画素だけになり、
+         暗い海の中で魚が丸ごと沈んで見えなくなる(実際そうなった)。 */
+      float belly = smoothstep(0.105, -0.105, Y);
       belly = mix(belly, 1.0 - belly, vTurn);
       /* 背は暗く腹は明るい。★ ここを弱くすると、屋外のスマホでも暗いノートでも
          「板が浮いている」だけになって姿が読めない。濃さではなく明暗差で読ませる。 */
       vec3 col = mix(vec3(0.016,0.044,0.062), vec3(0.21,0.38,0.41), belly);
       col *= 1.0 + vTurn * 0.55;
       // 眼。これ1点で「紙の切り抜き」が「生き物」になる
-      float eye = 1.0 - smoothstep(0.012, 0.026, length((vUv - vec2(0.175, 0.545)) * vec2(1.0, 1.9)));
+      float eye = 1.0 - smoothstep(0.014, 0.024, length(vec2(X - 0.115, Y - 0.030)));
       col = mix(col, vec3(0.015,0.030,0.038), eye*0.85);
       float d = length(vW - cameraPosition);
       vec3 Vv = normalize(vW - cameraPosition);
+      /* ★ ここに「魚だけ水を薄くする」係数を入れたくなるが、入れても
+         変わらない。実測: d を 45% にしても魚の明るさは sRGB で 1 しか
+         動かなかった(600m の階調圧縮の方が支配的なので)。
+         この場面の水は中央値 sRGB 12、魚は 20。魚は既に「水の中で
+         いちばん明るいもの」になっている。これ以上明るくすると
+         暗い海に発光体が1つ浮くだけになる。 */
       col = waterFogV(col, d, uDepth, mix(1.0,0.3,uDepth), vW.y, Vv, uSun);
       col = mix(col, uFog, farFade(d));
       gl_FragColor = vec4(col, m * 0.95 * (1.0 - smoothstep(13.0, 24.0, d)) * vAlpha);
@@ -3080,7 +3117,11 @@ const FISH_SEED = (() => {
 })();
 const frnd = mulberry32(FISH_SEED);
 
-const fishGeo  = new THREE.PlaneGeometry(0.42, 0.20);
+/* ★ 分割を入れないと頂点が四隅の4つしかなく、頂点シェーダの
+   smoothstep(0.15,1.0,uv.x) が 0 と 1 でしか評価されない。
+   曲線が消えて板が平行四辺形に傾くだけになり、「泳ぐ」ではなく「傾く」に見える。
+   横10分割で胴がしなる。頂点は22個、instancing なので費用はほぼ0。 */
+const fishGeo  = new THREE.PlaneGeometry(0.42, 0.20, 10, 1);
 const fishMesh = new THREE.InstancedMesh(fishGeo, fishMat, NF);
 fishMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
 fishMesh.frustumCulled = false;         // 位置はCPUが持つ。境界球は当てにならない
@@ -3566,6 +3607,10 @@ function measureLayout(){
   contentSpan   = Math.max(1, contentEl.scrollHeight - innerHeight);
   if (typeof layoutRulerIndex === 'function') layoutRulerIndex();
 }
+/* 読み取り点を目盛りの 0..1 に写す。目次の行と同じ分母を使う。 */
+function readHeadP(){
+  return Math.min(1, Math.max(0, (scrollY + innerHeight*READ_HEAD - contentTopDoc) / contentSpan));
+}
 function measureSeam(){
   if (!contentEl) return;
   /* ★ 自分が当てている transform を必ず引く。
@@ -3764,25 +3809,38 @@ const SEC_NAME = {
   philosophy:'思想', service:'制作', ai:'AI', seo:'SEO', works:'実績',
   flow:'進め方', faq:'FAQ', news:'お知らせ', contact:'お問い合わせ', about:'汀ノ庭について',
 };
-let curSecName = '思想', curSecId = 'philosophy';
-{
-  const secs = [...document.querySelectorAll('#content section[id]')];
-  if (secs.length && 'IntersectionObserver' in window){
-    const io = new IntersectionObserver((es) => {
-      for (const e of es){
-        if (!e.isIntersecting || !SEC_NAME[e.target.id]) continue;
-        curSecName = SEC_NAME[e.target.id];
-        curSecId = e.target.id;
-        for (const a of rIdxEls) a.classList.toggle('now', a.dataset.sec === curSecId);
-      }
-    }, { rootMargin:'-45% 0px -45% 0px', threshold:0 });
-    for (const el of secs) io.observe(el);
-  }
+/* ★ 「いま読んでいる点」は1つだけ。画面の上から 45% の高さ。
+   目次の行・針・見出しの3つが必ずこの1点を見る。
+   以前は針が readP(=画面の上端)、見出しが IntersectionObserver の
+   画面中央の帯、と別々の基準だったので、行の真上に針が乗っているのに
+   その行が光らない、という食い違いが常時見えていた。
+   さらに IO は「交差が変わった時」しか鳴らないので、目次のリンクで
+   飛んだ先に節が1つも無い(=あとがき)と、前の見出しが居座り続けた。 */
+const READ_HEAD = 0.45;
+const SEC_LIST = [...document.querySelectorAll('#content section[id]')].filter(el => SEC_NAME[el.id]);
+const secTops  = SEC_LIST.map(() => 0);
+function measureSections(){
+  for (let i = 0; i < SEC_LIST.length; i++) secTops[i] = SEC_LIST[i].getBoundingClientRect().top + scrollY;
+}
+/* ★ curSecId の初期値を先頭の節にすると、最初の呼び出しが
+   「変わっていない」で早期returnし、.now が一度も付かない。空で始める。 */
+let curSecName = '思想', curSecId = '';
+function updateSection(){
+  if (!SEC_LIST.length) return;
+  const head = scrollY + innerHeight * READ_HEAD;
+  let k = 0;
+  for (let i = 0; i < SEC_LIST.length; i++) if (secTops[i] <= head) k = i;
+  const id = SEC_LIST[k].id;
+  if (id === curSecId) return;
+  curSecId = id; curSecName = SEC_NAME[id] || curSecName;
+  for (const a of rIdxEls) a.classList.toggle('now', a.dataset.sec === curSecId);
 }
 /* 目次の行は等分ではなく、実際の節の位置に置く(針と食い違わせない)。 */
 let seamNameH = 14;
 function layoutRulerIndex(){
   seamNameH = seamNameEl ? (seamNameEl.offsetHeight || 14) : 14;
+  /* 目次を出さない幅でも見出しの判定に要るので、先に必ず測る */
+  measureSections();
   if (!rIdxEls.length) return;
   const wide = innerWidth >= 1280;
   document.documentElement.toggleAttribute('data-index', wide);
@@ -3793,8 +3851,8 @@ function layoutRulerIndex(){
   const GAP = 14;
   const tops = [];
   for (const el of rIdxEls){
-    const sec = document.getElementById(el.dataset.sec);
-    const t = sec ? (sec.getBoundingClientRect().top + scrollY - contentTopDoc) / contentSpan * h : 0;
+    const k = SEC_LIST.findIndex(x => x.id === el.dataset.sec);
+    const t = k >= 0 ? (secTops[k] - contentTopDoc) / contentSpan * h : 0;
     tops.push(Math.min(h, Math.max(0, t)));
   }
   for (let i = tops.length - 2; i >= 0; i--){
@@ -4127,6 +4185,9 @@ function frame(mode){
        IntersectionObserver は1〜2フレーム遅れ、最後のライブフレームと
        凍結フレームの姿勢がずれるので、ここで同期的に決める。 */
     const readingUI = hpR >= 0.62;
+    /* ★ ここで呼ぶ。writeReadingHud だけに置くと、第三幕(rp>0)は
+       本流の frame() を通るので見出しが前の節のまま居座る。 */
+    if (readingUI) updateSection();
     if (readingUI !== reading){
       reading = readingUI;
       document.documentElement.dataset.reading = reading ? '1' : '0';
@@ -4440,7 +4501,7 @@ function frame(mode){
   const wmix = ss(0.50, 0.62, hp);
   fillEl.style.transform = `scaleX(${(sp*(1-wmix) + readP*wmix).toFixed(4)})`;
   rdotEl.style.transform = `translate3d(0, ${
-    ((Math.min(1, depthM/DEPTH_MAX)*(1-wmix) + readP*wmix) * rulerH).toFixed(1)}px, 0)`;
+    ((Math.min(1, depthM/DEPTH_MAX)*(1-wmix) + readHeadP()*wmix) * rulerH).toFixed(1)}px, 0)`;
 
   const SECN = Math.max(1, cards.length);
   const sec = Math.min(SECN - 1, Math.floor(sp * SECN));
@@ -4612,6 +4673,15 @@ function updateFish(fdt, focusAmt){
      ★ hpR の純関数。時間で駆動すると巻き戻したとき違う場所に出る。 */
   const heroSeam = hpR > 0.24 && hpR < 0.99;
   if (!heroSeam) fishHeroDist = 0;
+  /* ★ 汀の一匹だけは「実寸」ではなく「距離」を固定する。
+     この水は濃く、実測で 3.45m でも光の約96%を吸う。遠くに置くと
+     真っ黒の中の真っ黒になり、体験の受け渡しに誰も気付かない。
+     発光を足して誤魔化さない —— 間にある水を減らす。
+     ★ 実寸を固定して placeNdc に距離を解かせると、縦画面では
+     狙う画面幅が広い(0.30)ぶん距離が倍以上になり、スマホだけ
+     魚が消える。距離を固定して実寸の方を解くと、どの端末でも
+     間にある水の厚みが同じになる。 */
+  const HERO2_DIST = 2.05;
 
   const tanH = Math.tan(camera.fov * Math.PI/360);
   const aspect = camera.aspect;
@@ -4619,13 +4689,16 @@ function updateFish(fdt, focusAmt){
      ★ 実寸は板の 0.42 ではなく「板 × その個体の倍率」。倍率を忘れると
      狙った幅の倍以上に大きく写る(実測 3.98m のところ 8.1m が正しい)。 */
   /* wantW は NDC の幅。画面に占める割合はその半分になる(NDCは -1..1)。 */
-  const placeNdc = (out, nx, ny, wantW, len) => {
-    const dist = len / Math.max(1e-4, wantW * tanH * aspect);
+  const placeNdcAt = (out, nx, ny, dist) => {
     _fs.copy(camFwd).cross(F_UP).normalize();                    // 右
     out.copy(cam).addScaledVector(camFwd, dist)
        .addScaledVector(_fs, nx * dist * tanH * aspect)
        .addScaledVector(F_UP, ny * dist * tanH);
   };
+  const placeNdc = (out, nx, ny, wantW, len) =>
+    placeNdcAt(out, nx, ny, len / Math.max(1e-4, wantW * tanH * aspect));
+  /* 距離を決めた時、狙った画面幅になる板の倍率 */
+  const sizeForNdc = (wantW, dist) => (dist * wantW * tanH * aspect) / 0.42;
 
   /* 濃く出せる数に硬い天井を置く。空白を作らないと、その次の1匹が
      「出来事」にならない。 */
@@ -4649,15 +4722,17 @@ function updateFish(fdt, focusAmt){
          来るので体の下半分が紙の裏へ回り、光の滲みにしか見えない。
          線のすぐ上（画面高の 5.5%）を泳がせて、腹が線をかすめる形にする。
          画角に対する比で置くので、端末が変わっても同じ絵になる。 */
-      placeNdc(_fp, nx, 0.055, aspect < 1 ? 0.30 : 0.18, 0.42*2.10);
-      fishHeroDist = _fp.distanceTo(cam);
+      const heroW = aspect < 1 ? 0.30 : 0.18;
+      const heroSize = sizeForNdc(heroW, HERO2_DIST);
+      placeNdcAt(_fp, nx, 0.055, HERO2_DIST);
+      fishHeroDist = HERO2_DIST;
       fPos[o] = _fp.x; fPos[o+1] = _fp.y; fPos[o+2] = _fp.z;
       _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(-1);   // 真横(左向き)
       fDir[o] = _fs.x; fDir[o+2] = _fs.z;
       A.aSquash.array[i] = 1; A.aTurn.array[i] = 0;
-      A.aAlpha.array[i] += (0.80*ss(0.24,0.31,hpR) - A.aAlpha.array[i]) * Math.min(1, fdt/0.35);
+      A.aAlpha.array[i] += (0.92*ss(0.24,0.31,hpR) - A.aAlpha.array[i]) * Math.min(1, fdt/0.35);
       A.aPhase.array[i] += fBeat[i]*0.62*fdt*timeScale;
-      writeFish(i, 2.10);
+      writeFish(i, heroSize);
       continue;
     }
 
@@ -4926,7 +5001,9 @@ function writeReadingHud(){
   if (footEl.dataset.rp !== q){
     footEl.dataset.rp = q;
     fillEl.style.transform = `scaleX(${q})`;
-    rdotEl.style.transform = `translate3d(0, ${(readP*rulerH).toFixed(1)}px, 0)`;
+    /* 針は目次の行と同じ物差しで置く。バーはスクロール量のまま
+       (読み取り点で置くと、下端に着く前に 100% になってしまう)。 */
+    rdotEl.style.transform = `translate3d(0, ${(readHeadP()*rulerH).toFixed(1)}px, 0)`;
   }
   writeSurvivors(document.documentElement.hasAttribute('data-index'));
   locWant = curSecName;
