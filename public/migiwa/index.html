@@ -339,7 +339,6 @@
     transition:opacity .9s var(--ease); 
   }
   html.js #boot.gone{opacity:0; pointer-events:none}
-  #noscriptNote{position:fixed; left:var(--gut); bottom:96px; z-index:12; max-width:34em}
   #boot .bar{width:132px; height:1px; background:rgba(143,212,222,.2)}
   #boot .bar span{display:block; height:1px; width:0%; background:var(--line); transition:width .3s linear}
 
@@ -649,8 +648,24 @@
   html[data-nogl] #stage,html[data-nogl] #hud,html[data-nogl] #vig,
   html[data-nogl] #grain,html[data-nogl] #legibility{display:none}
   html[data-nogl] #spacer{height:0}
-  /* JS無効では計器が一切動かないので、居座らせない */
-  html:not(.js) #hud{display:none}
+  /* JS無効では計器が一切動かないので、居座らせない。
+     ★ #hud だけ消しても足りない。620vh の空白がそのまま残るので、
+       本文の前に6画面ぶんの黒が挟まる(実測 5233px)。空白と、その上に
+       敷いていた暗幕・粒子も一緒に畳む。判定は data-nogl と同じ考え方だが、
+       あちらは JS が立てる属性なので JS無効では絶対に立たない。 */
+  html:not(.js) #hud,html:not(.js) #stage,html:not(.js) #vig,
+  html:not(.js) #grain,html:not(.js) #legibility,html:not(.js) #boot{display:none}
+  html:not(.js) #spacer{height:0}
+  /* #hud を畳むと名乗りごと消えるので、JS無効のときだけ静的に置き直す。
+     <noscript> の中身は JS が動いていれば存在しないので、本流には触れない。 */
+  /* ★ 以前は position:fixed で画面の下に貼っていた(3Dの上に置く注記だった)。
+     静的な名乗りに作り替えたので、その規則は消してある。残したままだと
+     こちらは padding しか上書きしないので、名乗りが画面の下に貼り付く。 */
+  #noscriptNote{padding:104px var(--gut) 72px; max-width:36em}
+  #noscriptNote .nsName{font-size:30px; letter-spacing:.14em; line-height:1.5; margin:0}
+  #noscriptNote .nsName .mono{display:block; font-size:11px; letter-spacing:.34em; opacity:.72; margin-top:10px}
+  #noscriptNote .nsLead{margin:22px 0 0}
+  #noscriptNote .nsNote{margin:28px 0 0; opacity:.66}
 
   /* ============================ モバイル ============================
      デスクトップの縮小版にしない。密度を落とし、情報の優先順位を組み替える。
@@ -842,9 +857,11 @@
 </div>
 
 <noscript>
-  <p id="noscriptNote" class="mono shade">
-    JavaScript が無効のため、水中の3D表現は再生されません。本文はそのままお読みいただけます。
-  </p>
+  <div id="noscriptNote">
+    <h1 class="nsName"><b>汀ノ庭</b><span class="mono">MIGIWA STUDIO</span></h1>
+    <p class="nsLead">ホームページをつくっています。<br>福岡・北九州から。</p>
+    <p class="nsNote mono">JavaScript が無効のため、水中の3D表現は再生されません。本文はそのままお読みいただけます。</p>
+  </div>
 </noscript>
 
 <div id="diag" hidden></div>
@@ -3535,6 +3552,13 @@ composer.addPass(gradePass);
    1px 動かしただけで画面が飛ぶのを避けるため、生の値は一切
    シーンへ渡さない。SmoothDamp(常に安定)で重さを作る。
    ================================================================ */
+/* ★ 一次遅れの係数。reduced-motion では必ず 1(=即座に当てる)。
+   個別の行に reduced を書いて回ると必ず1つ書き漏らし、「海は止まって
+   いるのに何かだけがゆっくり動き続ける」状態が残る。実際、魚を止めた
+   あとも被写界深度のピントだけが寄り続けていた。窓口を1つにする。 */
+function ease1(k, dt){ return reduced ? 1 : Math.min(1, dt*k); }
+/* 同じ理由で、追従の時定数も reduced では 0 にする */
+function lag1(t){ return reduced ? 0 : t; }
 function smoothDamp(cur, target, ref, smoothTime, dt){
   const omega = 2 / Math.max(smoothTime, 1e-4);
   const x = omega * dt;
@@ -4208,9 +4232,9 @@ function frame(mode){
   t += dt * timeScale;
 
   /* --- 減衰。スクロールは"重い"、ポインタは"軽いが遅れる" --- */
-  sp = smoothDamp(sp, targetP, spV, reduced ? 0.05 : 0.42, dt);
-  px = smoothDamp(px, pxT, pxV, 0.55, dt);
-  py = smoothDamp(py, pyT, pyV, 0.55, dt);
+  sp = smoothDamp(sp, targetP, spV, lag1(0.42), dt);
+  px = smoothDamp(px, pxT, pxV, lag1(0.55), dt);
+  py = smoothDamp(py, pyT, pyV, lag1(0.55), dt);
   /* 実フレーム時間で割る(丸めた dt で割ると低フレーム時に過大評価される)。
      一次遅れではなく二次のばね: 行き過ぎ約10%・揺り戻し1回・収束0.7秒。
      可変dtで積分すると低フレーム時に発散するので固定ステップで回す。 */
@@ -4273,7 +4297,7 @@ function frame(mode){
   /* --- 汀線の駆動 -------------------------------------------------
      幾何(シートの見かけの上端・明線の位置)は hpR、
      幾何でないもの(時間の倍率・接地影の濃さ)は hp。 */
-  hp = smoothDamp(hp, hpR, hpV, reduced ? 0 : 0.09, dt);
+  hp = smoothDamp(hp, hpR, hpV, lag1(0.09), dt);
   /* 海の時間。hp 0.34→0.56 で 0 へ。第三幕(rp)で 0→1 に戻る。 */
   timeScale = reduced ? 0 : Math.max(1 - ss(0.34, 0.56, hp), ss(0.10, 0.70, rp));
   {
@@ -4340,22 +4364,31 @@ function frame(mode){
     c.rotation.y = u.baseRotY + px*0.045 + Math.sin(t*0.29 + u.sway)*0.012;
     const near = 1 - Math.min(1, Math.abs(camera.position.y - u.base.y)/(isMobile ? 2.2 : 2.7));
     const f = near*near;
-    u.uni.uFocus.value += (f - u.uni.uFocus.value) * Math.min(1, dt*3.2);
+    u.uni.uFocus.value += (f - u.uni.uFocus.value) * ease1(3.2, dt);
     /* ホバーは縁の強調と、ごく僅かに手前へ寄るだけ。大きく動かすと
        板が飛んで「浮いている物」ではなくUI部品に見える。 */
     const hv = (hovered === i && !reduced) ? 1 : 0;
-    u.uni.uHover.value += (hv - u.uni.uHover.value) * Math.min(1, dt*6.0);
+    u.uni.uHover.value += (hv - u.uni.uHover.value) * ease1(6.0, dt);
     c.position.z = u.base.z + u.uni.uHover.value * 0.12;
     /* 水面は不透明なので、水面より上のカードは潜った瞬間に見えなくなるのが
        正しい。放っておくと波の稜線でカードが切り取られたように見える。 */
     const vis = u.base.y > 0.4 ? 1 - ss(0.004, 0.050, depth01) : 1;
-    u.uni.uVis.value += (vis - u.uni.uVis.value) * Math.min(1, dt*4.0);
+    u.uni.uVis.value += (vis - u.uni.uVis.value) * ease1(4.0, dt);
     u.uni.uDepth.value = depth01;
     u.uni.uTime.value = T;
     if (f > focusAmt){ focusAmt = f; focusI = i; focusDist = camera.position.distanceTo(c.position); }
   }
 
-  updateFish(Math.min(dt, 1/30), focusAmt);
+  /* ★ 魚の時計は2つ。位置と姿勢は timeScale(reduced-motion では0)で進め、
+     出入りの濃度だけ実時間で進める。位置まで実時間にすると、
+     reduced-motion で海が止まっているのに魚だけ泳ぎ続ける(実測で
+     3.5秒あけた2枚が一致しなかった)。逆に濃度まで止めると、
+     alpha が 0 のまま一匹も出てこない。 */
+  const fdtRaw = Math.min(dt, 1/30);
+  /* reduced-motion では濃度も「寄せる」のではなく即座に当てる(fdtA=1 で
+     一次遅れの係数が 1 になる)。ゆっくり現れるのも演出なので、
+     静止画として1フレーム目から完成していること。 */
+  updateFish(reduced ? 0 : fdtRaw, focusAmt, reduced ? 1 : fdtRaw);
 
   /* --- 粒子。層ごとに違う遅れ・違う速度で流す ---
      海流は Gerstner の主方向と揃え、深いほど弱める。 */
@@ -4391,7 +4424,7 @@ function frame(mode){
        ずれ量はレイヤーのスパンの15%で頭打ちにし、折り返しが視界に入るのを防ぐ。 */
     const ud = layer.userData;
     const span = opt.yMax - opt.yMin;
-    const lag = reduced ? 0 : opt.lag;
+    const lag = lag1(opt.lag);
     ud.fy = lag ? smoothDamp(ud.fy, camY, ud.fyv, lag, dt) : camY;
     ud.fx = lag ? smoothDamp(ud.fx, camera.position.x, ud.fxv, lag, dt) : camera.position.x;
     const cap = span * 0.15;
@@ -4412,7 +4445,7 @@ function frame(mode){
   // 水中でだけ強く出す(水上は空の描画そのものが眩しさを持っている)
   const rayAmt = (inFront ? (0.10 + 0.62*ss(0.03,0.34,depth01)) * (1 - ss(0.80,1.0,depth01)*0.55) : 0)
                  * (RENDER.godrayOcclusion ? 1 : 0.55);   // 遮蔽できないぶん控えめに
-  atmosPass.uniforms.uRay.value += (rayAmt - atmosPass.uniforms.uRay.value) * Math.min(1, dt*2.5);
+  atmosPass.uniforms.uRay.value += (rayAmt - atmosPass.uniforms.uRay.value) * ease1(2.5, dt);
   atmosPass.uniforms.uDepth01.value = depth01;
   atmosPass.uniforms.uTime.value = t;
   // 被写界深度。焦点は"いま見ている作品"、絞りは深いほど開く
@@ -4421,12 +4454,12 @@ function frame(mode){
      被写界深度でにじんだままだと、せっかくの1匹が光の筋にしか見えない。 */
   const targetFocus = (hpR > 0.26 && fishHeroDist > 0) ? fishHeroDist
                     : (focusAmt > 0.12 ? focusDist : 8.5);
-  atmosPass.uniforms.uFocus.value += (targetFocus - atmosPass.uniforms.uFocus.value) * Math.min(1, dt*1.6);
+  atmosPass.uniforms.uFocus.value += (targetFocus - atmosPass.uniforms.uFocus.value) * ease1(1.6, dt);
   atmosPass.uniforms.uAperture.value = 0.16 + 0.42*depth01;
   /* 潜水カメラの順応。深いほど僅かに開き、暗部の階調を残す
      (黒潰れは禁止事項)。振れ幅は現行値の +10% まで、時定数0.45秒。 */
   const expTarget = RENDER.exposure * (1 + 0.10 * ss(0.15, 0.90, depth01));
-  expShown = smoothDamp(expShown, expTarget, expVel, 0.45, dt);
+  expShown = smoothDamp(expShown, expTarget, expVel, lag1(0.45), dt);
   renderer.toneMappingExposure = expShown;
 
   gradePass.uniforms.uDepth01.value = depth01;
@@ -4451,7 +4484,7 @@ function frame(mode){
   const depthM = Math.min(DEPTH_MAX, Math.max(0, -camYBase) * DEPTH_PER_UNIT);
   lastDepthM = depthM;
   /* 計器の針は即応、数字は0.55秒の一次遅れ。数字が瞬間値だと桁が暴れて読めない */
-  depthShown = smoothDamp(depthShown, depthM, depthVel, 0.55, dt);
+  depthShown = smoothDamp(depthShown, depthM, depthVel, lag1(0.55), dt);
   const nowMs = performance.now();
   if (nowMs - hudTextAt > 100){
     hudTextAt = nowMs;
@@ -4635,7 +4668,7 @@ function resetFishState(){
     fEsc[i*3] = fEsc[i*3+1] = fEsc[i*3+2] = 0; }
 }
 
-function updateFish(fdt, focusAmt){
+function updateFish(fdt, focusAmt, fdtA = fdt){
   const A = fAttr;
   /* 深いほどこちらを認識しなくなる。600m先で最も近くを通る生き物が
      こちらを見ない ―― それが「汀 = どちらの側とも言えない境目」の実演。 */
@@ -4730,7 +4763,7 @@ function updateFish(fdt, focusAmt){
       _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(-1);   // 真横(左向き)
       fDir[o] = _fs.x; fDir[o+2] = _fs.z;
       A.aSquash.array[i] = 1; A.aTurn.array[i] = 0;
-      A.aAlpha.array[i] += (0.92*ss(0.24,0.31,hpR) - A.aAlpha.array[i]) * Math.min(1, fdt/0.35);
+      A.aAlpha.array[i] += (0.92*ss(0.24,0.31,hpR) - A.aAlpha.array[i]) * Math.min(1, fdtA/0.35);
       A.aPhase.array[i] += fBeat[i]*0.62*fdt*timeScale;
       writeFish(i, heroSize);
       continue;
@@ -4887,7 +4920,7 @@ function updateFish(fdt, focusAmt){
     const i = cand[n][0];
     const cap = n < budget ? cand[n][1] : Math.min(cand[n][1], 0.04);
     const a = A.aAlpha.array;
-    a[i] += (cap - a[i]) * Math.min(1, fdt/0.6);
+    a[i] += (cap - a[i]) * Math.min(1, fdtA/0.6);
     writeFish(i, fSize[i]);
   }
 
