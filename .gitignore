@@ -10,3 +10,6 @@ node_modules/
 out/
 public/migiwa/.content.html
 public/migiwa/.works.html
+
+# 実装中の使い捨ての検証スクリプト置き場
+scratch/

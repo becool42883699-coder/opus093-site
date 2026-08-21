@@ -471,7 +471,7 @@
     #content .shot-lead{margin:20px 0 26px}
   }
 
-  #contentFoot{border-top:1px solid rgba(143,212,222,.16); padding:26px 0 40px; font-size:9px; letter-spacing:.2em; color:rgba(196,224,228,.42)}
+  #contentFoot{border-top:1px solid rgba(143,212,222,.16); padding:26px 0 40px; font-size:10px; letter-spacing:.2em; color:rgba(196,224,228,.70)}
 
   /* 本文を読んでいる間は潜航の計器を引っ込め、描画も止める。
      絵が変わらない区間なので、最低FPSはむしろ上がる。 */
@@ -487,9 +487,20 @@
     .facts b{flex-basis:7em}
   }
 
-  #fallback{display:none; position:fixed; inset:0; z-index:20; background:var(--abyss); color:var(--bone);
-    padding:40vh var(--gut) 0; text-align:center; font-size:13px; line-height:2.2}
+  /* WebGL2 が起動できない端末の案内。
+     ★ 以前は position:fixed; inset:0 で全面を覆っており、本文15,000字が
+     1文字も読めなかった。案内は上端の帯に留め、本文は必ず通す。 */
+  #fallback{display:none; position:relative; z-index:16; max-width:1000px; margin:0 auto;
+    padding:14px var(--gut); border-bottom:1px solid rgba(143,212,222,.16);
+    background:var(--abyss); color:var(--bone);
+    font-size:12px; line-height:1.9; letter-spacing:.06em; text-align:left}
   #fallback.on{display:block}
+  /* 3Dが出ない端末では、620vhの黒い空白と動かない計器を丸ごと畳む */
+  html[data-nogl] #stage,html[data-nogl] #hud,html[data-nogl] #vig,
+  html[data-nogl] #grain,html[data-nogl] #legibility{display:none}
+  html[data-nogl] #spacer{height:0}
+  /* JS無効では計器が一切動かないので、居座らせない */
+  html:not(.js) #hud{display:none}
 
   /* ============================ モバイル ============================
      デスクトップの縮小版にしない。密度を落とし、情報の優先順位を組み替える。
@@ -594,7 +605,7 @@
       <span class="mono">MIGIWA STUDIO</span>
     </h1>
     <p class="shade">ホームページをつくっています。<br>福岡・北九州から。</p>
-    <a id="cta" class="mono shade" href="#dive-start">スクロールで、潜ります。 <em>↓</em></a>
+    <a id="cta" class="mono shade" href="#works">スクロールで、潜ります。 <em>↓</em></a>
   </section>
 
   <div id="vert" class="mono">Selected works / 02 projects</div>
@@ -1493,7 +1504,16 @@ const TIER = (() => {
   };
 })();
 
-function fail(){ document.getElementById('fallback').classList.add('on'); bootEl.classList.add('gone'); }
+function fail(){
+  document.getElementById('fallback').classList.add('on');
+  document.documentElement.dataset.nogl = '1';
+  const sp0 = document.getElementById('spacer'); if (sp0) sp0.style.height = '0';
+  /* ★ html.js body{opacity:0} は「起動が終わったら見せる」ための伏せ布。
+     ここで起こさないと、WebGL2 が無い端末は真っ白のまま何も読めない
+     (案内も本文も opacity:0 の下に埋まる)。必ず起こす。 */
+  document.body.classList.add('ready');
+  bootEl.classList.add('gone');
+}
 
 /* WebGL2 が使えない場合は静かに止める。例外を投げるとコンソールに
    未捕捉エラーが残るので、トップレベル await で停止させる
@@ -1608,6 +1628,8 @@ document.getElementById('dprv').textContent = DPR.toFixed(1);
 
 const scene  = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(56, innerWidth/innerHeight, 0.1, 2000);
+/* 基準画角。resize() だけが書き、frame() は速度ぶんを足して使う */
+let fovBase = 56;
 camera.position.set(0, 0.95, 0);
 
 /* 太陽。空・水面反射・シャフト・カードのスペキュラ・後処理の散乱、
@@ -3190,12 +3212,35 @@ if (fine && !reduced){
   }, { passive:true });
 }
 
-function scrollToP(p, smooth){
-  const max = document.documentElement.scrollHeight - innerHeight;
-  scrollTo({ top: max * p, behavior: (reduced || !smooth) ? 'auto' : 'smooth' });
+/* 潜航の進み具合 p(0..1) の位置へ飛ぶ。
+   ★ 除数は「本文まで含めた文書全体」ではなく readScroll と同じ #spacer の
+   span でなければならない。document.scrollHeight で割ると本文2万px を
+   含んだ長さの3割へ飛ぶので、海底を通り越して本文の途中に着地する
+   (実際そうなっていた)。読む式と飛ぶ式は必ず同じ分母を使う。 */
+function diveSpan(){
+  return Math.max(1, (spacerEl ? spacerEl.offsetHeight
+                               : document.documentElement.scrollHeight) - innerHeight);
 }
-const toWorks = (e) => { e.preventDefault(); scrollToP(0.30, true); };
-document.getElementById('cta').addEventListener('click', toWorks);
+function scrollToP(p, smooth){
+  scrollTo({ top: diveSpan() * Math.min(1, Math.max(0, p)),
+             behavior: (reduced || !smooth) ? 'auto' : 'smooth' });
+}
+/* camY = 0.95 - 9.55*smoothstep(sp) の逆関数。飛び先をハードコードせず
+   「カードが焦点に入るカメラ高さ」から幾何で導く。カードを動かしたら
+   飛び先も自動で追従する。 */
+const invEase = (e) => { e = Math.min(1, Math.max(0, e));
+                         return 0.5 - Math.sin(Math.asin(1 - 2*e) / 3); };
+const spForCamY = (y) => invEase((0.95 - y) / 9.55);
+
+const toWorks = (e) => {
+  e.preventDefault();
+  const c = cards[1] || cards[0];
+  scrollToP(c ? spForCamY(c.userData.base.y) : 0.58, true);
+};
+/* ヒーローの「スクロールで、潜ります。」は works ではなく
+   「潜り始めた」位置(camY=-1.11 / 約77M)へ。 */
+const toDive = (e) => { e.preventDefault(); scrollToP(0.30, true); };
+document.getElementById('cta').addEventListener('click', toDive);
 document.getElementById('navWorks').addEventListener('click', toWorks);
 
 /* ---- カードのホバーとクリック --------------------------------------
@@ -3569,7 +3614,10 @@ function frame(){
   /* 同じ速度源からヨーとロールへも分配する。モバイルにも二軸目が入る */
   camera.rotation.y = -px*0.055 + Math.max(-0.030, Math.min(0.030, scrollVel*0.10));
   camera.rotation.z = -px*0.014 + Math.max(-0.012, Math.min(0.012, scrollVel*0.040));
-  const fov = 56 + Math.max(-1.6, Math.min(2.6, scrollVel*7.0));
+  /* ★ 基準画角は resize() が決める(縦画面 64 / 横画面 56)。
+     ここで 56 を直書きすると縦画面の画角指定が毎フレーム消され、
+     solvePortraitLift() は誰も使わない 64 に対して解くことになる。 */
+  const fov = fovBase + Math.max(-1.6, Math.min(2.6, scrollVel*7.0));
   if (Math.abs(camera.fov - fov) > 0.01){ camera.fov = fov; camera.updateProjectionMatrix(); }
 
   /* --- 共有ユニフォーム --- */
@@ -3892,7 +3940,8 @@ function resize(){
   camera.aspect = w/h;
   /* 縦画面はそのままだと画角が狭く、カードが見切れる。
      モバイルは"縮小版"にせず、画角そのものを組み替える。 */
-  camera.fov = h > w ? 64 : 56;
+  fovBase = h > w ? 64 : 56;
+  camera.fov = fovBase;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
   composer.setSize(w, h);
