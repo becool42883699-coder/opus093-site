@@ -3036,11 +3036,13 @@ const fishMat = new THREE.ShaderMaterial({
     varying vec2 vUv; varying vec3 vW; varying float vAlpha, vTurn;
     ${G_WATER}
     void main(){
-      // 楕円の胴 + 三角の尾。テクスチャを持たない
+      /* 楕円の胴 + 三角の尾。テクスチャを持たない。
+         ★ 胴を細く・尾を大きく取ると、大きく写したときに尾が主役になって
+         「矢」か「彗星」に見える。胴を厚めに、尾の広がりは控えめに。 */
       vec2 p = vUv - vec2(0.42, 0.5);
-      float body = 1.0 - smoothstep(0.16, 0.20, length(p*vec2(1.0, 2.5)));
+      float body = 1.0 - smoothstep(0.16, 0.20, length(p*vec2(1.0, 2.05)));
       vec2 t = vUv - vec2(0.80, 0.5);
-      float tail = (vUv.x > 0.62) ? 1.0 - smoothstep(0.0, 0.14, abs(t.y) - (vUv.x-0.62)*0.42) : 0.0;
+      float tail = (vUv.x > 0.66) ? 1.0 - smoothstep(0.0, 0.12, abs(t.y) - (vUv.x-0.66)*0.34) : 0.0;
       float m = clamp(body + tail, 0.0, 1.0);
       if (m < 0.02 || vAlpha < 0.004) discard;
       /* 背は暗く腹は明るい(カウンターシェーディング)。
@@ -4639,12 +4641,15 @@ function updateFish(fdt, focusAmt){
          距離に関係なく必ず水平線の上に投影される。
          0.56 で止めるのは、海の時間が止まるのと同じ場所で止めないと
          尾を振らないまま滑る「硬い魚」になるから。 */
-      const nx = 0.82 - 1.24*ss(0.28, 0.50, hpR) - 0.18*ss(0.50, 0.56, hpR);
+      /* ★ 縦画面は名前が画面の中央に来るので、そのままだと魚が名前の裏に
+         重なる(実機幅の1枚で重なっていた)。重ならない位置まで左へ送る。 */
+      const nxEnd = aspect < 1 ? -0.70 : -0.42;
+      const nx = 0.82 + (nxEnd - 0.82)*ss(0.28, 0.50, hpR) - 0.12*ss(0.50, 0.56, hpR);
       /* ★ 目線とぴったり同じ高さに置くと、汀の線とシートの上端が同じ場所に
          来るので体の下半分が紙の裏へ回り、光の滲みにしか見えない。
          線のすぐ上（画面高の 5.5%）を泳がせて、腹が線をかすめる形にする。
          画角に対する比で置くので、端末が変わっても同じ絵になる。 */
-      placeNdc(_fp, nx, 0.055, aspect < 1 ? 0.42 : 0.18, 0.42*2.10);
+      placeNdc(_fp, nx, 0.055, aspect < 1 ? 0.30 : 0.18, 0.42*2.10);
       fishHeroDist = _fp.distanceTo(cam);
       fPos[o] = _fp.x; fPos[o+1] = _fp.y; fPos[o+2] = _fp.z;
       _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(-1);   // 真横(左向き)
