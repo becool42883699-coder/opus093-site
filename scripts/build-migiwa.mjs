@@ -229,6 +229,28 @@ BASE = '';
 fs.writeFileSync(path.join(DIR, '.content.html'), topHtml);
 fs.writeFileSync(path.join(DIR, '.works.html'), worksHtml);
 
+/* ★ 生成物を手でHTMLへ貼り直さない。貼り直しは必ずズレる
+   (このファイルの冒頭がそもそもそう書いてあるのに、最後の1歩だけ手作業で残っていた)。
+   印で挟んだ範囲をそのまま差し替える。印が無ければ黙って通さず落とす。 */
+function inject(file, tag, html){
+  const p = path.join(DIR, file);
+  const src = fs.readFileSync(p, 'utf8');
+  const open = new RegExp(`([ \\t]*)<!--\\s*build-migiwa:${tag}:start[^>]*-->`);
+  const close = new RegExp(`[ \\t]*<!--\\s*build-migiwa:${tag}:end\\s*-->`);
+  const mo = open.exec(src), mc = close.exec(src);
+  if (!mo || !mc || mc.index < mo.index){
+    console.error(`${file} に build-migiwa:${tag} の印が無い。手で貼らずに印を戻すこと。`);
+    process.exit(4);
+  }
+  const head = src.slice(0, mo.index + mo[0].length);
+  const tail = src.slice(mc.index);
+  const next = head + html + '\n' + tail;
+  if (next === src) return 0;
+  fs.writeFileSync(p, next);
+  return 1;
+}
+const wrote = inject('index.html', 'top', topHtml) + inject('works/index.html', 'works', worksHtml);
+
 /* --- 公開前チェックリスト --- */
 const uniq = [];
 const seen = new Set();
@@ -272,5 +294,5 @@ fs.writeFileSync(path.join(DIR, 'NOTES.md'),
 ${NOTES.map(n => `### ${n.where}\n\n${n.text}\n`).join('\n')}
 `);
 
-console.log(`TOP ${topHtml.length}字 / 実績 ${worksHtml.length}字`);
+console.log(`TOP ${topHtml.length}字 / 実績 ${worksHtml.length}字 / 差し替え ${wrote}ファイル`);
 console.log(`印を付けたブロック ${new Set(ALL_PROV.map(p => p.block)).size}件 / チェック項目 ${uniq.length}件 / 反論メモ ${NOTES.length}件`);
