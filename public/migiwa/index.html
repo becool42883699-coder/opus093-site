@@ -233,8 +233,8 @@
   /* 本文が下端の計器の下を通るときだけ敷く。第三幕では引く(海を汚さない)。 */
   #footScrim{
     position:absolute; left:0; right:0; bottom:0; opacity:0; pointer-events:none;
-    height:calc(96px + env(safe-area-inset-bottom));
-    background:linear-gradient(to top, rgba(3,20,27,.93) 0%, rgba(3,20,27,.70) 46%, rgba(3,20,27,0) 100%);
+    height:calc(84px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, rgba(3,20,27,.94) 0%, rgba(3,20,27,.86) 34%, rgba(3,20,27,0) 100%);
   }
 
   #foot{position:absolute; left:var(--gut); bottom:calc(30px + env(safe-area-inset-bottom))}
@@ -677,7 +677,7 @@
     #foot.isIndex .track{width:calc(100vw - var(--gut) * 2)}
     /* 本文と場所を取り合うので、読んでいる間は見出しの1行を畳む */
     html[data-reading="1"] #locCap{display:none}
-    #footScrim{height:calc(78px + env(safe-area-inset-bottom))}
+    #footScrim{height:calc(72px + env(safe-area-inset-bottom))}
     #foot .loc{font-size:11.5px}
     #counter{right:var(--gut); bottom:calc(24px + env(safe-area-inset-bottom))}
     #counter .n{font-size:11.5px}
@@ -4855,7 +4855,12 @@ function tickRecall(){
    writeReadingHud() からも同じ式で書く。
    ★ 本文中は frame() が止まるので、ここで書かないと 0.62 の手前の
    中途半端な値のまま凍る。 */
-function writeSurvivors(wideIdx, reading){
+function writeSurvivors(wideIdx){
+  /* ★ 「本文に渡ったか」は呼び出し元ではなく hpR から決める。
+     第三幕(rp>0)では frame() が動き直すので、引数で渡していると
+     計器が「潜航中の値」で書かれて消える(実際、海が戻ると同時に
+     読了の計器まで消えていた)。 */
+  const reading = hpR >= 0.62;
   /* 汀の一枚では下端の計器を引く。画面に残すのは 線・名前・紙 の3つだけ。
      幅で条件を変えない ―― 1280px の画面でも本文の左端は 140px しかなく、
      計器と見出しが必ず当たる。 */
@@ -4886,7 +4891,7 @@ function writeReadingHud(){
     fillEl.style.transform = `scaleX(${q})`;
     rdotEl.style.transform = `translate3d(0, ${(readP*rulerH).toFixed(1)}px, 0)`;
   }
-  writeSurvivors(document.documentElement.hasAttribute('data-index'), true);
+  writeSurvivors(document.documentElement.hasAttribute('data-index'));
   locWant = curSecName;
   capWant = 'Reading';
   tickLabels();
