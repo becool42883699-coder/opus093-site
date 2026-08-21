@@ -264,6 +264,77 @@ const contentInfo = await page.evaluate(() => {
            reading: document.documentElement.dataset.reading };
 });
 
+/* ---------------- 汀線(潜り終わりの受け渡し) ----------------
+   「砂の消失線」と「本文の上端罫」が本当に重なるかを、絵ではなく数で見る。
+   透視投影では床の消失線は必ず ndc.y = -tan(θ)/tan(fov/2) に出るので、
+   その画面Yとシート上端の画面Yの差を測ればよい。 */
+let seam = null;
+if (await page.evaluate(() => !!(window.__diag && window.__diag.seam))) {
+  const base = await page.evaluate(() => ({
+    ct: window.__diag.seam.contentTopDoc, ih: innerHeight,
+  }));
+  const waitFrames = async (n, maxMs = 30000) => {
+    const f0 = await page.evaluate(() => window.__diag.frames);
+    const t0 = Date.now();
+    while (Date.now() - t0 < maxMs) {
+      await page.waitForTimeout(300);
+      if (await page.evaluate(() => window.__diag.frames) >= f0 + n) return;
+    }
+  };
+  const rows = [];
+  for (const h of [0.40, 0.44, 0.47, 0.50, 0.53, 0.56, 0.60, 0.64]) {
+    await page.evaluate(y => scrollTo(0, y), Math.round(base.ct - base.ih * (1 - h)));
+    await waitFrames(5);
+    rows.push(await page.evaluate(() => {
+      const s = window.__diag.seam;
+      return { hpR:+s.hpR.toFixed(3), d:+(s.seamPx - s.horizonPx).toFixed(1),
+               th:+s.theta.toFixed(4), sd:s.seamDelta, ts:+s.timeScale.toFixed(2),
+               uL:+s.uLand.toFixed(3), uR:+s.uRim.toFixed(3), dM:+s.depthM.toFixed(1),
+               ox: document.documentElement.scrollWidth > document.documentElement.clientWidth };
+    }));
+  }
+  /* 凍結。本文へ渡り切ったところで記録の1枚が1回だけ描かれ、
+     シートのずれが 0 に戻っていること。 */
+  await page.evaluate(y => scrollTo(0, y), Math.round(base.ct + base.ih * 0.4));
+  await waitFrames(3);
+  const frozen = await page.evaluate(() => {
+    const s = window.__diag.seam;
+    return { reading:s.reading, settled:s.settledDone, sd:s.seamDelta,
+             ts:+s.timeScale.toFixed(2), uL:s.uLand, uR:s.uRim };
+  });
+  const win = rows.filter(r => r.hpR >= 0.435 && r.hpR <= 0.545);
+  seam = {
+    contentTopVh: +(base.ct / base.ih).toFixed(3),
+    rows, frozen,
+    lineMax: Math.max(...win.map(r => Math.abs(r.d))),
+    thetaMax: Math.max(...win.map(r => Math.abs(r.th))),
+    landClean: rows.filter(r => r.hpR >= 0.60).every(r => r.uL === 0 && r.uR === 0),
+    overflowX: rows.some(r => r.ox),
+    depthMax: Math.max(...rows.map(r => r.dM)),
+  };
+}
+
+/* ---------------- 魚 ---------------- */
+let fish = null;
+if (await page.evaluate(() => !!(window.__diag && window.__diag.fish))) {
+  const span = await page.evaluate(() => {
+    const sp = document.getElementById('spacer');
+    return (sp ? sp.offsetHeight : document.documentElement.scrollHeight) - innerHeight;
+  });
+  let best = 0, wake = 0;
+  for (const p of [0.18, 0.42, 0.70]) {
+    await page.evaluate(y => scrollTo(0, y), Math.round(span * p));
+    for (let k = 0; k < 26; k++) {
+      await page.waitForTimeout(500);
+      const f = await page.evaluate(() => window.__diag.fish);
+      if (f.vis > best) best = f.vis;
+      if (f.wake > wake) wake = f.wake;
+      if (best >= 2) break;
+    }
+  }
+  fish = { visMax: best, wakeMax: +wake.toFixed(2) };
+}
+
 const ctxLost = await page.evaluate(() => window.__ctxLost || 0);
 await browser.close();
 server.close();
@@ -312,9 +383,25 @@ const verdict = {
   'ガラスの屈折が有効':        { pass: effects ? (effects.glassOn && !!effects.glassRefract
                                   && effects.glassRefract[0] > 2) : null,
                                value: effects ? JSON.stringify(effects.glassRefract) : 'n/a' },
+  /* 汀線。窓の中(hpR 0.435〜0.545)で2本の線が4px以内、ピッチは0。 */
+  '汀線: 2本の線が4px以内':    { pass: seam ? (seam.lineMax <= 4.0 && seam.thetaMax <= 0.002) : null,
+                               value: seam ? `最大 ${seam.lineMax}px / |θ| ${seam.thetaMax}` : 'n/a' },
+  '汀線: 本文の頭が620vh':     { pass: seam ? Math.abs(seam.contentTopVh - 6.2) < 0.01 : null,
+                               value: seam ? seam.contentTopVh + 'vh' : 'n/a' },
+  '汀線: 0.60以降は帯を描かない': { pass: seam ? seam.landClean : null,
+                               value: seam ? JSON.stringify(seam.rows.filter(r => r.hpR >= 0.60)) : 'n/a' },
+  '汀線: 記録の1枚で凍る':      { pass: seam ? (seam.frozen.reading && seam.frozen.settled
+                                  && seam.frozen.sd === 0 && seam.frozen.ts === 0) : null,
+                               value: seam ? JSON.stringify(seam.frozen) : 'n/a' },
+  '汀線: 計器が600Mを超えない':  { pass: seam ? seam.depthMax <= 600.01 : null,
+                               value: seam ? seam.depthMax + 'M' : 'n/a' },
+  '横スクロールが出ていない':    { pass: seam ? !seam.overflowX : null,
+                               value: seam ? String(!seam.overflowX) : 'n/a' },
+  '魚が画面に出ている':         { pass: fish ? fish.visMax >= 1 : null,
+                               value: fish ? JSON.stringify(fish) : 'n/a' },
 };
 
-const report = { loop: loopNo, view: VIEW, url: BASE, diag, overlay, hudOverlap, effects, contentInfo, ctxLost, messages, diff, verdict };
+const report = { loop: loopNo, view: VIEW, url: BASE, diag, overlay, hudOverlap, effects, contentInfo, seam, fish, ctxLost, messages, diff, verdict };
 fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 
 console.log(`\n=== loop-${String(loopNo).padStart(2, '0')} (${VIEW} ${V.w}x${V.h}) ===`);

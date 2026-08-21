@@ -188,7 +188,10 @@ function renderBlock(key, ref, level){
     ? ` data-provisional="${esc(prov.map(p => p.why).join(' / ').slice(0, 400))}"`
     : '';
   const H = level === 2 ? 'h2' : 'h3';
-  let out = `\n        <div class="blk" id="${esc(b.id)}"${attr}>`;
+  /* ★ 節のidと同じ名前のブロックがある(faq / news / contact)。
+     接頭辞を付けないと文書内に同じidが2つできて、#contact の
+     リンクがどちらへ飛ぶか不定になる。 */
+  let out = `\n        <div class="blk" id="blk-${esc(b.id)}"${attr}>`;
   if (b.eyebrow) out += `\n          <p class="eyebrow mono">${esc(b.eyebrow)}</p>`;
   out += `\n          <${H}>${t(b.heading, w)}</${H}>`;
   out += shot(b.id, BASE || './');
