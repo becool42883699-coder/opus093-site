@@ -4353,7 +4353,11 @@ function frame(mode){
   atmosPass.uniforms.uDepth01.value = depth01;
   atmosPass.uniforms.uTime.value = t;
   // 被写界深度。焦点は"いま見ている作品"、絞りは深いほど開く
-  const targetFocus = focusAmt > 0.12 ? focusDist : 8.5;
+  /* 汀では、線の上を通る1匹へピントを送る。ここだけ背景ではなく生き物に
+     合わせる(奥はどのみち霧で柔らかいので、失うものが無い)。
+     被写界深度でにじんだままだと、せっかくの1匹が光の筋にしか見えない。 */
+  const targetFocus = (hpR > 0.26 && fishHeroDist > 0) ? fishHeroDist
+                    : (focusAmt > 0.12 ? focusDist : 8.5);
   atmosPass.uniforms.uFocus.value += (targetFocus - atmosPass.uniforms.uFocus.value) * Math.min(1, dt*1.6);
   atmosPass.uniforms.uAperture.value = 0.16 + 0.42*depth01;
   /* 潜水カメラの順応。深いほど僅かに開き、暗部の階調を残す
@@ -4544,6 +4548,7 @@ const F_UP = new THREE.Vector3(0,1,0);
 let fishReady = false;          // 助走を済ませたか
 let fishIdleT = 0, fishVSm = 0, fishPrevCamY = 0.95, fishT = 0;
 let heroFlashCool = 0, hero1Fired = false, hero1T = -1;
+let fishHeroDist = 0;           // 汀の魚までの距離。ピントを送るのに使う
 let fishBudget = 3;
 /* 品質の梯子は「距離」だけを落とす。数も振る舞いも1つも減らさない。
    重い端末では魚が近寄ってこない ＝ 塗る面積を自動的に払わない。
@@ -4604,12 +4609,14 @@ function updateFish(fdt, focusAmt){
   /* 出来事2「汀」。水平線の上を横切る1匹。
      ★ hpR の純関数。時間で駆動すると巻き戻したとき違う場所に出る。 */
   const heroSeam = hpR > 0.24 && hpR < 0.99;
+  if (!heroSeam) fishHeroDist = 0;
 
   const tanH = Math.tan(camera.fov * Math.PI/360);
   const aspect = camera.aspect;
   /* NDC の狙った場所へ、狙った画面幅で置く(端末と画角に依存しない)。
      ★ 実寸は板の 0.42 ではなく「板 × その個体の倍率」。倍率を忘れると
      狙った幅の倍以上に大きく写る(実測 3.98m のところ 8.1m が正しい)。 */
+  /* wantW は NDC の幅。画面に占める割合はその半分になる(NDCは -1..1)。 */
   const placeNdc = (out, nx, ny, wantW, len) => {
     const dist = len / Math.max(1e-4, wantW * tanH * aspect);
     _fs.copy(camFwd).cross(F_UP).normalize();                    // 右
@@ -4637,7 +4644,8 @@ function updateFish(fdt, focusAmt){
          来るので体の下半分が紙の裏へ回り、光の滲みにしか見えない。
          線のすぐ上（画面高の 5.5%）を泳がせて、腹が線をかすめる形にする。
          画角に対する比で置くので、端末が変わっても同じ絵になる。 */
-      placeNdc(_fp, nx, 0.055, aspect < 1 ? 0.30 : 0.14, 0.42*2.10);
+      placeNdc(_fp, nx, 0.055, aspect < 1 ? 0.42 : 0.18, 0.42*2.10);
+      fishHeroDist = _fp.distanceTo(cam);
       fPos[o] = _fp.x; fPos[o+1] = _fp.y; fPos[o+2] = _fp.z;
       _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(-1);   // 真横(左向き)
       fDir[o] = _fs.x; fDir[o+2] = _fs.z;
