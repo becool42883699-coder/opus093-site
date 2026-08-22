@@ -2,11 +2,12 @@
    本文とHUDを消して撮るので、水そのものだけが写る。
 
      node scripts/probe.mjs --view=desktop --tier=high --script=scripts/sea-shots.mjs
+     SEA_POINTS=0.45,0.6,0.8,0.95 node scripts/probe.mjs --script=scripts/sea-shots.mjs
      node scripts/sea-profile.mjs artifacts/sea-desktop-0_14.png
 
    ★ ヘッドレスChromiumは既定で reduced-motion なので probe.mjs 経由で使うこと
      （probe.mjs が no-preference を立てている）。 */
-const POINTS = [0.0, 0.06, 0.14, 0.30];
+const POINTS = (process.env.SEA_POINTS || "0,0.06,0.14,0.30").split(",").map(Number);
 
 export default async function (page, h){
   const span = await page.evaluate(() =>
