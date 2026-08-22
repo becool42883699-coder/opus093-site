@@ -156,6 +156,18 @@ const pic = (base, key, alt, cls) => `
               <img src="${base}shots/${key}-pc.webp" width="1720" height="1075"
                    alt="${esc(alt)}" loading="lazy" decoding="async">
             </figure>`;
+/* ★ 3件目(このサイト)だけは静止画にしない。
+   「さっき潜ってきた景色はブラウザがその場で描いています」と本文で
+   言い切っているのに、その証拠が他所と同じ静止画だと主張が死ぬ。
+   記録の1枚を描いた直後に、その画素をここへ写す。
+   写せない環境(WebGL非対応・JS無効)では静止画がそのまま残る。 */
+const picLive = (base, key, alt) => `
+            <figure class="shot shot-live">
+              <canvas class="liveShot" role="img" aria-label="${esc(alt)}（いま描画された画面）"></canvas>
+              <img src="${base}shots/${key}-pc.webp" width="1720" height="1075"
+                   alt="${esc(alt)}" loading="lazy" decoding="async">
+              <figcaption class="mono">この1枚は写真ではありません。いま、このブラウザが描いたものです。</figcaption>
+            </figure>`;
 const picSp = (base, key, alt) => `
             <figure class="shot-sp">
               <img src="${base}shots/${key}-sp.webp" width="780" height="1688"
@@ -179,7 +191,7 @@ function shot(id, base){
     return `\n          <div class="shots shots-3">`
       + pic(base, 'becool', 'GARAGE BeCool のトップページ', 'shot')
       + pic(base, 'trex',   'T-REX CO., LTD. のトップページ', 'shot')
-      + pic(base, 'migiwa', '汀ノ庭 のトップページ', 'shot')
+      + picLive(base, 'migiwa', '汀ノ庭 のトップページ')
       + `\n          </div>`;
   }
   const s = SHOTS[id];

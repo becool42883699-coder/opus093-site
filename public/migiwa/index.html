@@ -539,6 +539,20 @@
     margin:0 0 12px; font-size:12.5px; line-height:1.9;
     letter-spacing:.03em; color:var(--hud);
   }
+  /* 3件目だけは、いまこの場で描いた1枚を貼る。写せたときだけ差し替わる。 */
+  #content .shot-live{position:relative; margin:0; padding:0}
+  #content .shot-live canvas{display:none}
+  #content .shot-live figcaption{display:none}
+  #content .shot-live[data-live="1"] canvas{
+    display:block; width:100%; height:auto; aspect-ratio:16/10;
+    border:1px solid rgba(143,212,222,.20);
+    filter:saturate(.96) brightness(.97);
+  }
+  #content .shot-live[data-live="1"] img{display:none}
+  #content .shot-live[data-live="1"] figcaption{
+    display:block; margin-top:9px; font-size:10.5px; line-height:1.75;
+    letter-spacing:.06em; color:var(--hud);
+  }
   #content .shot{margin:0; padding:0}
   #content .shot img{
     display:block; width:100%; height:auto;
@@ -916,9 +930,11 @@
               <img src="./shots/trex-pc.webp" width="1720" height="1075"
                    alt="T-REX CO., LTD. のトップページ" loading="lazy" decoding="async">
             </figure>
-            <figure class="shot">
+            <figure class="shot shot-live">
+              <canvas class="liveShot" role="img" aria-label="汀ノ庭 のトップページ（いま描画された画面）"></canvas>
               <img src="./shots/migiwa-pc.webp" width="1720" height="1075"
                    alt="汀ノ庭 のトップページ" loading="lazy" decoding="async">
+              <figcaption class="mono">この1枚は写真ではありません。いま、このブラウザが描いたものです。</figcaption>
             </figure>
           </div>
           <p class="blead">2件と、このサイト。</p>
@@ -4536,6 +4552,33 @@ function renderSettledFrame(){
   px = py = pxT = pyT = 0; pxV.v = 0; pyV.v = 0;
   scrollVel = 0; velX = 0; velV = 0;
   frame(SETTLED);
+  captureLiveShot();
+}
+
+/* 記録の1枚を、実績の3件目のタイルへ写す。
+   ★ 描いた直後の同じ処理の中で写すこと。WebGLの描画バッファは
+   合成が終わると消えることがあり、あとから写すと白紙になる。
+   preserveDrawingBuffer は使わない(常に2枚分のメモリを持つので
+   モバイルで効いてくる)。失敗しても静止画のままにする。 */
+function captureLiveShot(){
+  const fig = document.querySelector('#content .shot-live');
+  if (!fig || fig.dataset.live === '1') return;
+  const dst = fig.querySelector('canvas'), src = renderer && renderer.domElement;
+  if (!dst || !src || !src.width || !src.height) return;
+  try {
+    const w = 720, h = Math.round(w * 10 / 16);
+    dst.width = w; dst.height = h;
+    /* 上端から 16:10 で切る。実績の他の2枚と同じ切り方に揃える。 */
+    const sh = Math.min(src.height, Math.round(src.width * 10 / 16));
+    const g = dst.getContext('2d');
+    g.drawImage(src, 0, 0, src.width, sh, 0, 0, w, h);
+    /* 真っ黒しか写らなかったときは主張が嘘になるので静止画へ戻す */
+    const px = g.getImageData(0, 0, Math.min(w, 64), Math.min(h, 40)).data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += px[i] + px[i+1] + px[i+2];
+    if (sum / (px.length / 4) < 6) return;
+    fig.dataset.live = '1';
+  } catch (e){ /* 写せなければ静止画のまま */ }
 }
 
 /* 本文を読んでいるあいだに書いてよいのは transform と opacity と
