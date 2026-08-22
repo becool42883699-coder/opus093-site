@@ -1487,6 +1487,26 @@ const WAVES = [
    なるので、必ず小数点を持つ形へ整形してから埋める(実際にこれで
    「該当する関数が無い」でシェーダが落ちた)。 */
 const glf = (n) => n.toFixed(3);
+/* ★ 水面の高さ。水の頂点シェーダと同じ式の「縦だけ」版を、
+   粒子と魚にも配る。別々に近似すると必ずズレて、
+   「水面と少しずれた見えない天井」ができる。
+   Gerstner は横にもずらすので厳密には媒介変数表示だが、
+   切り取りの閾値には縦の変位だけで足りる(誤差は steep×振幅で数cm)。 */
+const WAVE_H = WAVES.map(w => {
+  const k = 6.2831853 / w[3], dl = Math.hypot(w[0], w[1]);
+  return { k, c: Math.sqrt(9.8 / k), a: w[2] / k, dx: w[0]/dl, dz: w[1]/dl };
+});
+function surfaceY(x, z, tm){
+  let y = 0;
+  for (const w of WAVE_H) y += w.a * Math.sin(w.k * (w.dx*x + w.dz*z - w.c*tm));
+  return y;
+}
+const G_SURF = `
+float surfY(vec2 xz, float tm){
+  float y = 0.0;
+${WAVE_H.map(w => `  y += ${glf(w.a)} * sin(${glf(w.k)} * (dot(vec2(${glf(w.dx)},${glf(w.dz)}), xz) - ${glf(w.c)} * tm));`).join('\n')}
+  return y;
+}`;
 const waveCall = (fn, args) => WAVES
   .map(w => `  ${fn}(vec2(${glf(w[0])},${glf(w[1])}), ${glf(w[2])}, ${glf(w[3])}${args});`)
   .join('\n');
@@ -1521,7 +1541,40 @@ const vec3 SCATTER = vec3(0.028, 0.115, 0.148);   // 散乱して返る色
 const float MEDIUM_K = 0.47;
 `;
 
-const G_WATER = G_MEDIUM + `
+const G_FAR = `
+/* 遠景の「壁」の色。
+   ここを定数1色にしていたのが、水が平らに見える最大の原因だった。
+   farFade の先(38m 以遠)は画面のどこでも同じ画素値になり、実測で
+   画面の 180px にわたって rgb(24,91,104) が1も動かなかった。
+   水ではなく、水色の霧の板に見える。
+
+   遠景は「位置」ではなく「視線の向き」だけの関数にする。こうすると
+   空ドーム・水面の裏・魚・カード・海底が、同じ画素では必ず同じ壁を
+   見ることになり、継ぎ目が出ない(定数だったのはそのためで、勾配を
+   付けたい時も向きの関数である限り安全)。
+     ・上を向く … 水面から降りてくる光。明るく、緑へ寄る
+     ・下を向く … 吸われた先。暗く、青へ沈み、彩度も落ちる
+     ・太陽の方位 … 前方散乱でわずかに持ち上がる(上向きの時だけ) */
+vec3 fogAt(vec3 fog, vec3 V, vec3 S, float depth01){
+  float lift = smoothstep(-0.62, 0.55, clamp(V.y, -1.0, 1.0));
+  /* 明暗。奥行きはほぼこれだけで出す。0.52 より下げると水中が洞窟になる */
+  vec3 c = fog * mix(0.52, 1.20, lift);
+  /* 色。下ほど赤が先に吸われて青へ倒れるのは物理どおりだが、強く掛けると
+     彩度が 100% に張り付き、海水ではなくプールの水になる
+     (実測: 赤を 0.62 倍にしたら sat 77% → 99%)。差は 1割強までに留める。 */
+  c *= mix(vec3(0.88, 0.99, 1.04), vec3(1.03, 1.01, 0.98), lift);
+  /* 太陽の方位。上を向いている時だけ効かせる(下向きに足すと
+     海底方向が明るくなり、光の来ている方向が逆に読める) */
+  vec2 vh = normalize(vec2(V.x, V.z) + 1e-5);
+  vec2 sh = normalize(vec2(S.x, S.z) + 1e-5);
+  c *= 1.0 + 0.13 * max(dot(vh, sh), 0.0) * lift;
+  /* 深く潜るほど上下の差そのものが失われる(届く光が減るため) */
+  return mix(c, fog * mix(1.0, 0.72, depth01), depth01 * 0.55);
+}
+
+`;
+
+const G_WATER = G_MEDIUM + G_FAR + `
 uniform vec3 uFog;
 
 /* 濁りの層。水は一様ではなく、水面直下に懸濁物の帯があり、
@@ -1646,13 +1699,14 @@ const skyMat = new THREE.ShaderMaterial({
     varying vec3 vW;
     ${G_NOISE}
     ${G_SKY}
+    ${G_FAR}
     void main(){
       vec3 dir = normalize(vW - cameraPosition);
       vec3 col = skyFn(dir);
       /* 水に入った瞬間から、無限遠は「空」ではなく「水の色」になる。
          深度(uDepth)で補間すると数十m潜るまで夕焼けが残り、水中の
          水平線に橙色の細い線として出る。水面をまたぐ位置そのもので切る。 */
-      col = mix(col, uFog, uSub);
+      col = mix(col, fogAt(uFog, dir, uSun, uDepth), uSub);
       gl_FragColor = vec4(col, 1.0);
     }`,
 });
@@ -1770,32 +1824,68 @@ ${WAVES.map(w => `      off += gerstner(vec2(${glf(w[0])},${glf(w[1])}), ${glf(w
       float ph = dot(dir, p)*fr + uTime*sp;
       return dir * (cos(ph)*am*fr);
     }
+    /* 波長ごとに落とす版。画面上での大きさは 1/(距離×周波数) に比例するので、
+       減衰も距離×周波数で決める。全項を同じ距離係数で落とすと、短い波が
+       1画素を切っても残り、モアレ(籠の網目)になる —— 実測でそうなった。 */
+    vec2 rippleD(vec2 p, vec2 dir, float fr, float sp, float am, float dist){
+      return ripple(p, dir, fr, sp, am) * exp(-dist * fr * 0.0090);
+    }
 
     void main(){
       vec3 V  = normalize(cameraPosition - vW);
       float d = length(vW - cameraPosition);
       vec2  wp = vW.xz;
 
-      // 遠いほど細波を消す。これを怠るとチラつき(スペキュラエイリアス)になる
+      bool above = cameraPosition.y > vW.y;
+
+      /* 水上の海面用。遠いほど細波を消す。これを怠るとチラつき
+         (スペキュラエイリアス)になる。水中の天井は別の落とし方をする。 */
       float fade = exp(-d*0.055);
 
       vec2 g = vec2(0.0);
-      g += ripple(wp, vec2( 1.0, 0.4),  2.40, 1.7, 0.054);
-      g += ripple(wp, vec2(-0.55,0.9),  5.00, 2.3, 0.035);
-      g += ripple(wp, vec2( 0.8,-0.5),  9.00, 2.9, 0.020);
-    #if DETAIL > 3
-      g += ripple(wp, vec2(-0.3,-1.0), 15.00, 3.4, 0.013);
-      g += ripple(wp, vec2( 1.0, 0.9), 24.00, 4.0, 0.008);
-    #endif
       float e = 0.12, n0 = vnoise(wp*2.0 + uTime*0.06);
-      g.x += (vnoise(wp*2.0 + vec2(e,0.0) + uTime*0.06) - n0)/e * 0.024;
-      g.y += (vnoise(wp*2.0 + vec2(0.0,e) + uTime*0.06) - n0)/e * 0.024;
-      g *= fade;
+      vec2 gn = vec2((vnoise(wp*2.0 + vec2(e,0.0) + uTime*0.06) - n0)/e,
+                     (vnoise(wp*2.0 + vec2(0.0,e) + uTime*0.06) - n0)/e) * 0.024;
+
+      if (above){
+        /* 水上の海面。ここは全項を同じ距離係数で落とす —— 鋭い太陽の
+           スペキュラがあるので、短い波は早めに消したい。 */
+        g += ripple(wp, vec2( 1.0, 0.4),  2.40, 1.7, 0.054);
+        g += ripple(wp, vec2(-0.55,0.9),  5.00, 2.3, 0.035);
+        g += ripple(wp, vec2( 0.8,-0.5),  9.00, 2.9, 0.020);
+      #if DETAIL > 3
+        g += ripple(wp, vec2(-0.3,-1.0), 15.00, 3.4, 0.013);
+        g += ripple(wp, vec2( 1.0, 0.9), 24.00, 4.0, 0.008);
+      #endif
+        g = (g + gn) * fade;
+      } else {
+        /* 水中の天井。鋭いスペキュラのローブが無いので、長い波は遠くまで
+           残してよい。残さないと、20m 先で細波が消えて放射メッシュの
+           リング間の補間だけになり、天井が「櫛で梳いたような平行の細線」
+           になる(実測)。短い波は画素を切る前に自分で消える。 */
+        g += rippleD(wp, vec2( 1.0, 0.4),  2.40, 1.7, 0.054, d);
+        g += rippleD(wp, vec2(-0.55,0.9),  5.00, 2.3, 0.035, d);
+        g += rippleD(wp, vec2( 0.8,-0.5),  9.00, 2.9, 0.020, d);
+      #if DETAIL > 3
+        g += rippleD(wp, vec2(-0.3,-1.0), 15.00, 3.4, 0.013, d);
+        g += rippleD(wp, vec2( 1.0, 0.9), 24.00, 4.0, 0.008, d);
+        /* 手元数メートルにだけ効く細かさ。リングの縞を割るのが役目。
+           ★ ここを純粋な正弦2本にすると、周波数の近い2本が干渉して
+             天井に菱形のうなり(モアレ)が出る —— 実測でそうなった。
+             1本は正弦、もう1本はノイズの勾配にして、うなりの相手を作らない。 */
+        g += rippleD(wp, vec2( 0.35,1.0), 38.00, 4.6, 0.0055, d);
+        float e2 = 0.05, m0 = vnoise(wp*9.0 - uTime*0.22);
+        g += vec2((vnoise(wp*9.0 + vec2(e2,0.0) - uTime*0.22) - m0)/e2,
+                  (vnoise(wp*9.0 + vec2(0.0,e2) - uTime*0.22) - m0)/e2)
+             * 0.0075 * exp(-d * 9.0 * 0.0090);
+      #endif
+        g += gn * exp(-d * 2.0 * 0.0090);
+      }
 
       vec3 Nn = normalize(vec3(vN.x - g.x, vN.y, vN.z - g.y));   // 常に上向き
       /* 表裏は巻き順(gl_FrontFacing)ではなく「カメラが水面の上にいるか」で決める。
-         放射状メッシュの巻き順に依存せず、水面を横切る瞬間も破綻しない。 */
-      bool above = cameraPosition.y > vW.y;
+         放射状メッシュの巻き順に依存せず、水面を横切る瞬間も破綻しない。
+         (above は細波の減衰を分けるため、この上で先に求めてある) */
       vec3 Nv = above ? Nn : -Nn;
       float ndv = clamp(dot(Nv, V), 0.0, 1.0);
       vec3 col;
@@ -1871,6 +1961,23 @@ ${WAVES.map(w => `      off += gerstner(vec2(${glf(w[0])},${glf(w[1])}), ${glf(w
            臨界角の境目が画素単位の二値になり、法線の細かい揺れで
            黒い斑点の帯になる(水平線際で実際に発生した)。
            スネルの法則から sin^2(屈折角) を求めて連続的に混ぜる。 */
+        /* 放射状メッシュは外側のリングほど三角形が細長い。水面のすぐ下から
+           浅い角度で見上げると、頂点法線の線形補間がそのまま「掃いたような
+           筋」として天井に出る(実測で画面の左半分が刷毛目になった)。
+           遠いところは法線を垂直へ戻し、陰影は毎画素の細波(g)だけで作る。
+           g は fade で距離とともに消えるので、遠景は自然に平滑になる。 */
+        /* 浅い角度で見上げるほど、長波の稜線は前後に潰れて「面」としては
+           見えなくなり、代わりに細波の質感だけが残る —— のが実際の見え方。
+           頂点の法線を残すと、放射メッシュのリング1本ずつが平行な細線に
+           なる。距離と浅さの両方で頂点法線を捨てる。 */
+        float graze = 1.0 - smoothstep(0.05, 0.30, abs(I.y));
+        float nflat = max(smoothstep(26.0, 130.0, d),
+                          graze * smoothstep(4.0, 22.0, d));
+        Nn = normalize(mix(Nn, normalize(vec3(-g.x, 1.0, -g.y)), nflat));
+        /* 窓の縁の量も、平らへ戻した後の法線で取り直す。
+           古い ndv のままだと縁の光だけが筋を残す。 */
+        ndv = clamp(dot(-Nn, V), 0.0, 1.0);
+
         float cosI  = clamp(dot(-I, Nn), 0.0, 1.0);
         float sinT2 = 1.776889 * (1.0 - cosI*cosI);        // (n_water/n_air)^2 * sin^2
         float tir   = smoothstep(0.93, 1.03, sinT2);
@@ -1888,15 +1995,26 @@ ${WAVES.map(w => `      off += gerstner(vec2(${glf(w[0])},${glf(w[1])}), ${glf(w
            暗いままだと水平線の少し上に暗い帯が残る。 */
         /* 距離は MEDIUM_K で割り戻して渡す(この値は係数の一本化より前に
            目で決めたもので、水面の裏だけは絵の意味が変わってしまうため) */
-        vec3 mirror = mix(waterFog(vec3(0.006,0.028,0.040), 10.0/MEDIUM_K, uDepth, 1.0, vW.y), uFog, 0.55);
+        /* 全反射で映るのは「下の水」なので、遠景の壁も下向きの向きで引く */
+        vec3 Rt = reflect(I, -Nn);
+        vec3 mirror = mix(waterFog(vec3(0.006,0.028,0.040), 10.0/MEDIUM_K, uDepth, 1.0, vW.y),
+                          fogAt(uFog, Rt, uSun, uDepth), 0.55);
 
         col = mix(sky, mirror, tir);
 
         // 窓の縁。強く出すと"輪"に見えるので、全反射との境目だけ薄く光らせる
         col += vec3(0.34,0.66,0.74) * pow(1.0 - ndv, 3.0) * 0.22;
 
-        // 波によるきらめき(天井のコースティクスの素)
-        col += vec3(0.40,0.78,0.84) * clamp(length(g)*6.0, 0.0, 1.0) * 0.20;
+        /* 波によるきらめき(天井のコースティクスの素)。
+           以前は clamp(length(g)*6.0, 0.0, 1.0) だった。近景では
+           length(g) が 0.8 まで出るので上限に張り付きっぱなしになり、
+           飽和し切らなかったわずかな谷だけがミミズ状の縞として残って
+           いた(実測で画面の右半分が落書きに見えた)。飽和させず、
+           勾配の強い所ほど滑らかに明るくする。
+           さらに全反射側では消す —— 光が入ってくるのはスネルの窓の
+           側だけで、鏡の側が煌めくのは物理的におかしい。 */
+        col += vec3(0.40,0.78,0.84) * smoothstep(0.04, 0.58, length(g))
+             * 0.19 * (1.0 - tir * 0.75);
 
         // 深いほど天井は遠く、暗く
         col = waterFog(col, min(d, 30.0)*0.24/MEDIUM_K, uDepth, 1.0, vW.y);
@@ -1905,7 +2023,7 @@ ${WAVES.map(w => `      off += gerstner(vec2(${glf(w[0])},${glf(w[1])}), ${glf(w
            同じ色になり、画面を横切る継ぎ目が消える。 */
         /* 収束を急にすると、水平線の少し上でディテールが途切れて
            画面を横切る段差になる。真上を明るく残しつつ緩やかに落とす。 */
-        col = mix(col, uFog, smoothstep(6.0, 95.0, d));
+        col = mix(col, fogAt(uFog, I, uSun, uDepth), smoothstep(6.0, 95.0, d));
       }
 
       gl_FragColor = vec4(col, 1.0);
@@ -2029,7 +2147,7 @@ const sandMat = new THREE.ShaderMaterial({
 
       vec3 V = normalize(vW - cameraPosition);
       vec3 col = waterFogV(sand, dd, uDepth, reach, vW.y, V, uSun);
-      col = mix(col, uFog, farFade(dd));
+      col = mix(col, fogAt(uFog, V, uSun, uDepth), farFade(dd));
       gl_FragColor = vec4(col, 1.0);
     }`,
 });
@@ -2077,12 +2195,32 @@ const shaftMat = new THREE.ShaderMaterial({
       float n = fbm(vec2(vUv.x*3.0, vUv.y*2.2 - uTime*0.05), 3);
       float body = across * along * (0.45 + 0.85*n);
       // 深度で立ち上がり、最深部では届かなくなる
-      float gate = smoothstep(0.02, 0.30, uDepth) * (1.0 - smoothstep(0.72, 1.0, uDepth)*0.72);
-      // カメラに近すぎる板は消す(顔に貼り付くのを防ぐ)
-      float near = smoothstep(0.8, 3.0, length(vW - cameraPosition));
+      /* 浅いところで光芒が一切立たないと、潜り始めの水が「色の付いた板」に
+         なる(実測で画面 180px にわたり画素値が動かなかった)。実際の海は
+         水面直下がいちばん光条が強い。立ち上がりを早める。 */
+      float gate = smoothstep(0.012, 0.19, uDepth) * (1.0 - smoothstep(0.72, 1.0, uDepth)*0.72);
+      /* カメラに近すぎる板は消す(顔に貼り付くのを防ぐ)。
+         傾けてからは板がカメラの脇を斜めに抜けるので、消し始めを早める。 */
+      float near = smoothstep(1.2, 5.0, length(vW - cameraPosition));
       gl_FragColor = vec4(vec3(0.30,0.62,0.72) * body * gate * near * uGain * uPulse * 0.55, 1.0);
     }`,
 });
+/* 水中を進む太陽光の向き。スネルの法則で1回だけ求める。
+   夕景の太陽は水平から約4.9度しかないので、入射角は鉛直から85.1度。
+   sin(85.1°)/1.333 = 0.747 → 屈折角は鉛直から 48.4度。
+   ＝水中の光条は「真下」ではなく、太陽の反対側へ大きく傾いて差す。
+   板を鉛直に立てていた頃は、舞台のスポットライトにしか見えなかった。 */
+const RAY_DIR = (() => {
+  const sh = new THREE.Vector2(SUN.x, SUN.z).normalize();   // 太陽の方位(水平)
+  const sinT = Math.min(0.99, Math.hypot(SUN.x, SUN.z) / 1.333);
+  const cosT = Math.sqrt(1 - sinT*sinT);
+  /* 光は太陽から来るので、水平には太陽の「逆」へ進む。鉛直は下向き。 */
+  return new THREE.Vector3(-sh.x * sinT, -cosT, -sh.y * sinT).normalize();
+})();
+const RAY_UP = RAY_DIR.clone().negate();
+/* 水面(-0.30)から海底までを、傾いた分だけ伸ばして張る */
+const SHAFT_LEN = (SEABED_Y + 0.30) / RAY_DIR.y;
+
 const shafts = [];
 {
   const g = new THREE.PlaneGeometry(1,1);
@@ -2095,21 +2233,29 @@ const shafts = [];
     m.material.uniforms.uGain = { value: 0.45 + Math.random()*0.75 };
     m.material.uniforms.uFloorY = { value: SEABED_Y };
     const w = 1.1 + Math.random()*2.4;
-    /* 水面より上へ出すと、水面ジオメトリに切られて板の断面が線として見える。
-       上端が水面のすぐ下に来るよう、丈と高さを合わせてある。 */
-    /* 下端が海底のすぐ上に来るまで伸ばす。着地は床側の光だまりで作る。 */
-    m.scale.set(w, 10.1, 1);
-    m.position.set(-8 + Math.random()*16, -5.35, -4.0 - Math.random()*10);
+    /* 板は RAY_UP を軸に張る。中点の高さ(-5.35)は変えていないので、
+       上端は水面のすぐ下(-0.30)、下端は海底(SEABED_Y)にそのまま来る
+       —— 傾けても縦の受け持ちは同じで、ずれるのは xz だけ。
+       水面より上へ出すと、水面ジオメトリに切られて板の断面が線に見える。 */
+    m.scale.set(w, SHAFT_LEN, 1);
+    /* ★ 傾けた分、下端は中点より 4.9m カメラ側(+z)へ来る。z を -4 のままに
+       すると手前の板が顔のすぐ横を通り、additive で白く飛ぶ(実測)。
+       クラスタごと奥へ下げて、傾きで手前へ出てくる分を相殺する。 */
+    m.position.set(-8 + Math.random()*16, -5.35, -8.5 - Math.random()*10);
     m.renderOrder = 5;
     scene.add(m); shafts.push(m);
   }
   /* 床の光だまりの位置は動かないので1回だけ詰める。
+     ★ 傾けた分、着地点は中点の真下ではない。下端の xz を渡す
+       (中点のままだと、光条と光だまりが 5m 以上ずれて別物に見える)。
      半径は板の幅より少し広く取る(光は床で散るため)。 */
   const slots = sandUniforms.uShaft.value;
   const n = Math.min(shafts.length, slots.length);
   for (let i = 0; i < n; i++){
     const m = shafts[i];
-    slots[i].set(m.position.x, m.position.z, m.scale.x * 0.95 + 0.5);
+    slots[i].set(m.position.x + RAY_DIR.x * SHAFT_LEN * 0.5,
+                 m.position.z + RAY_DIR.z * SHAFT_LEN * 0.5,
+                 m.scale.x * 0.95 + 0.5);
   }
   sandUniforms.uShaftN.value = n;
 }
@@ -2406,7 +2552,7 @@ const cards = [];
 
           float d = length(vW - cameraPosition);
           col = waterFogV(col, d, uDepth, mix(1.0, 0.25, uDepth), vW.y, -V, uSun);
-          col = mix(col, uFog, farFade(d) * uDepth);
+          col = mix(col, fogAt(uFog, -V, uSun, uDepth), farFade(d) * uDepth);
 
           /* 背景は自分で読んで合成済みなので、板の内側は不透明でよい。
              端の消え際と、水面より上のカードが潜水時に消える分だけ alpha を使う。 */
@@ -2430,51 +2576,13 @@ const cards = [];
 }
 
 /* ================================================================
-   5.5) 降下の背骨 — 深さを測る基準になる垂直の連続体
+   5.5) 降下の基準について — 垂直な「背骨」は置かない
    ----------------------------------------------------------------
-   画面に「どれだけ降りたか」を測る物が無いと、深度計の数字だけが
-   頼りになる。実寸の係留索やシャックルは置かない —— この世界の
-   1単位はメートルではなく、600Mは演出上の数字なので、実物を置くと
-   HUDが嘘だと観客に教えることになる。発光もブランド色も使わない。
+   以前は深さを測る基準として細い円柱を1本立てていた。実測すると
+   これは画面を縦断するマットな灰色の直線として出ており、外洋の水中に
+   支柱が浮いている絵は現実に無いので、写真らしさを最も強く壊していた。
+   深さの手掛かりは HUD の計器・光芒・マリンスノーの視差で足りている。
    ================================================================ */
-{
-  const g = new THREE.CylinderGeometry(0.018, 0.018, 22, 6, 1, true);
-  const mat = new THREE.ShaderMaterial({
-    transparent:true, depthWrite:false, side:THREE.DoubleSide,
-    uniforms:{ uDepth:{value:0}, uFog:{value:fogCol}, uSun:{value:SUN} },
-    vertexShader:`
-      varying vec3 vW;
-      void main(){
-        vec4 wp = modelMatrix * vec4(position,1.0);
-        vW = wp.xyz;
-        gl_Position = projectionMatrix * viewMatrix * wp;
-      }`,
-    fragmentShader:`
-      uniform float uDepth; uniform vec3 uSun;   /* uFog は G_WATER が宣言しているので重ねない */
-      varying vec3 vW;
-      ${G_WATER}
-      void main(){
-        float d = length(vW - cameraPosition);
-        vec3 V = normalize(vW - cameraPosition);
-        vec3 col = waterFogV(vec3(0.055,0.075,0.085), d, uDepth, mix(1.0,0.3,uDepth), vW.y, V, uSun);
-        col = mix(col, uFog, farFade(d));
-        /* 背骨は「水中の深さの基準」なので、水面より上へ出したままだと
-           夕景の空に細い線が1本引かれたように見える(モバイルでは見出しを
-           横切って特に目立つ)。水面の手前で消す。 */
-        float aboveW = 1.0 - smoothstep(-0.55, 0.35, vW.y);
-        gl_FragColor = vec4(col, (1.0 - smoothstep(14.0, 24.0, d)) * 0.55 * aboveW);
-      }`,
-  });
-  const spine = new THREE.Mesh(g, mat);
-  /* カード列と反対側に置き、HUDの安全域に一度も重ならせない */
-  /* 縦組みHUD(右端)を横切らない位置へ。モバイルは画角が狭く、
-     -1.85 では画面外に出て一度も見えていなかった。 */
-  spine.position.set(isMobile ? -0.98 : 2.20, -6.0, isMobile ? -4.6 : -4.0);
-  spine.renderOrder = 3;
-  spine.userData.uni = mat.uniforms;
-  scene.add(spine);
-  window.__spine = spine;
-}
 
 /* ================================================================
    6) 粒子 — 手前 / 中景 / 奥 の3層。1つの材質で階層を作らない
@@ -2526,16 +2634,20 @@ function makeMotes(count, opt){
     uFishPos:wakeU.uFishPos, uFishDir:wakeU.uFishDir, uFishSide:wakeU.uFishSide,
     uFishWake:wakeU.uFishWake, uWakeAny:wakeU.uWakeAny,
     uOrigin:{value:new THREE.Vector3()},
+    /* ★ 水は uTime に t*0.8 を使う。粒子は t を使うので、
+       同じ数字を別に渡さないと水面の判定が1割ずれる。 */
+    uWaveT:{value:0},
   };
   const mat = new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
     uniforms: uni,
     vertexShader:`
-      uniform float uTime, uPix, uWobble, uWakeAny, uFloc;
+      uniform float uTime, uPix, uWobble, uWakeAny, uFloc, uWaveT;
       uniform vec3 uFishPos[3], uFishDir[3], uFishSide[3], uOrigin;
       uniform float uFishWake[3];
       attribute float aSeed, aSize, aSpeed;
       varying float vFade, vSeed, vDist;
+      ${G_SURF}
       varying vec3 vSpin;          // xy=回転の基底 / z=細長さ
       void main(){
         /* ★ 回転はここで作る。フラグメントで三角関数を回すと、手前の
@@ -2562,6 +2674,13 @@ function makeMotes(count, opt){
         gl_PointSize = min(aSize * uPix * (34.0 / max(vDist, 0.35)), 90.0*uPix);
         // 手前すぎ / 遠すぎを消す
         vFade = smoothstep(0.25, 1.4, vDist) * (1.0 - smoothstep(16.0, 30.0, vDist));
+        /* ★ 粒子はカメラ中心の帯を折り返すので、水面近くでは帯の上半分が
+           空へ出る(実測: 水面 y=0 に対して y=+1.35 まで出ていた)。
+           固定の閾値で切ると、波の谷(最大 -0.68m)で水中の粒子まで消える。
+           その場の水面の高さで切る。 */
+        vec3 wpos = p + uOrigin;
+        float sy = surfY(wpos.xz, uWaveT);
+        vFade *= 1.0 - smoothstep(sy - 0.50, sy - 0.08, wpos.y);
         vSeed = aSeed;
         gl_Position = projectionMatrix * mv;
       }`,
@@ -2767,7 +2886,7 @@ const fishMat = new THREE.ShaderMaterial({
          いちばん明るいもの」になっている。これ以上明るくすると
          暗い海に発光体が1つ浮くだけになる。 */
       col = waterFogV(col, d, uDepth, mix(1.0,0.3,uDepth), vW.y, Vv, uSun);
-      col = mix(col, uFog, farFade(d));
+      col = mix(col, fogAt(uFog, Vv, uSun, uDepth), farFade(d));
       /* 鰭と尾の先は透ける。不透明な三角形は必ず紙に見える。 */
       /* ★ 透かしすぎると尾が消える。膜だと分かる最小に留める。 */
       float trans = 1.0 - 0.26*fin - 0.14*smoothstep(0.88, 0.99, X);
@@ -3592,6 +3711,9 @@ let t = 0, running = true, visible = true;
    t が全ユニフォームの供給源なので、この1つで集光・砂紋・光芒のノイズ・
    マリンスノー・気泡・魚・ガラス板の揺れが同時に、同じ倍率で止まる。 */
 let timeScale = reduced ? 0 : 1;
+/* ★ 水の時計。frame() のローカル const T は updateFish から見えないので、
+   モジュールの側に置いて共有する(見えないまま surfaceY へ渡して落とした)。 */
+let waveT = 0;
 
 /* ---- 実測FPS(直近5秒の平均と最低) --------------------------------
    最低FPSは「一番重かった1フレーム」の逆数。平均だけ見ていると
@@ -3764,7 +3886,16 @@ window.__diag = {
                  ))*57.3).toFixed(0) });
     }
     return { n:NF, vis: out.filter(f => f.a > 0.12 && Math.abs(f.x)<1 && Math.abs(f.y)<1 && f.z<1).length,
-             wake:+wakeU.uWakeAny.value.toFixed(2), list: out };
+             wake:+wakeU.uWakeAny.value.toFixed(2),
+             /* 水面より上に出ている個体の数。0 でなければ空を飛んでいる。 */
+             sky: (() => { let n = 0, worst = -99;
+               for (let i=0;i<NF;i++){ const o=i*3;
+                 if (fAttr.aAlpha.array[i] < 0.02) continue;
+                 const over = fPos[o+1] - surfaceY(fPos[o], fPos[o+2], waveT);
+                 if (over > 0) n++;
+                 if (over > worst) worst = over; }
+               return { n, worst:+worst.toFixed(2) }; })(),
+             list: out };
   },
   get seam(){ return {
     hpR, hp, cEff: cEff(hpR), seamDelta,
@@ -3883,6 +4014,11 @@ const DPR_MIN = 1.0, DPR_MAX = Math.min(devicePixelRatio || 1, TIER.dpr);
 const camFwd = new THREE.Vector3();
 const sunPoint = new THREE.Vector3();
 const tmpV = new THREE.Vector3();
+/* 光芒の板を毎フレーム向け直すための作業用(確保はここで1回だけ) */
+const rayFrom   = new THREE.Vector3();
+const shaftSide = new THREE.Vector3();
+const shaftNrm  = new THREE.Vector3();
+const shaftBasis = new THREE.Matrix4();
 
 function applyDPR(next){
   const v = Math.max(DPR_MIN, Math.min(DPR_MAX, next));
@@ -4040,7 +4176,7 @@ function frame(mode){
   }
 
   /* --- 共有ユニフォーム --- */
-  const T = t*0.8;
+  const T = t*0.8; waveT = T;
   // 1つの Color を全マテリアルが共有しているので、ここ1箇所の更新で全部に効く
   fogCol.copy(FOG_SHALLOW).lerp(FOG_DEEP, depth01);
   pulseU.value = reduced ? 1 : lightPulse(t);
@@ -4051,22 +4187,27 @@ function frame(mode){
   sandUniforms.uTime.value  = T;  sandUniforms.uDepth.value  = depth01;
   shaftUniforms.uTime.value = T;  shaftUniforms.uDepth.value = depth01;
   fishUniforms.uTime.value  = T;  fishUniforms.uDepth.value  = depth01;
-  if (window.__spine) window.__spine.userData.uni.uDepth.value = depth01;
   skyDome.position.copy(camera.position);
   water.position.x = camera.position.x; water.position.z = camera.position.z;
   waterUniforms.uOrigin.value.set(water.position.x, water.position.z);
 
   /* --- 光芒 -------------------------------------------------
-     Y軸まわりだけカメラへ向けて"板"を消し、画面上では太陽の位置から
-     放射状に開くよう z 回転を与える(リファレンスの光条の要). */
-  sunPoint.copy(camera.position).addScaledVector(SUN, 400);
-  tmpV.copy(sunPoint).project(camera);
-  const sunSX = tmpV.x;
+     板の軸を RAY_UP(屈折した太陽光の向き)に取り、その軸まわりだけ
+     カメラへ向けて"板"であることを消す。
+     ★ 以前は軸をY(鉛直)に固定し、画面上で太陽から放射状に開いて見える
+       よう z 回転を後付けしていた。これは水上のゴッドレイの見え方で、
+       水中の光条は屈折して**平行に**差す —— 画面上で開いて見えるのは
+       透視のせいなので、板をきちんと傾ければ勝手にそうなる。
+       鉛直のままだと、夕日の海なのに舞台のスポットライトに見える。 */
   for (let i=0;i<shafts.length;i++){
     const sh = shafts[i];
-    tmpV.copy(sh.position).project(camera);
-    const lean = Math.max(-0.55, Math.min(0.55, (tmpV.x - sunSX) * 0.38));
-    sh.rotation.set(0, Math.atan2(camera.position.x - sh.position.x, camera.position.z - sh.position.z), lean);
+    shaftSide.subVectors(camera.position, sh.position).cross(RAY_UP);
+    /* カメラが軸の真上/真下に来ると外積が潰れる。前フレームの向きを
+       使い回すより、決め打ちの横向きへ倒す方が破綻が短い。 */
+    if (shaftSide.lengthSq() < 1e-6) shaftSide.set(1, 0, 0); else shaftSide.normalize();
+    shaftNrm.crossVectors(shaftSide, RAY_UP);
+    shaftBasis.makeBasis(shaftSide, RAY_UP, shaftNrm);
+    sh.quaternion.setFromRotationMatrix(shaftBasis);
     const u = sh.material.uniforms;
     u.uTime.value = T; u.uDepth.value = depth01;
   }
@@ -4134,6 +4275,7 @@ function frame(mode){
     }
     geo.attributes.position.needsUpdate = true;
     uni.uTime.value = t;
+    uni.uWaveT.value = T;                 // 水と同じ時計(t*0.8)を渡す
     uni.uDepth.value = depth01;
 
     /* 層ごとに違う遅れでカメラを追う。旧実装は3層とも camY をそのまま
@@ -4154,11 +4296,16 @@ function frame(mode){
   }
 
   /* --- ポストの駆動 ------------------------------------------ */
-  // 太陽の画面座標。視野の外に出たら散乱を切る
-  sunPoint.copy(camera.position).addScaledVector(SUN, 400);
+  /* 散乱の中心の画面座標。視野の外に出たら散乱を切る。
+     ★ 水中では太陽そのものではなく、屈折して差し込む向き(RAY_UP)の
+       無限遠が中心になる。光芒の板を屈折の向きへ傾けたので、ここを
+       太陽のままにすると、画面の筋と板の向きが食い違う。
+       水面をまたぐ区間は uSub で連続に渡す(空の色の切替と同じ重み)。 */
+  rayFrom.copy(SUN).lerp(RAY_UP, skyUniforms.uSub.value).normalize();
+  sunPoint.copy(camera.position).addScaledVector(rayFrom, 400);
   tmpV.copy(sunPoint).project(camera);
   camera.getWorldDirection(camFwd);
-  const inFront = camFwd.dot(SUN) > 0.02;
+  const inFront = camFwd.dot(rayFrom) > 0.02;
   atmosPass.uniforms.uSunUV.value.set(tmpV.x*0.5+0.5, tmpV.y*0.5+0.5);
   // 水中でだけ強く出す(水上は空の描画そのものが眩しさを持っている)
   const rayAmt = (inFront ? (0.10 + 0.62*ss(0.03,0.34,depth01)) * (1 - ss(0.80,1.0,depth01)*0.55) : 0)
@@ -4404,6 +4551,8 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
   const A = fAttr;
   /* 深いほどこちらを認識しなくなる。600m先で最も近くを通る生き物が
      こちらを見ない ―― それが「汀 = どちらの側とも言えない境目」の実演。 */
+  /* 水面からこれだけは下に居させる。0 にすると波の谷で背が出る。 */
+  const FISH_SUB = 0.42;
   const flee = 1 - ss(0.30, 0.92, sp);
   const alive = timeScale > 0.001 && !reduced;
 
@@ -4520,6 +4669,10 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
       fPos[o]   = cam.x + (frnd()-0.5)*0.88*zd;
       fPos[o+1] = cam.y + down*(0.3 + frnd()*0.35*zd);
       fPos[o+2] = cam.z - zd;
+      /* ★ 上へ戻っている時(down=+1)はカメラより上へ湧く。水面近くだと
+         そのまま空へ出る(実測: 水面 y=0 に対し y=+4.5 まで湧いていた)。
+         その場の水面より下へ落とす。 */
+      fPos[o+1] = Math.min(fPos[o+1], surfaceY(fPos[o], fPos[o+2], waveT) - FISH_SUB);
       const a0 = frnd()*6.2831;
       fDir[o] = Math.cos(a0); fDir[o+2] = Math.sin(a0);
       fEsc[o] = fEsc[o+1] = fEsc[o+2] = 0;
@@ -4548,7 +4701,9 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
       /* 1.60秒。NDC を決め打ちして端末に依らず同じ画面位置に出す */
       const u = hero1T/1.60, e = u*u*(3-2*u);
       placeNdc(_fs, 0.74 - 0.44*e, 0.30 - 0.18*e, aspect < 1 ? 0.24 : 0.115, 0.42*fSize[i]);
-      tx = _fs.x; ty = _fs.y; tz = _fs.z;
+      /* ★ NDC で置くので、カメラが水面近くだと画面の上側は空になる。 */
+      tx = _fs.x; tz = _fs.z;
+      ty = Math.min(_fs.y, surfaceY(_fs.x, _fs.z, waveT) - FISH_SUB);
     }
 
     /* 間合い。近づかれ方(速さ・正対)で警戒の半径が変わる。
@@ -4600,12 +4755,22 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
       if (((fPos[o+2]-b.z) >= 0 ? 1 : -1) === side) tz = b.z - side*1.4;
     }
 
+    /* ★ 目標の高さも水面より下に抑える。抑えないと、上下の徘徊と
+       逃避の縦成分で水面を突き抜ける。 */
+    ty = Math.min(ty, surfaceY(fPos[o], fPos[o+2], waveT) - FISH_SUB);
+
     /* 追随。速度に一次遅れを掛けるので行き過ぎない・揺り戻さない。 */
     const k = alive ? (fPause[i] > 0 ? 1.0 : 2.6) : 0;
     for (let a=0;a<3;a++){
       const tgt = a === 0 ? tx : a === 1 ? ty : tz;
       fEsc[o+a] += ((tgt - fPos[o+a])*k - fEsc[o+a]) * Math.min(1, fdt*6.0);
       fPos[o+a] += fEsc[o+a] * fdt;
+    }
+    /* 最後の関門。速度で行き過ぎた分もここで止める。上向きの速度は殺す
+       (残すと水面に貼り付いたまま押し続ける)。 */
+    {
+      const capY = surfaceY(fPos[o], fPos[o+2], waveT) - FISH_SUB;
+      if (fPos[o+1] > capY){ fPos[o+1] = capY; if (fEsc[o+1] > 0) fEsc[o+1] = 0; }
     }
 
     /* 向きは速度から取る。こちらを向く / 背を向ける瞬間を作らない。 */
