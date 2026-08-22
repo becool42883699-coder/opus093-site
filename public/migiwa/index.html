@@ -379,11 +379,18 @@
     content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
     /* 下端の --open-h ぶんだけ地色を抜く。読み終えたところで海が戻る。
        抜けている帯には文字を1つも置かない(集光が来ると必ず読めなくなる)。 */
+    /* ★ 地の濃さは .945 だった。読書中の海は「記録の1枚」＝止まった絵で、
+       しかも #stage は position:fixed なので、動く背景に文字を置く話ではない。
+       実測: 地のいちばん明るいところ(砂)に対して、全透過でも本文 6.81:1 /
+       見出し 7.96:1 ある。効いてくるのは 8.5px の欧文ラベルだけ。
+       .62 で 本文 11.1 / 一覧 10.0 / 見出し 13.3 / ラベル 6.4 (実測)。
+       海の見える量が 5.5% → 38% になる。★ ここを動かすときは必ず
+       scratch/alpha.mjs で測り直すこと(見た目で決めない)。 */
     background:linear-gradient(to top,
-      rgba(3,20,27,0)    0,
-      rgba(3,20,27,0)    var(--open-h),
-      rgba(3,20,27,.945) calc(var(--open-h) + var(--fade-h)),
-      rgba(3,20,27,.945) 100%);
+      rgba(3,20,27,0)   0,
+      rgba(3,20,27,0)   var(--open-h),
+      rgba(3,20,27,.62) calc(var(--open-h) + var(--fade-h)),
+      rgba(3,20,27,.62) 100%);
   }
   /* 3Dが出ない端末では透かす相手が居ないので、地色は不透明に戻す */
   html[data-nogl] #content::before{background:var(--abyss)}
@@ -454,7 +461,9 @@
     font-size:clamp(21px,2.7vw,30px); line-height:1.35; margin-bottom:12px;
   }
   #content .eyebrow{
-    font-size:8.5px; letter-spacing:.24em; color:var(--hud);
+    /* ★ 地を開けたぶん、8.5px のラベルだけ余裕が無くなる(--hud は .60)。
+       本文の中のラベルに限って持ち上げる。計器側の --hud は触らない。 */
+    font-size:8.5px; letter-spacing:.24em; color:rgba(196,224,228,.80);
     text-transform:uppercase; margin-bottom:13px;
   }
   #content .blead{
