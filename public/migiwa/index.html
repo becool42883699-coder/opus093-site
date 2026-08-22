@@ -3755,7 +3755,13 @@ window.__diag = {
                  turn:+A.aTurn.array[i].toFixed(2),
                  /* 姿勢。度で出す(ラジアンだと目で異常が読めない) */
                  roll:+(fRoll[i]*57.3).toFixed(1), pitch:+(fPitch[i]*57.3).toFixed(1),
-                 spd:+fSpd[i].toFixed(2), amp:+A.aAmp.array[i].toFixed(4) });
+                 spd:+fSpd[i].toFixed(2), amp:+A.aAmp.array[i].toFixed(4),
+                 /* 体の向きと視線のなす角。90度=真横(板が正面を向く)、
+                    0/180度=正面か真後ろ(板が線になる)。 */
+                 view:+(Math.acos(Math.min(1, Math.abs(
+                   (fPos[o]-camera.position.x)*fDir[o] + (fPos[o+2]-camera.position.z)*fDir[o+2]
+                 ) / Math.max(1e-4, Math.hypot(fPos[o]-camera.position.x, fPos[o+2]-camera.position.z))
+                 ))*57.3).toFixed(0) });
     }
     return { n:NF, vis: out.filter(f => f.a > 0.12 && Math.abs(f.x)<1 && Math.abs(f.y)<1 && f.z<1).length,
              wake:+wakeU.uWakeAny.value.toFixed(2), list: out };
@@ -4657,6 +4663,19 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
        可視予算を全部使ってしまう。 */
     const onScreen = _fp.z <= 1 && Math.abs(_fp.x) <= 1.12 && Math.abs(_fp.y) <= 1.12;
     let want = onScreen ? 0.34 + 0.66*ss(0.18, 0.55, r) : 0;
+    /* ★ 板は平面なので、体の軸が視線と重なると幾何学的に線になる。
+       実測では可視の魚の 8.3% が真正面±15度に入る。
+       完全に直すには体の断面を向いた3枚目の面が要る(体の軸を含む2枚を
+       十字に組んでも、正面から見れば両方とも線になるので効かない)。
+       そこまでの改造に見合う頻度ではないので、線になる手前で薄れさせて
+       「向こうを向いた魚が見えにくくなる」に読み替える。 */
+    {
+      const hx = fPos[o]-cam.x, hz = fPos[o+2]-cam.z;
+      const hl = Math.max(1e-4, Math.hypot(hx, hz));
+      const cosPhi = Math.abs((hx*fDir[o] + hz*fDir[o+2]) / hl);
+      const sinPhi = Math.sqrt(Math.max(0, 1 - cosPhi*cosPhi));
+      want *= 0.42 + 0.58*ss(0.05, 0.42, sinPhi);
+    }
     cand.push([i, want, isHero1 ? 99 : (onScreen ? r : -1)]);
 
     /* 尾。位相は CPU で進める。★ timeScale を掛け忘れると、凍った海の中で
