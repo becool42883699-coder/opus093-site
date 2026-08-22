@@ -70,7 +70,10 @@ function grouped(items){
 }
 
 /* 連絡の方法は、宛先が決まっていれば a、決まっていなければ準備中の表示にする */
-const isContactTitle = (s) => /^(LINE|フォーム|メール)/.test(String(s));
+/* ★ 前方一致だけだと広すぎる。サービス名「LINEで相談してもらう仕組みづくり」まで
+   自社の窓口と誤判定し、提供している仕事に「準備中」が付いていた。
+   窓口として扱うのは、その3語だけで完結している項目に限る。 */
+const isContactTitle = (s) => /^(LINE|フォーム|メール)$/.test(String(s).trim());
 function contactRow(it, w){
   const key = /LINE/i.test(it.title) ? 'line' : /メール/.test(it.title) ? 'mail'
             : /フォーム/.test(it.title) ? 'form' : '';
@@ -91,6 +94,12 @@ function defList(b, w){
   return grouped(b.items).map(g => {
     const gh = g.g ? `<p class="glabel mono">${esc(g.g)}</p>` : '';
     const isContact = /連絡の方法/.test(g.g);
+    /* ★ 宛先が1つも決まっていないときは、その状態を先に1行で言う。
+       「準備中」バッジが3つ並ぶだけだと、準備中の店ではなく
+       壊れたサイトに見える。1つでも開いたらこの行は自動で消える。 */
+    const soonNote = (isContact && !LINK.line && !LINK.mail && !LINK.form)
+      ? `<p class="soonNote">下の3つは、いま用意しているところです。開いたらここに出します。</p>\n          `
+      : '';
     const rows = g.items.map(it => (isContact || isContactTitle(it.title)) ? contactRow(it, w) : `
             <div class="row${it.emphasis ? ' is-key' : ''}">
               <dt>${href(it.title)
@@ -98,7 +107,7 @@ function defList(b, w){
                 : t(it.title, w)}</dt>
               <dd>${t(it.text, w)}</dd>
             </div>`).join('');
-    return `${gh}\n          <dl class="dl">${rows}
+    return `${gh}\n          ${soonNote}<dl class="dl">${rows}
           </dl>`;
   }).join('\n          ');
 }
@@ -164,9 +173,13 @@ function shot(id, base){
       + `\n          </div>`;
   }
   if (id === 'works-lead'){
-    return `\n          <div class="shots">`
+    /* ★ 実績が本文の先頭に来たので、ここが訪問者の見る最初の中身になる。
+       3件とも出す(3件目＝このサイト自身)。文字だけの一覧より、
+       何を作る人なのかが1画面で伝わる。 */
+    return `\n          <div class="shots shots-3">`
       + pic(base, 'becool', 'GARAGE BeCool のトップページ', 'shot')
       + pic(base, 'trex',   'T-REX CO., LTD. のトップページ', 'shot')
+      + pic(base, 'migiwa', '汀ノ庭 のトップページ', 'shot')
       + `\n          </div>`;
   }
   const s = SHOTS[id];
@@ -203,15 +216,19 @@ function renderBlock(key, ref, level){
 }
 
 /* TOPの本文。大見出し(h2)1つに、続くブロックをh3でぶら下げる */
+/* ★ ホームページであって読み物ではない。順番は「訪問者が判断する順」。
+   以前は自己説明(思想2806 + できること1884 + AI2506 + SEO1855 = 7051字)を
+   読ませてから、6番目にやっと実績が543字で出ていた。証拠を先に出す。
+   落とした節: ai / seo / faq / news。
+   - ai と seo は service#services の中に1行ずつ既に入っているので中身は消えない
+   - faq 10問は site.config.js が自分で「未確定」と印を付けた事業上の約束
+     (納期・修正回数・交通費)。消せば字数と риск が同時に落ちる
+   - お知らせは知らせることが1件も無い。空の欄はHPでは信用を減らす */
 const TOP_SECTIONS = [
-  { id: 'philosophy', key: 'shiso',    refs: ['shiso#rashisa','shiso#miru-kiku','shiso#otoshikomi','shiso#design-de-owaranai','shiso#issho-ni'] },
-  { id: 'service',    key: 'service',  refs: ['service#services','service#service-style'] },
-  { id: 'ai',         key: 'ai',       refs: ['ai#ai-intro','ai#ai-examples','ai#ai-value','ai#ai-flow','ai#ai-note'] },
-  { id: 'seo',        key: 'seo-flow', refs: ['seo-flow#seo-intro','seo-flow#seo-tasks','seo-flow#seo-ranking'] },
   { id: 'works',      key: 'works-contact', refs: ['works-contact#works-lead','works-contact#works-this-site'] },
-  { id: 'flow',       key: 'seo-flow', refs: ['seo-flow#flow-intro','seo-flow#flow-steps','seo-flow#flow-prepare','seo-flow#flow-duration','seo-flow#flow-running-cost'] },
-  { id: 'faq',        key: 'faq',      refs: ['faq#faq'] },
-  { id: 'news',       key: 'works-contact', refs: ['works-contact#news'] },
+  { id: 'service',    key: 'service',       refs: ['service#services'] },
+  { id: 'flow',       key: 'seo-flow',      refs: ['seo-flow#flow-prepare','seo-flow#flow-duration','seo-flow#flow-running-cost'] },
+  { id: 'philosophy', key: 'shiso',         refs: ['shiso#rashisa'] },
   { id: 'contact',    key: 'works-contact', refs: ['works-contact#contact'] },
   { id: 'about',      key: 'works-contact', refs: ['works-contact#footer'] },
 ];
