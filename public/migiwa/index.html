@@ -2518,6 +2518,9 @@ function makeMotes(count, opt){
     uTime:{value:0}, uSun:{value:SUN}, uDepth:{value:0},
     uPix:{value:DPR}, uGain:{value:opt.gain}, uSoft:{value:opt.soft},
     uWobble:{value:opt.wobble||0},
+    /* ★ 真円が正しいのは気泡だけ。マリンスノーは不定形の凝集体(floc)で、
+       ゆっくり回りながら沈む。全部を真円にすると「点の集合」に見える。 */
+    uFloc:{value:opt.floc == null ? 1 : opt.floc},
     /* 魚が押しのける分。3層で同じオブジェクトを共有するので1回書けば効く。
        層はワールド原点を持つので、比較のために原点も渡す。 */
     uFishPos:wakeU.uFishPos, uFishDir:wakeU.uFishDir, uFishSide:wakeU.uFishSide,
@@ -2528,12 +2531,17 @@ function makeMotes(count, opt){
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
     uniforms: uni,
     vertexShader:`
-      uniform float uTime, uPix, uWobble, uWakeAny;
+      uniform float uTime, uPix, uWobble, uWakeAny, uFloc;
       uniform vec3 uFishPos[3], uFishDir[3], uFishSide[3], uOrigin;
       uniform float uFishWake[3];
       attribute float aSeed, aSize, aSpeed;
       varying float vFade, vSeed, vDist;
+      varying vec3 vSpin;          // xy=回転の基底 / z=細長さ
       void main(){
+        /* ★ 回転はここで作る。フラグメントで三角関数を回すと、手前の
+           大きな粒(最大90px)ぶん全部にコストが乗る。頂点なら1粒1回。 */
+        float rot = aSeed*6.2831 + uTime*(0.10 + fract(aSeed*7.3)*0.22) * uFloc;
+        vSpin = vec3(cos(rot), sin(rot), mix(1.0, 1.55, fract(aSeed*13.1)*uFloc));
         vec3 p = position;
         p.x += sin(uTime*0.5 + aSeed)*uWobble;
         p.z += cos(uTime*0.37 + aSeed*1.7)*uWobble*0.6;
@@ -2558,12 +2566,19 @@ function makeMotes(count, opt){
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader:`
-      uniform float uGain, uSoft, uDepth, uTime;
+      uniform float uGain, uSoft, uDepth, uTime, uFloc;
       varying float vFade, vSeed, vDist;
+      varying vec3 vSpin;
       ${G_MEDIUM}
       void main(){
         vec2 q = gl_PointCoord - 0.5;
+        /* 回して、少し細長くする。基底は頂点で作ってあるので掛けるだけ。 */
+        q = vec2(q.x*vSpin.x - q.y*vSpin.y, q.x*vSpin.y + q.y*vSpin.x);
+        q.x /= vSpin.z;
         float r = length(q)*2.0;
+        /* 輪郭を崩す。★ atan は使わない(手前の粒は最大90pxあり、
+           1粒で8000画素になる)。q の直交する2つの波の積で十分に不定形になる。 */
+        r *= 1.0 + uFloc * 0.30 * sin(q.x*15.0 + vSeed*9.0) * sin(q.y*12.0 - vSeed*5.0);
         if (r > 1.0) discard;
         /* 近い粒ほどボケる(擬似DOF)。層ごとの固定値だと、同じ層の粒が
            手前へ流れてきても輪郭が硬いままで、奥行きが読めない。 */
@@ -2594,6 +2609,8 @@ const motes = makeMotes(TIER.motes, {
 });
 /* 中景: 気泡。上へ昇り、少し大きく、輪郭が残る */
 const bubbles = makeMotes(TIER.bubbles, {
+  /* 気泡は真円。表面張力で丸くなるので、崩すと嘘になる。 */
+  floc:0,
   spread:[13,0,12], zNear:-1.2, yMin:-9.6, yMax:0.2,
   size:[0.9,2.6], speed:[0.16,0.52], gain:0.42, soft:1.5, wobble:0.16, lag:0.45, drift:0.022,
 });
