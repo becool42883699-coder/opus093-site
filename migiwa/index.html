@@ -1286,7 +1286,7 @@ const TIER = (() => {
   if (TPIN !== 'high' && (TPIN === 'low' || isMobile || lowEnd)) return {
     name:'low',
     seg: 110, dpr: 1.5,
-    motes: 260, bubbles: 70, fore: 26, fish: 9, shafts: 5,
+    motes: 96, bubbles: 78, fore: 14, fish: 24, shafts: 7,
     waveDetail: 5, skyOctaves: 2, causticOctaves: 2, causticRGB: false,
     bloom: true, godray: true, dof: false, smaa: false,
     reflect: false,     // モバイルは平面反射を持たず skyFn だけに戻す
@@ -1294,7 +1294,7 @@ const TIER = (() => {
   return {
     name:'high',
     seg: 240, dpr: 2,
-    motes: 620, bubbles: 150, fore: 54, fish: 15, shafts: 9,
+    motes: 210, bubbles: 168, fore: 26, fish: 46, shafts: 13,
     waveDetail: 5, skyOctaves: 3, causticOctaves: 3, causticRGB: true,
     bloom: true, godray: true, dof: true, smaa: true,
     reflect: true,
@@ -1461,7 +1461,9 @@ float fbm(vec2 p, int oct){
    すべてこの1色へ収束するので、遠景に継ぎ目が出ない。
    (旧版はドームの地平線が水中でも見えて、画面を横切る明るい帯になっていた) */
 const FOG_SHALLOW = new THREE.Color(0.038, 0.132, 0.168);
-const FOG_DEEP    = new THREE.Color(0.0035, 0.0195, 0.0380);
+/* ★ 水槽の底の色。外洋の深場は (0.0035, 0.0195, 0.0380) のほぼ黒だったが、
+   大水槽は底まで青が残る。浅い側との差は「明るさが少し落ちて青へ寄る」だけ。 */
+const FOG_DEEP    = new THREE.Color(0.0230, 0.0930, 0.1400);
 const fogCol = new THREE.Color().copy(FOG_SHALLOW);
 
 /* 水面の揺らぎ由来のスカラー1本。海底の集光・光芒・カードの縁・
@@ -1532,13 +1534,23 @@ ${waveCall('waveTerm', ', p, t, h, lap')}
 }`;
 
 /* 媒質そのものの定数。粒子のように uFog を持たない材質も、
-   吸収だけはここから引く(=同じ水の中にいることになる)。 */
+   吸収だけはここから引く(=同じ水の中にいることになる)。
+
+   ★ ここは「水族館の大水槽」の水。以前は外洋の深場の水で、実測で
+     3.45m でも光の約96%を吸っていた ―― 数メートル先が既に闇なので、
+     魚を増やしても見えず、絵として成立しなかった。
+     水槽は濾過された水を上から強く照らすので、20m 先の魚まで見える。
+     変えたのは3つ:
+       ・MEDIUM_K(減衰率)を 0.47 → 0.165。透明度がおよそ3倍になる
+       ・SCATTER(散乱して返る色)を上げる。水そのものが明るい青緑に光る
+       ・ABSORB の比は触らない。赤から先に吸われるのは水である以上同じで、
+         ここを崩すと水ではなく色付きの空気になる
+     この3つ以外で「明るさ」を足さない。個々の材質に色を盛ると、
+     同じ距離の魚とカードで霞み方が違う状態に逆戻りする。 */
 const G_MEDIUM = `
 const vec3 ABSORB  = vec3(0.115, 0.032, 0.018);   // 距離あたりの吸収
-const vec3 SCATTER = vec3(0.028, 0.115, 0.148);   // 散乱して返る色
-/* 媒質の減衰率。物体ごとに違う係数を掛けていたので、同じ距離の魚と
-   カードで霞み方が違っていた。水は1種類しか無いので係数も1つにする。 */
-const float MEDIUM_K = 0.47;
+const vec3 SCATTER = vec3(0.052, 0.196, 0.246);   // 散乱して返る色
+const float MEDIUM_K = 0.165;
 `;
 
 const G_FAR = `
@@ -1600,8 +1612,10 @@ float phaseFwd(float cosT){
    uSun を G_WATER で宣言すると、G_SKY を併用する材質で二重宣言になるので
    引数で受け取る。 */
 vec3 waterFogV(vec3 col, float dist, float depth01, float light, float y, vec3 V, vec3 S){
-  // 深いほど届く光が減り、散乱色そのものも暗くなる
-  float dl = mix(1.0, 0.16, depth01);
+  /* 深いほど届く光が減る。★ 外洋なら 0.16 まで落ちるが、水槽は上から
+     均一に照らすので底まで明るい。ここを落とすと、下へ行くほど絵が
+     消えていき「大水槽」ではなく「深海」に戻る。 */
+  float dl = mix(1.0, 0.72, depth01);
   vec3 t = exp(-ABSORB * turbidity(y) * dist * MEDIUM_K * 6.0);
   /* 等方成分を残したまま前方のローブを足す。全部をローブにすると
      太陽と反対側が真っ暗になり、水ではなく煙に見える。 */
@@ -1611,7 +1625,7 @@ vec3 waterFogV(vec3 col, float dist, float depth01, float light, float y, vec3 V
 }
 /* 視線を持たない呼び出し用(方向による偏りなし) */
 vec3 waterFog(vec3 col, float dist, float depth01, float light, float y){
-  float dl = mix(1.0, 0.16, depth01);
+  float dl = mix(1.0, 0.72, depth01);
   vec3 t = exp(-ABSORB * turbidity(y) * dist * MEDIUM_K * 6.0);
   return col * t + SCATTER * light * dl * (1.0 - t);
 }
@@ -1619,7 +1633,9 @@ vec3 waterFog(vec3 col, float dist, float depth01, float light, float y){
 /* 遠景が媒質の色へ収束するまでの距離。これも媒質の性質なので1本にする
    (以前は 4→22 / 6→18 / 8→44 / 9→30 と物体ごとにバラバラで、
    同じ距離にある魚とカードで霞み方が違っていた)。 */
-float farFade(float d){ return smoothstep(7.0, 38.0, d); }`;
+/* ★ 7→38m は外洋の濁った水の値。水槽の水は 20m 先の魚が見えるので、
+   ここを伸ばさないと透明度を上げても「霞む距離」だけが元のままになる。 */
+float farFade(float d){ return smoothstep(16.0, 86.0, d); }`;
 
 /* --- 空。ドームと、水面の反射・スネルの窓が同じ関数を読む --------
    ここが1つでないと「反射に映る空」と「実際の空」がズレて嘘になる。 */
@@ -2018,7 +2034,7 @@ ${WAVES.map(w => `      off += gerstner(vec2(${glf(w[0])},${glf(w[1])}), ${glf(w
 
         // 深いほど天井は遠く、暗く
         col = waterFog(col, min(d, 30.0)*0.24/MEDIUM_K, uDepth, 1.0, vW.y);
-        col *= mix(1.0, 0.30, uDepth);
+        col *= mix(1.0, 0.74, uDepth);   // 水槽は底まで明るい(外洋なら 0.30)
         /* 遠方は空ドームと同じ霧色へ落とす。これで水面の端と無限遠が
            同じ色になり、画面を横切る継ぎ目が消える。 */
         /* 収束を急にすると、水平線の少し上でディテールが途切れて
@@ -2116,7 +2132,7 @@ const sandMat = new THREE.ShaderMaterial({
 
       /* 集光。q は「水面の曲率がどれだけ光を寄せるか」の係数で、
          これを上げるほど焦線が細く鋭くなる。 */
-      float reach = mix(1.0, 0.30, uDepth) * uPulse;   // 光の脈を共有
+      float reach = mix(1.0, 0.66, uDepth) * uPulse;   // 光の脈を共有(水槽は底まで届く)
       const float Q = 2.6;
       vec3 ca;
     #if C_RGB
@@ -2129,7 +2145,10 @@ const sandMat = new THREE.ShaderMaterial({
       /* 芯だけを残して裾を切る。切らないと海底全体が一様に持ち上がって
          「明るい砂」になり、網目に見えない。 */
       ca = ca / (1.0 + ca * 0.85);
-      sand += vec3(0.40,0.52,0.51) * ca * reach * 0.16;
+      /* ★ 0.16 は暗い海の砂に合わせた値。水が明るくなり、散乱で砂全体が
+         持ち上がったので、同じ量だと網目が地に沈んで見えない。水槽の砂に
+         走る集光の網は絵の主役の1つなので、はっきり出す。 */
+      sand += vec3(0.40,0.52,0.51) * ca * reach * 0.38;
 
       // 海底の起伏の代わりの大きな陰影。周期が長すぎるとオーロラ状の塊になる
       float macro = fbm(p*0.55 + 11.0, C_OCT);
@@ -2230,9 +2249,11 @@ const shafts = [];
     m.material.uniforms = THREE.UniformsUtils.clone(shaftMat.uniforms);
     m.material.uniforms.uSun.value = SUN;
     m.material.uniforms.uPulse = pulseU;
-    m.material.uniforms.uGain = { value: 0.45 + Math.random()*0.75 };
+    /* ★ 上限 1.20 は暗い外洋で決めた値。水が明るくなると、太い1本が
+       サーチライトに見える。細く・少し暗く・本数を増やす方が水槽らしい。 */
+    m.material.uniforms.uGain = { value: 0.40 + Math.random()*0.55 };
     m.material.uniforms.uFloorY = { value: SEABED_Y };
-    const w = 1.1 + Math.random()*2.4;
+    const w = 0.50 + Math.random()*1.25;
     /* 板は RAY_UP を軸に張る。中点の高さ(-5.35)は変えていないので、
        上端は水面のすぐ下(-0.30)、下端は海底(SEABED_Y)にそのまま来る
        —— 傾けても縦の受け持ちは同じで、ずれるのは xz だけ。
@@ -2551,7 +2572,7 @@ const cards = [];
           col += vec3(1.0,0.94,0.82) * pow(max(dot(N,H),0.0), 260.0) * 0.85;
 
           float d = length(vW - cameraPosition);
-          col = waterFogV(col, d, uDepth, mix(1.0, 0.25, uDepth), vW.y, -V, uSun);
+          col = waterFogV(col, d, uDepth, mix(1.0, 0.70, uDepth), vW.y, -V, uSun);
           col = mix(col, fogAt(uFog, -V, uSun, uDepth), farFade(d) * uDepth);
 
           /* 背景は自分で読んで合成済みなので、板の内側は不透明でよい。
@@ -2705,7 +2726,7 @@ function makeMotes(count, opt){
         float a = pow(1.0 - r, soft);
         // わずかな明滅。全部が同じ明るさだと"点の集合"に見える
         float tw = 0.72 + 0.28*sin(uTime*1.6 + vSeed*3.1);
-        float depthDim = mix(1.0, 0.34, uDepth);
+        float depthDim = mix(1.0, 0.70, uDepth);
         /* 粒も水の中にある。他の物と同じ吸収を通すと、遠い粒は赤が先に
            死んで青く沈み、近い粒だけが白く残る = 層が距離で分かれる。
            以前は距離に関係なく同じ色だったので、全部が同じ面に見えていた。 */
@@ -2721,22 +2742,31 @@ function makeMotes(count, opt){
   return pts;
 }
 
-/* 奥: マリンスノー。細かく、ゆっくり沈む */
+/* 奥: 舞っている細かいもの。ゆっくり沈む。
+   ★ 外洋のマリンスノーとしては 620粒・gain 0.34 で正しかったが、
+     水は濾過された水槽の水になり、しかも明るくなったので、同じ量だと
+     「埃だらけの水」に見える。数と濃さを落とす —— 消しはしない。
+     ゼロにすると水に厚みが無くなり、魚が空中を泳いでいるように見える。 */
 const motes = makeMotes(TIER.motes, {
   spread:[17,0,15], zNear:-1.0, yMin:-9.6, yMax:0.4,
-  size:[0.5,1.5], speed:[-0.055,-0.012], gain:0.34, soft:2.4, wobble:0.10, lag:0.22, drift:0.010,
+  size:[0.5,1.5], speed:[-0.055,-0.012], gain:0.16, soft:2.4, wobble:0.10, lag:0.22, drift:0.010,
 });
-/* 中景: 気泡。上へ昇り、少し大きく、輪郭が残る */
+/* 中景: 気泡。上へ昇り、少し大きく、輪郭が残る。
+   ★ ここだけは減らさない。水槽の泡は「濾過が回っている」の合図で、
+     アクアリウムらしさに直接効く数少ない要素。 */
 const bubbles = makeMotes(TIER.bubbles, {
   /* 気泡は真円。表面張力で丸くなるので、崩すと嘘になる。 */
   floc:0,
   spread:[13,0,12], zNear:-1.2, yMin:-9.6, yMax:0.2,
   size:[0.9,2.6], speed:[0.16,0.52], gain:0.42, soft:1.5, wobble:0.16, lag:0.45, drift:0.022,
 });
-/* 手前: 大きくボケた層。視差の主役で、これが無いと画面が平らに見える */
+/* 手前: 大きくボケた層。視差の主役で、これが無いと画面が平らに見える。
+   ★ 暗い海では気付かなかったが、水を明るくすると、この層は「レンズに
+     付いた大きな灰色のにじみ」として見える。数と濃さを落として、
+     視差を作る役だけ残す。 */
 const fore = makeMotes(TIER.fore, {
   spread:[7,0,3.2], zNear:-0.35, yMin:-9.4, yMax:0.2,
-  size:[5.0,13.0], speed:[-0.030,0.030], gain:0.055, soft:0.85, wobble:0.05, lag:0.85, drift:0.040,
+  size:[5.0,13.0], speed:[-0.030,0.030], gain:0.020, soft:0.85, wobble:0.05, lag:0.85, drift:0.040,
 });
 
 /* ================================================================
@@ -2760,9 +2790,10 @@ const fishMat = new THREE.ShaderMaterial({
   transparent:true, depthWrite:true, side:THREE.DoubleSide,
   uniforms: fishUniforms,
   vertexShader:`
-    attribute float aPhase, aAmp, aSquash, aAlpha, aTurn;
-    varying vec2 vUv; varying vec3 vW; varying float vAlpha, vTurn;
+    attribute float aPhase, aAmp, aSquash, aAlpha, aTurn, aSp;
+    varying vec2 vUv; varying vec3 vW; varying float vAlpha, vTurn, vSp;
     void main(){
+      vSp = aSp;
       /* uv.x=0 が頭、1 が尾。板は両面なので、どちら側から見ても頭が前を向く
          (左右反転は「頭と尾の入れ替え」になるので入れない)。 */
       vec2 uvv = uv;
@@ -2784,7 +2815,7 @@ const fishMat = new THREE.ShaderMaterial({
     }`,
   fragmentShader:`
     uniform float uDepth; uniform vec3 uSun;
-    varying vec2 vUv; varying vec3 vW; varying float vAlpha, vTurn;
+    varying vec2 vUv; varying vec3 vW; varying float vAlpha, vTurn, vSp;
     ${G_WATER}
     void main(){
       /* 姿は uv ではなく「実寸の比」で描く。★板は 0.42×0.20(=2.1:1)なので、
@@ -2834,13 +2865,29 @@ const fishMat = new THREE.ShaderMaterial({
       float nyT = mix(ny, -ny, vTurn);                    // 翻ると裏返る
       float lam = 0.30 + 0.70 * clamp(0.5 + 0.5*nyT, 0.0, 1.0);   // 上から来る光
       /* ★ 切り替わりを急にすると背が黒に潰れ、明暗の境目が硬い線になる。
-         暗い側も 0 まで落とさない(落とすと逆行迷彩ではなく影になる)。 */
-      vec3  pig = mix(vec3(0.235,0.405,0.435), vec3(0.032,0.074,0.098),
-                      smoothstep(-0.80, 0.90, nyT));               // 色素
+         暗い側も 0 まで落とさない(落とすと逆行迷彩ではなく影になる)。
+         ★ 以前の色素は「夕暮れの外洋」用で、腹 0.235 / 背 0.032 と
+           かなり暗く、明るい水槽の水に置くと切り絵のシルエットになった。
+           照明の下の魚として、腹側を大きく持ち上げてある。
+         種で3系統。重みは vSp がちょうど 0/1/2 なのでどれか1つだけ 1 になる。 */
+      float wSil = max(0.0, 1.0 - abs(vSp - 0.0));   // 銀のアジ型
+      float wYel = max(0.0, 1.0 - abs(vSp - 1.0));   // 黄帯
+      float wNav = max(0.0, 1.0 - abs(vSp - 2.0));   // 濃紺の大きめ
+      vec3 pigB = wSil*vec3(0.560,0.635,0.660)       // 腹(明るい側)
+                + wYel*vec3(0.545,0.545,0.455)
+                + wNav*vec3(0.430,0.505,0.560);
+      vec3 pigD = wSil*vec3(0.062,0.125,0.155)       // 背(暗い側)
+                + wYel*vec3(0.086,0.108,0.062)
+                + wNav*vec3(0.030,0.058,0.112);
+      vec3  pig = mix(pigB, pigD, smoothstep(-0.80, 0.90, nyT));   // 色素
       vec3 col = pig * lam;
       /* 体側の帯。面ではなく1本。魚が光るのはここだけ。 */
       float flank = exp(-pow((nyT - 0.16) / 0.28, 2.0));
-      col += vec3(0.085,0.150,0.170) * flank * (0.50 + 0.60*vTurn);
+      col += vec3(0.130,0.185,0.205) * flank * (0.50 + 0.60*vTurn);
+      /* 黄帯の1本。★ 面で塗ると熱帯魚のおもちゃになる。体側の1本に留める。 */
+      col += vec3(0.300,0.225,0.045) * wYel
+           * exp(-pow((nyT - 0.06) / 0.15, 2.0))
+           * smoothstep(0.10, 0.20, X) * (1.0 - smoothstep(0.80, 0.95, X));
       /* 縁は落とす。★ 明るいまま切ると「縁取りをしたステッカー」に見える。 */
       float edge = smoothstep(0.0, 0.26, 1.0 - abs(ny));
       col *= 0.88 + 0.12 * edge;
@@ -2885,7 +2932,7 @@ const fishMat = new THREE.ShaderMaterial({
          この場面の水は中央値 sRGB 12、魚は 20。魚は既に「水の中で
          いちばん明るいもの」になっている。これ以上明るくすると
          暗い海に発光体が1つ浮くだけになる。 */
-      col = waterFogV(col, d, uDepth, mix(1.0,0.3,uDepth), vW.y, Vv, uSun);
+      col = waterFogV(col, d, uDepth, mix(1.0,0.72,uDepth), vW.y, Vv, uSun);
       col = mix(col, fogAt(uFog, Vv, uSun, uDepth), farFade(d));
       /* 鰭と尾の先は透ける。不透明な三角形は必ず紙に見える。 */
       /* ★ 透かしすぎると尾が消える。膜だと分かる最小に留める。 */
@@ -2922,7 +2969,10 @@ fishMesh.renderOrder = 3;
 scene.add(fishMesh);
 
 const fAttr = {};
-for (const k of ['aPhase','aAmp','aSquash','aAlpha','aTurn']){
+/* aSp は「種」。0=銀のアジ型 / 1=黄帯 / 2=濃紺の大きめ。
+   1種だけだと、何匹居ても「同じ魚を量産した」ようにしか見えない ——
+   水槽らしさは匹数より種類の差で出る。値は初期化で1回書くだけ。 */
+for (const k of ['aPhase','aAmp','aSquash','aAlpha','aTurn','aSp']){
   const a = new THREE.InstancedBufferAttribute(new Float32Array(NF), 1);
   a.setUsage(THREE.DynamicDrawUsage);
   fishGeo.setAttribute(k, a);
@@ -2948,7 +2998,15 @@ const fPitch = new Float32Array(NF);     // 頭の上下(垂直の速度から)
 const fSpd   = new Float32Array(NF);     // 速さの移動平均
 const fAmp0  = new Float32Array(NF);     // 個体ごとの尾の振り幅(上限)
 for (let i=0;i<NF;i++){
-  fSize[i] = 1.15 + frnd()*1.15;
+  /* 種の配分。銀の群れが主で、黄帯が中くらい、濃紺の大きいのは数匹。
+     ★ 均等に配ると「3種類が同数」という不自然な水槽になる。 */
+  const r = frnd();
+  const sp = r < 0.58 ? 0 : (r < 0.88 ? 1 : 2);
+  fAttr.aSp.array[i] = sp;
+  /* 大きさは種に紐づける。色だけ変えて同じ寸法だと、塗り替えに見える。 */
+  fSize[i] = sp === 2 ? (2.05 + frnd()*0.95)
+           : sp === 1 ? (1.05 + frnd()*0.55)
+                      : (0.78 + frnd()*0.62);
   fBeat[i] = 6.0 + frnd()*3.4;
   fAttr.aPhase.array[i]  = frnd()*6.2831;
   fAmp0[i]               = 0.018 + frnd()*0.010;
@@ -4524,7 +4582,11 @@ let fishReady = false;          // 助走を済ませたか
 let fishIdleT = 0, fishVSm = 0, fishPrevCamY = 0.95, fishT = 0;
 let heroFlashCool = 0, hero1Fired = false, hero1T = -1;
 let fishHeroDist = 0;           // 汀の魚までの距離。ピントを送るのに使う
-let fishBudget = 3;
+/* 濃く出せる匹数。★ ここは元々 3 で、画面に居ても濃く描けるのは
+   2〜4匹だけだった ——「描くのは姿ではなく間合い」という前の設計。
+   水槽は逆で、魚が見えないと水槽ではない。匹数を全部出す。
+   梯子で落とす時も、切るのは「距離」であって「数」ではない。 */
+let fishBudget = 999;
 /* 品質の梯子は「距離」だけを落とす。数も振る舞いも1つも減らさない。
    重い端末では魚が近寄ってこない ＝ 塗る面積を自動的に払わない。
    降格が「粗くなる」ではなく「今日は警戒が強い」に見える。 */
@@ -4533,7 +4595,9 @@ let fApproach = 2.3, fApproachT = 2.3;
 
 function fishQuality(step){
   fApproachT = F_APPROACH[Math.min(step, F_APPROACH.length-1)];
-  fishBudget = step <= 1 ? 3 : step <= 5 ? 2 : 1;
+  /* 梯子の下の方でだけ、遠い個体から間引く(塗る面積を返すため)。
+     上の方では1匹も減らさない。 */
+  fishBudget = step <= 3 ? 999 : step <= 5 ? 26 : 14;
 }
 
 /* 洗ってよいのは「入力の履歴」だけ。
@@ -4616,7 +4680,10 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
 
   /* 濃く出せる数に硬い天井を置く。空白を作らないと、その次の1匹が
      「出来事」にならない。 */
-  const budget = Math.min(fishBudget, Math.round(4 - 2*ss(0.30, 0.62, sp)));
+  /* ★ 以前は Math.round(4 - 2*ss(0.30,0.62,sp)) で、潜るほど 4→2 匹まで
+     絞っていた(深いほどこちらを無視する、という前の設計)。水槽なので
+     絞らない。梯子が下がった時だけ fishBudget が効く。 */
+  const budget = fishBudget;
   const cand = [];
 
   for (let i=0;i<NF;i++){
@@ -4667,11 +4734,17 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
       const down = targetP >= sp ? -1 : 1;                  // 潜っている向き
       const zd = 3.5 + frnd()*6.0;                          // 前方の距離
       fPos[o]   = cam.x + (frnd()-0.5)*0.88*zd;
-      fPos[o+1] = cam.y + down*(0.3 + frnd()*0.35*zd);
+      /* ★ 以前は「潜っている向きの側」にだけ、カメラから 0.3〜3.6m の
+         範囲で湧かせていた。魚が「すれ違うもの」だった頃は正しかったが、
+         水槽では上にも下にも居てほしい。とくに底(cam.y -9.4)では
+         down=-1 のせいで砂の中へ湧いており、最深部に魚がほとんど
+         居なかった(実測: 画面に2匹)。カメラの高さを中心に上下へ散らす。
+         進行方向へわずかに寄せるのだけ残す —— 潜っていく先に魚が
+         見えてこないと、降りている感じが消えるため。 */
+      fPos[o+1] = cam.y + (frnd() - 0.5 + down*0.14) * (1.8 + 0.62*zd);
       fPos[o+2] = cam.z - zd;
-      /* ★ 上へ戻っている時(down=+1)はカメラより上へ湧く。水面近くだと
-         そのまま空へ出る(実測: 水面 y=0 に対し y=+4.5 まで湧いていた)。
-         その場の水面より下へ落とす。 */
+      /* 砂の中と、水面の上には出さない。 */
+      fPos[o+1] = Math.max(SEABED_Y + 0.55, fPos[o+1]);
       fPos[o+1] = Math.min(fPos[o+1], surfaceY(fPos[o], fPos[o+2], waveT) - FISH_SUB);
       const a0 = frnd()*6.2831;
       fDir[o] = Math.cos(a0); fDir[o+2] = Math.sin(a0);
@@ -4818,8 +4891,10 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
        速さが効くのは「遅いときに振らない」方向だけ。 */
     A.aAmp.array[i] = fAmp0[i] * (0.40 + 0.60*Math.min(1, fSpd[i]*0.6));
 
-    /* 中央で薄れる ―― 周辺視の実装。
-       床 0.22 と 0.6秒の鈍りは交渉不可。速いと演出ではなくバグに読まれる。 */
+    /* ★ 元は「中央へ来るほど薄れる(周辺視)」で、床が 0.34 だった。
+       水槽では見せるのが目的なので、ほぼ均一に濃く出す。端をわずかに
+       濃くするのだけ残す —— 画面の隅で唐突に現れるのを和らげるため。
+       0.6秒の鈍りは交渉不可(速いと演出ではなくバグに読まれる)。 */
     _fp.set(fPos[o], fPos[o+1], fPos[o+2]).project(camera);
     const r = Math.hypot(_fp.x, _fp.y);
     fScr[i*2] = r; fScr[i*2+1] = _fp.z;
@@ -4827,7 +4902,7 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
        (x=1.2, y=0 → r=1.2)が「端＝濃く出す」と判定され、見えない魚に
        可視予算を全部使ってしまう。 */
     const onScreen = _fp.z <= 1 && Math.abs(_fp.x) <= 1.12 && Math.abs(_fp.y) <= 1.12;
-    let want = onScreen ? 0.34 + 0.66*ss(0.18, 0.55, r) : 0;
+    let want = onScreen ? 0.90 + 0.10*ss(0.18, 0.55, r) : 0;
     /* ★ 板は平面なので、体の軸が視線と重なると幾何学的に線になる。
        実測では可視の魚の 8.3% が真正面±15度に入る。
        完全に直すには体の断面を向いた3枚目の面が要る(体の軸を含む2枚を
