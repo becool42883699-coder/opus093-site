@@ -360,21 +360,33 @@ if (await page.evaluate(() => !!(window.__diag && window.__diag.seam
      決め打ちしていたが、この環境の実測は 0.2〜1fps まで振れるので、遅い回だけ
      針が途中で止まったまま読まれ、1行手前を指して落ちた(実際に踏んだ)。
      フレーム数ではなく「針が動かなくなるまで」待つ。 */
+  /* ★ 「フレームが進んだうえで動いていない」だけでは足りない。lastF の初期値が
+     -1 なので**最初の1サンプルが必ず「フレームが進んだ」と判定され**、針がまだ
+     動き出していなければ、そこから3回続けて同じ値を読んで「止まった」と結論する。
+     結果、針が1つ前の節を指したまま読まれて不一致になる(実測: 5点中2点が
+     dotY を前の位置のまま返し、readP と now は正しかった)。再実行すると通るので
+     「たまに落ちるテスト」に見えていた。
+     針は readP へ一次遅れで追うので、「動き出してから止まるまで」を待つ。
+     動く必要が無かった場合(既に正しい位置)のために、frames が十分進んだら
+     動かないまま抜けてよいことにする。 */
   const waitDot = async (maxMs = 40000) => {
     const t0 = Date.now();
-    let lastY = -1e9, lastF = -1, still = 0;
+    const read = () => page.evaluate(() => {
+      const r = document.getElementById('rdot').getBoundingClientRect();
+      return { y: r.top + r.height / 2, f: window.__diag.frames };
+    });
+    const s0 = await read();
+    let lastY = s0.y, lastF = s0.f, still = 0, moved = false, frames = 0;
     while (Date.now() - t0 < maxMs) {
-      const s = await page.evaluate(() => {
-        const r = document.getElementById('rdot').getBoundingClientRect();
-        return { y: r.top + r.height / 2, f: window.__diag.frames };
-      });
-      /* フレームが進んだ上で位置が動いていないことを条件にする
-         (同じフレームを2回読んで「止まった」と誤判定しないため) */
-      if (s.f !== lastF) {
-        if (Math.abs(s.y - lastY) < 0.25) { if (++still >= 3) return; } else still = 0;
-        lastY = s.y; lastF = s.f;
-      }
       await page.waitForTimeout(300);
+      const s = await read();
+      if (s.f === lastF) continue;                 // 同じフレームを2度読まない
+      frames++;
+      if (Math.abs(s.y - s0.y) >= 1) moved = true; // 動き出したか
+      if (Math.abs(s.y - lastY) < 0.25) still++; else still = 0;
+      lastY = s.y; lastF = s.f;
+      /* 動き出したうえで止まった / そもそも動く必要が無かった、のどちらか */
+      if (still >= 3 && (moved || frames >= 6)) return;
     }
   };
   const out = [];
