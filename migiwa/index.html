@@ -3725,6 +3725,19 @@ const LADDER = [
   { name:'散乱を停止',        down(){ atmosPass.enabled = false; },
                               up(){   atmosPass.enabled = true; } },
 ];
+/* ★ 読書中の海を止めない。以前は本文へ渡った時点で描画を完全に切り、
+   「記録の1枚」を貼ったまま固定していた。FPSと電池のためだったが、
+   海が主役のサイトで、読んでいるあいだだけ海が死んでいた。
+   代わりに「凪」で回す —— 時間を 0.28 倍に落とし、描くのは 30fps(低ティアは24)、
+   被写界深度と水面の映り込みは切る(62%の地の裏では見えない)。
+   止めるのは reduced-motion と saveData だけ。
+   ★ 端末で差を付けない(デスクトップだけ動く、は禁止)。落とすのは
+     描画の頻度と重いパスであって、動きそのものではない。 */
+const READ_CALM = 0.28;
+const READ_FPS  = TIER.name === 'high' ? 30 : 24;
+const READ_ALIVE_OK = !reduced && !saveData;
+let readAlive = false, readAcc = 0, readQOn = false;
+
 let qStep = 0;            // 何段落としているか
 let bloomScale = 1.0;
 let slowFor = 0, fastFor = 0;
@@ -3753,6 +3766,27 @@ function setQuality(step){
   while (qStep > target) LADDER[--qStep].up();
   /* 魚は数も振る舞いも減らさない。落とすのは近寄る距離だけ。 */
   fishQuality(qStep);
+}
+
+/* 読書中だけ落とすもの。品質の梯子(実測で降りるやつ)とは別系統で、
+   出るときに必ず元へ戻す。DPRは触らない —— 変えると canvas が張り直されて
+   記録の1枚が消え、resize 経路(measureLayout / resetFishState)まで走る。 */
+let readReflectWas = false;
+function setReadingQuality(on){
+  if (on === readQOn) return;
+  readQOn = on;
+  if (on){
+    readReflectWas = reflectOn;
+    reflectOn = false;                       // 600mでは水面は画角に入らない
+    setAtmosDefine('DOF', 0);                // 62%の地の裏でボケは見えない
+    setAtmosDefine('RAY_SAMPLES', 8);
+    bloomScale = 0.5; applyBloomSize();
+  } else {
+    reflectOn = readReflectWas;
+    setAtmosDefine('DOF', (TIER.dof && RENDER.dof && qStep < 1) ? 1 : 0);
+    setAtmosDefine('RAY_SAMPLES', qStep < 2 ? (TIER.name==='high' ? 26 : 12) : 8);
+    bloomScale = qStep < 3 ? 1.0 : 0.5; applyBloomSize();
+  }
 }
 
 /* 適応DPR。品質を落とすのは"実測で遅い時だけ" */
@@ -3810,15 +3844,24 @@ function frame(mode){
     }
     /* 第三幕(rp>0)に入っていれば描画は続ける。海だけが戻る。 */
     if (readingUI && rp <= 0){
+      /* 記録の1枚は1回だけ描く。実績の3件目へ写すのがこの1枚。 */
       if (!settledDone){ settledDone = true; renderSettledFrame(); }
-      writeReadingHud();
-      return;
+      if (!READ_ALIVE_OK){ writeReadingHud(); return; }
+      /* ここから下は「凪」。本流の frame() をそのまま通し、
+         最後に writeReadingHud() で読書中の表示に上書きする。 */
+      readAlive = true;
+    } else {
+      settledDone = false;
+      readAlive = false;
     }
-    settledDone = false;
+    setReadingQuality(readAlive);
   }
   t += dt * timeScale;
 
   /* --- 減衰。スクロールは"重い"、ポインタは"軽いが遅れる" --- */
+  /* ★ 読書中はカメラを据える。ポインタで視点が動くと、文字の裏の絵が
+     一緒に動いて読みにくい。動かすのは雪・光条・魚の側だけ。 */
+  if (readAlive){ pxT = pyT = 0; scrollVel = 0; }
   sp = smoothDamp(sp, targetP, spV, lag1(0.42), dt);
   px = smoothDamp(px, pxT, pxV, lag1(0.55), dt);
   py = smoothDamp(py, pyT, pyV, lag1(0.55), dt);
@@ -3886,7 +3929,8 @@ function frame(mode){
      幾何でないもの(時間の倍率・接地影の濃さ)は hp。 */
   hp = smoothDamp(hp, hpR, hpV, lag1(0.09), dt);
   /* 海の時間。hp 0.34→0.56 で 0 へ。第三幕(rp)で 0→1 に戻る。 */
-  timeScale = reduced ? 0 : Math.max(1 - ss(0.34, 0.56, hp), ss(0.10, 0.70, rp));
+  timeScale = reduced ? 0
+    : Math.max(readAlive ? READ_CALM : 0, 1 - ss(0.34, 0.56, hp), ss(0.10, 0.70, rp));
   {
     const cE = cEff(hpR);
     /* シートの実オフセット。実スクロールは奪わず、見かけの位置だけずらす。
@@ -4178,11 +4222,20 @@ function frame(mode){
     splashEl.style.opacity = '0';
   }
 
+  /* ★ 間引くのは「描く回数」だけ。t は毎フレーム進めるので、
+     30fps に落としても水と雪の速さは実時間どおりになる。 */
+  let skipDraw = false;
+  if (readAlive && !settled){
+    readAcc += dt;
+    if (readAcc < 1 / READ_FPS) skipDraw = true; else readAcc = 0;
+  }
   if (!settled && CAL && CAL.step < 5) calibrate(rawDt);
-  else renderComposer();
+  else if (!skipDraw) renderComposer();
 
   /* 記録の1枚は「1フレーム」として数えない(FPSも品質の梯子も汚さない) */
   if (settled) return;
+
+  if (readAlive) writeReadingHud();
 
   pushFrame(performance.now(), rawDt);
 
@@ -4200,7 +4253,12 @@ function frame(mode){
     renderDiag();
     /* まず解像度、それでも足りなければ品質の梯子を降りる。
        戻す側は降りる側より鈍くする(境界で往復させないため)。 */
-    if (QPIN === 'full'){ /* 固定。何も落とさない */ }
+    /* ★ 読書中は梯子を触らない。描く回数を間引いているので1フレームの
+       平均が実力より速く出て、梯子が勝手に登ってくる。登ると
+       setReadingQuality() が落としたパスを LADDER.up() が戻してしまい、
+       2つの仕組みが同じ設定を取り合う。 */
+    if (readAlive){ /* 凪のあいだは据え置き */ }
+    else if (QPIN === 'full'){ /* 固定。何も落とさない */ }
     else if (avg > 0.024){
       slowFor++; fastFor = 0;
       if (DPR > DPR_MIN + 0.01) applyDPR(DPR - 0.25);
