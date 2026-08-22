@@ -446,9 +446,15 @@ const verdict = {
                                value: seam ? seam.contentTopVh + 'vh' : 'n/a' },
   '汀線: 0.60以降は帯を描かない': { pass: seam ? seam.landClean : null,
                                value: seam ? JSON.stringify(seam.rows.filter(r => r.hpR >= 0.60)) : 'n/a' },
-  '汀線: 記録の1枚で凍る':      { pass: seam ? (seam.frozen.reading && seam.frozen.settled
-                                  && seam.frozen.sd === 0 && seam.frozen.ts === 0) : null,
+  /* ★ 「凍る」ではなく「凪ぐ」に変わった。本文へ渡ったあとも海は動く
+     (timeScale は READ_CALM=0.28 の底で流れる)。ここで測るべき不変条件は
+     時間が0であることではなく、記録の1枚が1回描かれ、シートのずれが
+     0に戻っていること。動きの有無は reduced-motion 側(degrade.mjs)が見る。 */
+  '汀線: 記録の1枚を1回描く':   { pass: seam ? (seam.frozen.reading && seam.frozen.settled
+                                  && seam.frozen.sd === 0) : null,
                                value: seam ? JSON.stringify(seam.frozen) : 'n/a' },
+  '読書中の海が凪いで動く':      { pass: seam ? (seam.frozen.ts > 0.05 && seam.frozen.ts < 0.6) : null,
+                               value: seam ? `timeScale ${seam.frozen.ts}` : 'n/a' },
   '目次: 行・針・見出しが一致':  { pass: ruler ? ruler.agree : null,
                                   value: ruler ? ruler.rows.map(r => `${r.readP}→${r.now}`).join(' / ')
                                                : '目次モードでない幅(n/a)' },
