@@ -6,6 +6,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>汀ノ庭 — MIGIWA STUDIO</title>
 <meta name="description" content="北九州市小倉北区のホームページ制作 MIGIWA STUDIO。その会社らしさを見つけて、デザイン・AI導入・SEOまで一緒に仕上げます。">
+<!-- 共有されたときの見え方。★ og:image は公開ドメインが決まったら
+     絶対URLに直すこと(相対パスを解決しないクローラがある)。 -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="汀ノ庭 — MIGIWA STUDIO">
+<meta property="og:title" content="汀ノ庭 — MIGIWA STUDIO">
+<meta property="og:description" content="北九州市小倉北区のホームページ制作 MIGIWA STUDIO。その会社らしさを見つけて、デザイン・AI導入・SEOまで一緒に仕上げます。">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:image" content="./og.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="夕暮れの海面と、水中に浮かぶ制作実績のガラス板">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#03141b">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2303141b'/%3E%3Cpath d='M6 13h20M16 13v13' stroke='%238FD4DE' stroke-width='2'/%3E%3C/svg%3E">
 <style>
@@ -37,6 +49,8 @@
     --f-mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
 
     --gut:34px;           /* 画面端のガター */
+    --open-h:58vh;        /* 本文の最後、地色を抜いて海を見せる帯の高さ */
+    --fade-h:30vh;        /* その上の移り変わり */
     --ease:cubic-bezier(.22,.61,.24,1);
   }
 
@@ -65,7 +79,13 @@
 
   /* ============================ HUD ============================
      3Dの上に乗る情報層。pointer-events は原則切って、リンクだけ拾う。 */
-  #hud{position:fixed; inset:0; z-index:10; pointer-events:none}
+  /* ★ 本文のシートは z-index:15。計器を 10 のままにすると、せり上がって
+     きたシートの裏に回り、地色の透け(5.5%)ぶんしか見えない計器になる。
+     渡したあとも生きている #foot / #ruler はシートの上に居なければ
+     意味がないので、#hud ごと 16 へ上げる。
+     子の z-index では逃げられない ―― #hud 自身が積み重ねの文脈を作るため。
+     pointer-events は none のままなので、本文のリンクは塞がない。 */
+  #hud{position:fixed; inset:0; z-index:16; pointer-events:none}
   #hud a,#hud button{pointer-events:auto; color:inherit; text-decoration:none; background:none; border:0; cursor:pointer; font:inherit}
   #hud a:focus-visible,#hud button:focus-visible{outline:1px solid var(--line); outline-offset:5px}
 
@@ -74,7 +94,8 @@
   .shade{text-shadow:0 1px 12px rgba(2,14,20,.55), 0 0 2px rgba(2,14,20,.35)}
 
   /* ---- ヘッダー ---- */
-  header{
+  #hud header{
+    text-shadow:0 1px 12px rgba(2,14,20,.55), 0 0 2px rgba(2,14,20,.35);
     position:absolute; top:0; left:0; right:0;
     display:flex; justify-content:space-between; align-items:flex-start;
     padding:calc(26px + env(safe-area-inset-top)) var(--gut) 0;
@@ -99,7 +120,7 @@
     .brand em{font-size:7.5px; letter-spacing:.24em; text-indent:.24em}
   }
   nav{display:flex; gap:30px; padding-top:1px}
-  nav a{position:relative; opacity:.62; transition:opacity .35s var(--ease)}
+  nav a{position:relative; opacity:.82; transition:opacity .35s var(--ease)}
   nav a::after{
     content:""; position:absolute; left:0; right:100%; bottom:-6px; height:1px;
     background:var(--line); transition:right .4s var(--ease);
@@ -120,19 +141,37 @@
 
   /* 深度の目盛り。水面では巨大なブランドマークと同じ場所に来て
      数字が字画に食い込むので、潜り始めるまで出さない。
-     潜航が始まれば(data-dived)フェードで現れる。 */
+     潜航が始まればフェードで現れる(不透明度はJSが持つ)。 */
   #ruler{
     position:absolute; left:calc(var(--gut) + 3px); top:196px; height:32vh; min-height:220px;
     border-left:1px solid rgba(143,212,222,.22);
-    opacity:0; transition:opacity .7s var(--ease);
+    /* 不透明度は JS が毎フレーム持つ。CSSトランジションを併せると
+       退役の曲線が0.7秒遅れて二重に効く。 */
+    opacity:0;
   }
-  :root[data-dived] #ruler{opacity:1}
   #ruler .tick{
     position:absolute; left:11px; transform:translateY(-50%);
     font-family:var(--f-mono); font-size:8px; letter-spacing:.16em; color:rgba(196,224,228,.42);
     white-space:nowrap;
   }
   #ruler .tick::before{content:""; position:absolute; left:-11px; top:50%; width:6px; height:1px; background:rgba(143,212,222,.3)}
+  /* 目次モード。深度の目盛りが、そのまま本文の目次になる。
+     幅の閾値は実測: 目盛り線11px + 最長の行「問い合わせ」5字
+     (9.5px×1.16×5 ≒ 56px)、左端37px から x∈[37,104]。
+     本文カラムの左端 (W-1000)/2 と 20px 以上あけるには W ≥ 1248px。
+     余裕を見て 1280px。★ 行を長くしたら必ずこの数字を計算し直すこと
+     (7字の「汀ノ庭について」だと 1296px 要る)。 */
+  /* display:contents なので、.idx の配置の基準は #ruler のまま */
+  #rulerIndex{display:contents}
+  #ruler .idx{
+    position:absolute; left:11px; transform:translateY(-50%);
+    font-family:var(--f-mono); font-size:9.5px; letter-spacing:.16em;
+    color:rgba(196,224,228,.42); white-space:nowrap; opacity:0;
+    transition:color .3s var(--ease);
+  }
+  #ruler .idx:hover,#ruler .idx.now{color:var(--line)}
+  #ruler .idx::before{content:""; position:absolute; left:-11px; top:50%; width:6px; height:1px; background:rgba(143,212,222,.3)}
+  @media (min-width:1280px){ html[data-index] #ruler{height:min(56vh,460px)} }
   #rdot{
     position:absolute; left:-3px; top:0; width:5px; height:5px; border-radius:50%;
     background:var(--line); box-shadow:0 0 10px rgba(143,212,222,.9);
@@ -180,13 +219,43 @@
   #dive .idx.on{opacity:1; color:var(--line)}
 
   /* ---- 下段 ---- */
+  /* 出来たばかりの1本の上に名前を置く。
+     600m潜って着いた場所の名前が「汀=水際」だ、という回収を
+     画面の隅ではなく中央でやる。 */
+  #seamName{
+    position:absolute; left:0; right:0; top:0; text-align:center;
+    font-size:clamp(10.5px,1.35vw,14px); letter-spacing:.34em; text-indent:.34em;
+    color:var(--bone); opacity:0; pointer-events:none;
+    text-shadow:0 1px 16px rgba(2,14,20,.75), 0 0 3px rgba(2,14,20,.5);
+  }
+  #seamName em{font-style:normal; opacity:.62; margin-left:1.1em; letter-spacing:.3em}
+
+  /* 本文が下端の計器の下を通るときだけ敷く。第三幕では引く(海を汚さない)。 */
+  #footScrim{
+    position:absolute; left:0; right:0; bottom:0; opacity:0; pointer-events:none;
+    height:calc(84px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, rgba(3,20,27,.94) 0%, rgba(3,20,27,.86) 34%, rgba(3,20,27,0) 100%);
+  }
+
   #foot{position:absolute; left:var(--gut); bottom:calc(30px + env(safe-area-inset-bottom))}
   #foot .loc{
     display:block; margin-top:9px;
     font-family:var(--f-mono); font-size:13px; font-weight:500; letter-spacing:.16em; color:var(--hud-hi);
   }
-  #foot .track{margin-top:13px; width:172px; height:1px; background:rgba(143,212,222,.2)}
+  #foot .track{position:relative; margin-top:13px; width:172px; height:1px; background:rgba(143,212,222,.2);
+    transition:width .5s var(--ease)}
   #foot .fill{display:block; height:1px; width:100%; background:var(--line); transform:scaleX(0); transform-origin:0 50%}
+  /* 目次モードの節の区切り。深度を測り終えたら、読了を測る物差しになる */
+  #foot .track i{position:absolute; top:-2px; width:1px; height:5px;
+    background:rgba(143,212,222,.42); opacity:0; transition:opacity .4s var(--ease)}
+  #foot .track i:nth-of-type(1){left:10%}  #foot .track i:nth-of-type(2){left:20%}
+  #foot .track i:nth-of-type(3){left:30%}  #foot .track i:nth-of-type(4){left:40%}
+  #foot .track i:nth-of-type(5){left:50%}  #foot .track i:nth-of-type(6){left:60%}
+  #foot .track i:nth-of-type(7){left:70%}  #foot .track i:nth-of-type(8){left:80%}
+  #foot .track i:nth-of-type(9){left:90%}
+  #foot.isIndex .track{width:320px}
+  #foot.isIndex .track i{opacity:1}
+  #foot .loc,#locCap{transition:opacity .2s var(--ease)}
 
   #counter{position:absolute; right:var(--gut); bottom:calc(30px + env(safe-area-inset-bottom)); text-align:right}
   #counter .n{font-family:var(--f-mono); font-size:13px; font-weight:500; letter-spacing:.14em; color:var(--hud-hi); font-variant-numeric:tabular-nums}
@@ -235,6 +304,8 @@
     transition:border-color .35s var(--ease), gap .35s var(--ease);
   }
   #work .go[hidden]{display:none}
+  /* 板の明るい面に重なるので、地ではなく影で持たせる(実測 2.16:1 だった) */
+  #work{text-shadow:0 1px 14px rgba(2,14,20,.72), 0 0 3px rgba(2,14,20,.5)}
   #work .go em{font-style:normal; transition:transform .35s var(--ease)}
   #work .go:hover{border-color:var(--line); gap:12px}
   #work .go:hover em{transform:translate(2px,-2px)}
@@ -243,9 +314,16 @@
   /* 周辺減光は「1枚だけ」。3D側にもVignetteを入れると二重になるので入れていない。 */
   #vig{position:fixed; inset:0; z-index:6; pointer-events:none;
     background:radial-gradient(124% 96% at 50% 46%, transparent 54%, rgba(1,9,13,.62) 100%)}
-  /* 本文が乗る左下だけ、ごく薄く沈める(文字の可読性を影ではなく地で作る) */
+  /* 文字が乗るところだけ、ごく薄く沈める(可読性を影ではなく地で作る)。
+     ★ 上端の帯は必須。斜めの1枚だけだと右上のナビが夕焼けの空に重なり、
+     実測 1.14:1 まで落ちていた(左しか沈めていなかった)。
+     下端はロケーションと章カウンタのため。深度で薄れるので水中では消える。 */
   #legibility{position:fixed; inset:0; z-index:5; pointer-events:none;
-    background:linear-gradient(105deg, rgba(2,14,20,.5) 0%, rgba(2,14,20,.2) 34%, transparent 62%)}
+    background:
+      linear-gradient(to bottom, rgba(2,14,20,.84) 0, rgba(2,14,20,.66) 56px,
+                                 rgba(2,14,20,.20) 118px, transparent 190px),
+      linear-gradient(to top,    rgba(2,14,20,.44) 0, rgba(2,14,20,.16) 92px, transparent 172px),
+      linear-gradient(105deg, rgba(2,14,20,.5) 0%, rgba(2,14,20,.2) 34%, transparent 62%)}
   #grain{position:fixed; inset:0; z-index:7; pointer-events:none; opacity:.038; mix-blend-mode:overlay;
     background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="220" height="220" filter="url(%23n)" opacity="0.6"/></svg>')}
   /* 水面を切る瞬間の一瞬の白。JSが 60ms だけ点ける */
@@ -261,7 +339,6 @@
     transition:opacity .9s var(--ease); 
   }
   html.js #boot.gone{opacity:0; pointer-events:none}
-  #noscriptNote{position:fixed; left:var(--gut); bottom:96px; z-index:12; max-width:34em}
   #boot .bar{width:132px; height:1px; background:rgba(143,212,222,.2)}
   #boot .bar span{display:block; height:1px; width:0%; background:var(--line); transition:width .3s linear}
 
@@ -288,11 +365,28 @@
      潜航の後に続く通常フローのセクション。canvasのピクセルではなく
      実テキストで置く(検索エンジンにもスクリーンリーダーにも見える)。
      面はガラス板・blur・影・発光を使わない。地色＋罫1本＋組版のみ。 */
+  /* 本文のシート。
+     地色は #content 自身ではなく ::before の1枚に持たせ、94.5% に落とす。
+     潜り終わりに凍らせた海の1枚が、本文のあいだ 5.5% で下に残り続ける。
+     動いていないから「記録」に読める(GPUの追加コストは0)。
+     上端の罫は汀線の主役なので .20 → .42 へ格上げする。 */
   #content{
-    position:relative; z-index:15; background:var(--abyss);
-    border-top:1px solid rgba(143,212,222,.20);
+    position:relative; z-index:15; background:none;
+    border-top:1px solid rgba(143,212,222,.42);
     padding:clamp(76px,10vw,150px) var(--gut) 0;
   }
+  #content::before{
+    content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
+    /* 下端の --open-h ぶんだけ地色を抜く。読み終えたところで海が戻る。
+       抜けている帯には文字を1つも置かない(集光が来ると必ず読めなくなる)。 */
+    background:linear-gradient(to top,
+      rgba(3,20,27,0)    0,
+      rgba(3,20,27,0)    var(--open-h),
+      rgba(3,20,27,.945) calc(var(--open-h) + var(--fade-h)),
+      rgba(3,20,27,.945) 100%);
+  }
+  /* 3Dが出ない端末では透かす相手が居ないので、地色は不透明に戻す */
+  html[data-nogl] #content::before{background:var(--abyss)}
   #content section{max-width:1000px; margin:0 auto; padding-bottom:clamp(66px,8vw,124px)}
   #content h2{
     font-family:var(--f-serif); font-weight:400; letter-spacing:-.02em;
@@ -304,8 +398,10 @@
   .workList .visit:hover em{transform:translate(2px,-2px)}
   .facts a{border-bottom:1px solid var(--line-dim); padding-bottom:2px}
   .facts a:hover{border-color:var(--line)}
-  #content .lead{margin-bottom:44px; font-size:14px; line-height:2.1; letter-spacing:.04em; color:rgba(222,240,242,.86); max-width:42em}
-  #content p{font-size:14.5px; line-height:2.05; letter-spacing:.02em; color:rgba(228,243,245,.92)}
+  #content .lead{margin-bottom:44px; font-size:15px; line-height:2.0; letter-spacing:.04em; color:rgba(222,240,242,.86); max-width:40em}
+  /* ★ 16px。14.5px では想定読者(北九州の中小企業の経営者・50〜60代)が読めない。
+     行送りは字が大きくなるぶん 2.05 → 1.95 に締める(同じ比のままだと間延びする)。 */
+  #content p{font-size:16px; line-height:1.95; letter-spacing:.02em; color:rgba(228,243,245,.92)}
 
   .workList{list-style:none}
   .workList li{
@@ -373,12 +469,14 @@
   /* 定義リスト。左に見出し、右に説明。狭い画面では縦に積む */
   #content .dl{margin-top:18px}
   #content .row{
-    display:grid; grid-template-columns:minmax(0,15em) minmax(0,1fr); gap:6px 28px;
-    padding:17px 0; border-top:1px solid rgba(143,212,222,.14);
+    display:grid; grid-template-columns:minmax(0,14em) minmax(0,1fr); gap:6px 30px;
+    padding:19px 0; border-top:1px solid rgba(143,212,222,.14);
   }
   #content .dl .row:last-child{border-bottom:1px solid rgba(143,212,222,.14)}
-  #content dt{font-size:13.5px; letter-spacing:.02em; color:var(--bone); line-height:1.85}
-  #content dd{font-size:13.5px; line-height:1.95; letter-spacing:.02em; color:rgba(222,240,242,.88)}
+  #content dt{font-size:15px; letter-spacing:.02em; color:var(--bone); line-height:1.8}
+  /* ★ 1行が53文字あった。日本語の適正は35〜45字。
+     字を大きくするだけでは足りないので、桁そのものに上限を置く。 */
+  #content dd{font-size:15px; line-height:1.9; letter-spacing:.02em; color:rgba(222,240,242,.88); max-width:38em}
   /* 特に見せたい項目(ホームページ制作 / AI導入)だけ、罫ではなく面で立てる */
   #content .row.is-key{
     border-top:1px solid rgba(143,212,222,.30);
@@ -425,6 +523,36 @@
 
 
   /* ---- 実績の画面。ポートフォリオなので文字より先に見せる ---- */
+  /* ★ 実績が本文の先頭に来たので、ここが訪問者の見る最初の中身になる。
+     グリッドは実績ページにしか無く、TOPでは縦に積まれていた。 */
+  #content .shots{
+    display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:16px; margin:26px 0 34px;
+  }
+  #content .shots-3{grid-template-columns:repeat(3, minmax(0,1fr)); gap:13px}
+  @media (max-width:820px){
+    #content .shots,#content .shots-3{grid-template-columns:minmax(0,1fr); gap:14px}
+  }
+  /* 窓口が1つも開いていないときの一行。バッジ3つが並ぶだけだと
+     「準備中の店」ではなく「壊れたサイト」に見える。 */
+  #content .soonNote{
+    margin:0 0 12px; font-size:12.5px; line-height:1.9;
+    letter-spacing:.03em; color:var(--hud);
+  }
+  /* 3件目だけは、いまこの場で描いた1枚を貼る。写せたときだけ差し替わる。 */
+  #content .shot-live{position:relative; margin:0; padding:0}
+  #content .shot-live canvas{display:none}
+  #content .shot-live figcaption{display:none}
+  #content .shot-live[data-live="1"] canvas{
+    display:block; width:100%; height:auto; aspect-ratio:16/10;
+    border:1px solid rgba(143,212,222,.20);
+    filter:saturate(.96) brightness(.97);
+  }
+  #content .shot-live[data-live="1"] img{display:none}
+  #content .shot-live[data-live="1"] figcaption{
+    display:block; margin-top:9px; font-size:10.5px; line-height:1.75;
+    letter-spacing:.06em; color:var(--hud);
+  }
   #content .shot{margin:0; padding:0}
   #content .shot img{
     display:block; width:100%; height:auto;
@@ -471,15 +599,70 @@
     #content .shot-lead{margin:20px 0 26px}
   }
 
-  #contentFoot{border-top:1px solid rgba(143,212,222,.16); padding:26px 0 40px; font-size:9px; letter-spacing:.2em; color:rgba(196,224,228,.42)}
+  /* 本文の立ち上がり。1ブロック = 1つの動きだけ。
+     ★ 「アニメ前」の指定は html[data-anim] の下にだけ置く。
+     JS無効・初期化失敗・reduced-motion では属性が付かず、
+     opacity:0 が残って本文が消える事故が起きない。 */
+  html[data-anim] #content .blk,
+  html[data-anim] #landing{
+    opacity:0; transform:translateY(10px);
+    transition:opacity .75s var(--ease), transform .75s var(--ease);
+  }
+  html[data-anim] #content .blk.isIn,
+  html[data-anim] #landing.isIn{opacity:1; transform:none}
+
+  /* ---- 着地。汀線を越えた最初の一枚 ---- */
+  #landing{
+    max-width:1000px; margin:0 auto clamp(56px,7vw,104px);
+    min-height:min(52vh,420px); display:flex; flex-direction:column; justify-content:center;
+    padding:clamp(54px,8vh,88px) 0 0;
+    border-bottom:1px solid rgba(143,212,222,.14);
+  }
+  #landing .eyebrow{margin-bottom:22px}
+  #landing h2{
+    font-family:var(--f-serif); font-weight:400; letter-spacing:-.02em;
+    font-size:clamp(30px,4.6vw,56px); line-height:1.24; margin-bottom:18px;
+  }
+  #landing .blead{max-width:34em}
+
+  /* ---- 第三幕。読み終えたところで海が戻る ---- */
+  #outro{max-width:1000px; margin:0 auto; padding-top:clamp(40px,5vw,64px)}
+  #outro #contentFoot{border-top:1px solid rgba(143,212,222,.16)}
+  #backTop{
+    display:inline-block; margin-top:4px; padding-bottom:34px;
+    font-size:11px; letter-spacing:.2em; color:rgba(196,224,228,.70);
+  }
+  #backTop em{font-style:normal; transition:transform .35s var(--ease)}
+  #backTop:hover em{transform:translateY(-3px)}
+  /* 地色0%の窓。ここには文字を置かない。
+     ★ 高さは open-h だけでなく fade-h も足す。足さないと「水面へもどる」が
+     移り変わりの途中(地色12%)に載り、集光が来た瞬間に読めなくなる。 */
+  #outroOpen{height:calc(var(--open-h) + var(--fade-h))}
+
+  #contentFoot{border-top:0; padding:26px 0 14px; font-size:10px; letter-spacing:.2em; color:rgba(196,224,228,.70)}
 
   /* 本文を読んでいる間は潜航の計器を引っ込め、描画も止める。
      絵が変わらない区間なので、最低FPSはむしろ上がる。 */
-  html[data-reading="1"] #hud,
+  html[data-reading="1"] #hud{pointer-events:none}
+  /* 計器は全部退くが、#foot と #ruler だけは持ち場を替えて残る
+     (深度を測る物から、読了を測る物へ)。 */
+  html[data-reading="1"] #hud > *:not(#foot):not(#ruler):not(#footScrim):not(.recall){opacity:0!important; pointer-events:none!important}
+  /* 本文の途中で上へ戻ろうとした人にだけ、名前と行き先を返す。
+     常時出す帯にはしない(15,000字の上に何かを浮かせ続けない)。 */
+  /* ★ 退役のときに JS が inline で opacity と visibility を書いているので、
+     ここは !important でないと勝てない(本文中は frame() が止まっていて
+     JS 側が書き直さないため、消えたままになる)。 */
+  #hud header.recall{
+    opacity:1!important; visibility:visible!important; pointer-events:auto!important;
+    padding-bottom:22px;
+    background:linear-gradient(to bottom, rgba(3,20,27,.94) 0%, rgba(3,20,27,.82) 62%, rgba(3,20,27,0) 100%);
+    transition:opacity .35s var(--ease), transform .35s var(--ease);
+  }
+  #hud header.recall a{pointer-events:auto}
   html[data-reading="1"] #vig,
   html[data-reading="1"] #grain,
   html[data-reading="1"] #legibility{opacity:0; pointer-events:none}
-  #hud,#vig,#grain,#legibility{transition:opacity .45s var(--ease)}
+  #vig,#grain,#legibility{transition:opacity .45s var(--ease)}
 
   @media (max-width:820px){
     .workList li{grid-template-columns:1fr; gap:4px}
@@ -487,16 +670,43 @@
     .facts b{flex-basis:7em}
   }
 
-  #fallback{display:none; position:fixed; inset:0; z-index:20; background:var(--abyss); color:var(--bone);
-    padding:40vh var(--gut) 0; text-align:center; font-size:13px; line-height:2.2}
+  /* WebGL2 が起動できない端末の案内。
+     ★ 以前は position:fixed; inset:0 で全面を覆っており、本文15,000字が
+     1文字も読めなかった。案内は上端の帯に留め、本文は必ず通す。 */
+  #fallback{display:none; position:relative; z-index:16; max-width:1000px; margin:0 auto;
+    padding:14px var(--gut); border-bottom:1px solid rgba(143,212,222,.16);
+    background:var(--abyss); color:var(--bone);
+    font-size:12px; line-height:1.9; letter-spacing:.06em; text-align:left}
   #fallback.on{display:block}
+  /* 3Dが出ない端末では、620vhの黒い空白と動かない計器を丸ごと畳む */
+  html[data-nogl] #stage,html[data-nogl] #hud,html[data-nogl] #vig,
+  html[data-nogl] #grain,html[data-nogl] #legibility{display:none}
+  html[data-nogl] #spacer{height:0}
+  /* JS無効では計器が一切動かないので、居座らせない。
+     ★ #hud だけ消しても足りない。620vh の空白がそのまま残るので、
+       本文の前に6画面ぶんの黒が挟まる(実測 5233px)。空白と、その上に
+       敷いていた暗幕・粒子も一緒に畳む。判定は data-nogl と同じ考え方だが、
+       あちらは JS が立てる属性なので JS無効では絶対に立たない。 */
+  html:not(.js) #hud,html:not(.js) #stage,html:not(.js) #vig,
+  html:not(.js) #grain,html:not(.js) #legibility,html:not(.js) #boot{display:none}
+  html:not(.js) #spacer{height:0}
+  /* #hud を畳むと名乗りごと消えるので、JS無効のときだけ静的に置き直す。
+     <noscript> の中身は JS が動いていれば存在しないので、本流には触れない。 */
+  /* ★ 以前は position:fixed で画面の下に貼っていた(3Dの上に置く注記だった)。
+     静的な名乗りに作り替えたので、その規則は消してある。残したままだと
+     こちらは padding しか上書きしないので、名乗りが画面の下に貼り付く。 */
+  #noscriptNote{padding:104px var(--gut) 72px; max-width:36em}
+  #noscriptNote .nsName{font-size:30px; letter-spacing:.14em; line-height:1.5; margin:0}
+  #noscriptNote .nsName .mono{display:block; font-size:11px; letter-spacing:.34em; opacity:.72; margin-top:10px}
+  #noscriptNote .nsLead{margin:22px 0 0}
+  #noscriptNote .nsNote{margin:28px 0 0; opacity:.66}
 
   /* ============================ モバイル ============================
      デスクトップの縮小版にしない。密度を落とし、情報の優先順位を組み替える。
      消すのは「補助的な計器」だけで、世界観(深度・現在地・作品名)は残す。 */
   @media (max-width:820px){
     :root{--gut:20px}
-    header{padding:20px var(--gut) 0}
+    #hud header{padding:20px var(--gut) 0}
     nav{gap:20px}
     #sim,#vert,#ruler{display:none}
     #meter{top:88px}
@@ -514,6 +724,19 @@
     #work .go{margin-top:0}
     #foot{left:var(--gut); bottom:calc(24px + env(safe-area-inset-bottom))}
     #foot .track{width:120px}
+    #foot.isIndex .track{width:calc(100vw - var(--gut) * 2)}
+    /* 本文と場所を取り合うので、読んでいる間は見出しの1行を畳む */
+    html[data-reading="1"] #locCap{display:none}
+    #footScrim{height:calc(72px + env(safe-area-inset-bottom))}
+    /* 狭い画面では本文が全幅なので、読んでいる間だけ「ぼかし」ではなく
+       はっきりした帯にする。中途半端に透けると、本文の大きな見出しと
+       計器の小さな文字が同じ濃さで混ざって、どちらも読みにくい。 */
+    html[data-reading="1"] #footScrim{
+      height:calc(56px + env(safe-area-inset-bottom));
+      background:rgba(3,20,27,.96);
+      border-top:1px solid rgba(143,212,222,.14);
+    }
+    html[data-reading="1"] #foot{bottom:calc(16px + env(safe-area-inset-bottom))}
     #foot .loc{font-size:11.5px}
     #counter{right:var(--gut); bottom:calc(24px + env(safe-area-inset-bottom))}
     #counter .n{font-size:11.5px}
@@ -521,7 +744,13 @@
     #diveBtn{bottom:calc(74px + env(safe-area-inset-bottom))}
     #diveBtn i{width:40px; height:40px}
     #diveBtn::after{width:40px; height:40px; margin-left:-20px}
-    #legibility{background:linear-gradient(180deg, rgba(2,14,20,.42) 0%, rgba(2,14,20,.12) 30%, transparent 55%, rgba(2,14,20,.5) 100%)}
+    /* ★ ここで background ごと差し替わるので、上端の沈みも作り直す。
+       前は .42 しかなく、明るい空にナビが重なる幅では読めなくなる。 */
+    #legibility{background:
+      linear-gradient(to bottom, rgba(2,14,20,.80) 0, rgba(2,14,20,.60) 52px,
+                                 rgba(2,14,20,.18) 112px, transparent 176px),
+      linear-gradient(to top,    rgba(2,14,20,.50) 0, rgba(2,14,20,.18) 96px, transparent 184px),
+      linear-gradient(180deg, rgba(2,14,20,.10) 0%, transparent 42%)}
   }
   /* 背の低い横向き */
   @media (max-height:520px){
@@ -576,13 +805,23 @@
     <span class="v" id="depthVal">000.0<small>M</small></span>
   </div>
 
-  <div id="ruler" aria-hidden="true">
-    <span id="rdot"></span>
-    <span class="tick" style="top:0%">000M</span>
-    <span class="tick" style="top:25%">150M</span>
-    <span class="tick" style="top:50%">300M</span>
-    <span class="tick" style="top:75%">450M</span>
-    <span class="tick" style="top:100%">600M</span>
+  <div id="ruler">
+    <span id="rdot" aria-hidden="true"></span>
+    <span class="tick" aria-hidden="true" style="top:0%">000M</span>
+    <span class="tick" aria-hidden="true" style="top:25%">150M</span>
+    <span class="tick" aria-hidden="true" style="top:50%">300M</span>
+    <span class="tick" aria-hidden="true" style="top:75%">450M</span>
+    <span class="tick" aria-hidden="true" style="top:100%">600M</span>
+    <!-- 深度の目盛りは、本文へ渡ったところでそのまま目次になる。
+         飾りではなく実際に飛べるリンクにする(1240px 以上でだけ出す)。 -->
+    <nav id="rulerIndex" aria-label="本文の目次">
+      <a class="idx" data-sec="works"      href="#works">実績</a>
+      <a class="idx" data-sec="service"    href="#service">できること</a>
+      <a class="idx" data-sec="flow"       href="#flow">進め方</a>
+      <a class="idx" data-sec="philosophy" href="#philosophy">考え方</a>
+      <a class="idx" data-sec="contact"    href="#contact">問い合わせ</a>
+      <a class="idx" data-sec="about"      href="#about">概要</a>
+    </nav>
   </div>
 
   <!-- 水面。置くのはロックアップと業種の一行、潜行の誘導だけ。
@@ -594,7 +833,7 @@
       <span class="mono">MIGIWA STUDIO</span>
     </h1>
     <p class="shade">ホームページをつくっています。<br>福岡・北九州から。</p>
-    <a id="cta" class="mono shade" href="#dive-start">スクロールで、潜ります。 <em>↓</em></a>
+    <a id="cta" class="mono shade" href="#works">スクロールで、潜ります。 <em>↓</em></a>
   </section>
 
   <div id="vert" class="mono">Selected works / 02 projects</div>
@@ -616,10 +855,17 @@
     <a class="go mono" id="workLink" hidden>View project <em>↗</em></a>
   </div>
 
+  <!-- 本文がせり上がってきたら、下端の計器の下に敷く。
+       固定の計器と流れる本文が同じ場所を取り合うのはモバイルで必ず起きる。 -->
+  <div id="footScrim" aria-hidden="true"></div>
+
+  <div id="seamName" class="mono shade" aria-hidden="true">汀ノ庭<em>MIGIWA STUDIO</em></div>
+
   <div id="foot" class="mono">
-    <span>Current location</span>
+    <span id="locCap">Current location</span>
     <span class="loc" id="locVal">SURFACE</span>
-    <div class="track"><span class="fill" id="diveFill"></span></div>
+    <div class="track"><span class="fill" id="diveFill"></span>
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
   </div>
 
   <div id="counter" class="mono">
@@ -641,9 +887,11 @@
 </div>
 
 <noscript>
-  <p id="noscriptNote" class="mono shade">
-    JavaScript が無効のため、水中の3D表現は再生されません。本文はそのままお読みいただけます。
-  </p>
+  <div id="noscriptNote">
+    <h1 class="nsName"><b>汀ノ庭</b><span class="mono">MIGIWA STUDIO</span></h1>
+    <p class="nsLead">ホームページをつくっています。<br>福岡・北九州から。</p>
+    <p class="nsNote mono">JavaScript が無効のため、水中の3D表現は再生されません。本文はそのままお読みいただけます。</p>
+  </div>
 </noscript>
 
 <div id="diag" hidden></div>
@@ -653,108 +901,84 @@
   別のブラウザ、または最新版でお試しください。
 </div>
 
-<div id="dive-start"></div>
+<!-- 文書の先頭を指す錨。本文末の「水面へもどる」の行き先。 -->
+<div id="top"></div>
 <div id="spacer"></div>
 
 <!-- 潜航のあとに続く本文。ここは canvas ではなく実テキスト。
      JS無効でも・クローラにも・スクリーンリーダーにも全部読める。 -->
 <main id="content">
-      <section id="philosophy" data-reveal>
-        <div class="blk" id="rashisa" data-provisional="実績の中身に触れる唯一の具体。サービス紹介のカードが「上=画像 / 下=テキスト、写真に文字を重ねない」構成であることは制作時の決めごとと一致するが、実績の書き方として公開してよいか、また理由づけ（写っているものを隠さない）が施主の説明と食い違わないかの確認が要る。同サイトでも先頭の大きな写真にはロゴと文字を重ねているので、「一度も重ねていない」とは書いていない。">
-          <p class="eyebrow mono">PHILOSOPHY</p>
-          <h2>色は、現場でいちばん目に入るものから取ります。</h2>
-          <p class="blead">デザインの決めごとは、たいていその会社の中にもう転がっています。外から持ってくる前に、そこを探します。</p>
-          <p>作業着、機械、看板、扱っている商品。決まったブランドカラーを持っていない会社でも、毎日その色を見ています。色だけの話ではありません。写真の選び方も、言葉づかいも、動きの量も、同じやり方で決めます。</p>
-          <p>見栄えのいい型に社名と写真を差し替えれば、ホームページの形にはなります。ただ、その型はどの会社にも入るように作られたものです。入れ替わるのは社名と写真で、並び順も余白も、次の会社のときと同じまま残ります。</p>
-          <p>GARAGE BeCoolのサービス紹介では、写真の上に文字を重ねていません。上に写真、下に説明と分けて、写真は写真のまま見せています。そこに写っているものを、文字で隠す理由が無かったからです。</p>
-          <p>だから、デザインを描き始める前に、見る時間と聞く時間を取ります。ここを飛ばすと、その会社らしさではなく、つくった側の好みが出るだけのホームページになります。</p>
+      <!-- 汀線を越えた最初の一枚。海が止まったことに気付かない読み手に
+           対する唯一の担い手なので、演出の説明ではなく案内として書く。 -->
+      <header id="landing" data-reveal>
+        <p class="eyebrow mono">DEPTH 600.0M — SEABED</p>
+        <h2>潜るのは、ここまでです。<br>ここから下が、この会社です。</h2>
+        <p class="blead">つくったもの、できること、進め方。海は、いちばん下でもう一度だけ出てきます。</p>
+      </header>
+
+      <!-- build-migiwa:top:start ここから copy.json 由来。手で書き換えない -->
+      <section id="works" data-reveal>
+        <div class="blk" id="blk-works-lead">
+          <p class="eyebrow mono">WORKS</p>
+          <h2>制作実績</h2>
+          <div class="shots shots-3">
+            <figure class="shot">
+              <img src="./shots/becool-pc.webp" width="1720" height="1075"
+                   alt="GARAGE BeCool のトップページ" loading="lazy" decoding="async">
+            </figure>
+            <figure class="shot">
+              <img src="./shots/trex-pc.webp" width="1720" height="1075"
+                   alt="T-REX CO., LTD. のトップページ" loading="lazy" decoding="async">
+            </figure>
+            <figure class="shot shot-live">
+              <canvas class="liveShot" role="img" aria-label="汀ノ庭 のトップページ（いま描画された画面）"></canvas>
+              <img src="./shots/migiwa-pc.webp" width="1720" height="1075"
+                   alt="汀ノ庭 のトップページ" loading="lazy" decoding="async">
+              <figcaption class="mono">この1枚は写真ではありません。いま、このブラウザが描いたものです。</figcaption>
+            </figure>
+          </div>
+          <p class="blead">2件と、このサイト。</p>
+          <p>これまでにつくったのは2件です。数は多くありません。そのかわり、どんな会社で、何をつくって、どこをどう動かしたのかを1件ずつ書いています。</p>
+          <p class="glabel mono">制作実績</p>
+          <dl class="dl">
+            <div class="row">
+              <dt><a class="go" href="../becool/">GARAGE BeCool <em>↗</em></a></dt>
+              <dd>コーポレートサイト / 中古車販売・整備 / 福岡県北九州市</dd>
+            </div>
+            <div class="row">
+              <dt><a class="go" href="../">T-REX CO., LTD. <em>↗</em></a></dt>
+              <dd>コーポレートサイト / 板金塗装・荷台換装・修理・出張修理 / 福岡・山口</dd>
+            </div>
+          </dl>
+          
+          <dl class="dl">
+            <div class="row is-key">
+              <dt><a class="go" href="./works/">制作実績を見る <em>↗</em></a></dt>
+              <dd>2件の画面と、このサイトの制作記。</dd>
+            </div>
+          </dl>
         </div>
-        <div class="blk" id="miru-kiku" data-provisional="対応エリアの具体（どこまでを訪問範囲とするか、遠方時の代替手段）が未確定。決まれば言い切れる箇所なので、公開前に表現を確定させる。 / 実際のヒアリングで聞いている内容を文章化した草案。この4つ目を項目名に立てて思想の中心に置いているので、施主の進め方と違う項目があれば見出しごと差し替えが必要。 / 実際にはやっていない工程が混ざっていないかの確認が要る。手順は事実として書いているので、施主の確認後に確定させる。特に色の拾い方は今回追記した具体なので、実際の決め方と一致するか要確認。">
-          <p class="eyebrow mono">LOOK &amp; LISTEN</p>
-          <h3>まず、見て、聞きます。</h3>
-          <p class="blead">打ち合わせの前半は、こちらから提案しません。材料を集める時間にします。</p>
-          <p>順番はだいたい次の4つです。全部そろわなくても始められます。写真が1枚も無い、話すのが得意ではない、という状態からで構いません。</p>
+        <div class="blk" id="blk-works-this-site">
+          <p class="eyebrow mono">THE FOURTH</p>
+          <h3>3件目は、いま見ているこのサイトです。</h3>
+          <p>水面から海底600メートルまで、さっき潜ってきた景色は写真でも動画でもありません。ブラウザがその場で描いています。</p>
+          <p>使っているのはthree.jsとWebGL——ブラウザの中で立体を描くための技術です。スマートフォンでも動くように、端末の性能に合わせて描く量を変えています。</p>
+          <p>つくれるものを説明するより、実際に動かして見てもらうほうが早いと思ったので、自分のサイトでやりました。何をどう組んだかは実績ページに書いています。</p>
           
           <dl class="dl">
             <div class="row">
-              <dt>写真を見せてもらう</dt>
-              <dd>現場や商品を撮ったものを、選ばずにまとめて見せてもらいます。うまく撮れた1枚より、これまで何を撮ろうとしてきたかのほうを見ています。写っている道具、人との距離、残そうとした瞬間。撮り方の癖に、その会社の性格が出ます。</dd>
-            </div>
-            <div class="row">
-              <dt>現場を見に行く</dt>
-              <dd>工場や店舗、事務所に入らせてもらいます。物の置き方、掃除の仕方、機械の年季、壁に貼ってあるもの。写真では伝わらない部分なので、近ければ足を運びます。行けない場合は、動画やビデオ通話で見せてもらいます。</dd>
-            </div>
-            <div class="row">
-              <dt>断ってきた仕事まで聞く</dt>
-              <dd>いつ、どういうきっかけで始めたか。一番大変だった仕事は何か。どんな依頼のときに手応えがあるか。そして、断ってきた仕事はどんな仕事か。断った理由の中には、その会社が譲らなかったものが入っています。引き受けた仕事の一覧だけを見ても、そこは出てきません。</dd>
+              <dt>汀ノ庭（このサイト）</dt>
+              <dd>コーポレートサイト / ホームページ制作 / 福岡県北九州市</dd>
             </div>
             <div class="row is-key">
-              <dt>本人が気づいていない強みを探す</dt>
-              <dd>「うちには特に何もない」と言われることがあります。それでも話を聞いていくと、本人には当たり前で、外から見ると珍しいことが出てきます。それを見つけて、表に出す位置まで持っていくのがこちらの仕事です。</dd>
+              <dt>このサイトの制作記を読む</dt>
+              <dd>海の描き方、スマホでの動かし方まで。</dd>
             </div>
           </dl>
-        </div>
-        <div class="blk" id="otoshikomi" data-provisional="実際にはやっていない工程が混ざっていないかの確認が要る。手順は事実として書いているので、施主の確認後に確定させる。特に色の拾い方は今回追記した具体なので、実際の決め方と一致するか要確認。">
-          <p class="eyebrow mono">HOW WE DECIDE</p>
-          <h3>見たものを、決めごとに変えます。</h3>
-          <p class="blead">見て聞いたものを、一つずつ具体的な設計に落とします。感覚のまま決めた部分は、あとから説明できなくなるからです。</p>
-          <p>なぜその色なのか、なぜその並びなのかを、元になった材料とセットで残します。半年後に「ここを変えたい」と言われたときに、何を動かすと何が崩れるのかが分かるようにしておくためです。</p>
-          
-          <dl class="dl">
-            <div class="row">
-              <dt>色</dt>
-              <dd>現場で一番よく目に入る色を軸にします。すでに決まった色があるなら、その色は変えず、画面で読みやすい明るさに調整するところで止めます。無い場合は、見せてもらった写真を並べて、いちばん多く写り込んでいる色から拾います。</dd>
-            </div>
-            <div class="row">
-              <dt>写真の選び方と撮り方</dt>
-              <dd>完成したものだけを並べるか、作業中の手や道具まで入れるか。人を出すか、出さないか。ここは会社によって答えが逆になるので、必ず一緒に決めます。手元に使える写真が無ければ、撮りに行きます。</dd>
-            </div>
-            <div class="row">
-              <dt>言葉づかい</dt>
-              <dd>話を聞いたときに出てきた言い方を、なるべくそのまま残します。「丁寧な施工を心がけています」に書き換えるより、その人が実際に使った言葉のほうが伝わります。読みやすく整えるのはこちらの仕事ですが、言い回しは持ち主のものです。</dd>
-            </div>
-            <div class="row">
-              <dt>動きの量と速さ</dt>
-              <dd>このサイトのように大きく動かすこともできますし、ほとんど動かさないこともできます。落ち着いて見せたい会社に、速い動きは付けません。動かす場合も、問い合わせ先のボタンだけは、動きが終わるのを待たずに押せる状態にしておきます。</dd>
-            </div>
-            <div class="row">
-              <dt>並べる順番</dt>
-              <dd>その場ですぐ連絡したい人が多いのか、いくつか比べてから決める人が多いのか。それによって、最初に見せるものと、問い合わせ先を置く位置が変わります。同じ材料でも、順番が違えば別のホームページになります。</dd>
-            </div>
-          </dl>
-        </div>
-        <div class="blk" id="design-de-owaranai" data-provisional="公開後の関わり方（都度相談か月額での継続か）が案件ごとのため、標準的な言い方を決めてから公開する。">
-          <p class="eyebrow mono">AFTER LAUNCH</p>
-          <h3>つくったあと、見つけてもらうところまでやります。</h3>
-          <p class="blead">きれいにできても、見つけてもらえなければ誰も来ません。見た目を決めるのと同じ時期に、公開したあとのことも決めます。</p>
-          <p>ホームページは、納品したら終わるものではなく、そのあと何年か使う道具です。デザインと同時に、次の3つを決めます。検索から見つけてもらう準備。見つけた人から問い合わせが来たあとの、こちら側の手間。そして、公開後に自分たちで直せる範囲。</p>
-          
-          <dl class="dl">
-            <div class="row">
-              <dt>見つけてもらう準備を、つくりながら入れる</dt>
-              <dd>検索したときに出てくるようにする調整を、制作と並行して組み込みます。ページの題名の付け方、見出しの並べ方、表示の速さ、地域名で探されたときの出やすさ。専門用語ではSEOと呼ばれるもので、やること自体は地味な整理の積み重ねです。あとから足すと、ページの構成ごと組み直しになります。順位を約束することはできないので、代わりに、何をどう直すのかを具体的に説明します。</dd>
-            </div>
-            <div class="row is-key">
-              <dt>AIを、飾りではなく道具として入れる</dt>
-              <dd>同じ質問を何度も受けているなら、その受け答えをAIに任せられます。自社の資料やサービス内容を覚えさせた、その会社専用のAIという言い方が近いです。問い合わせ内容の自動整理や、見積もりの下書きにも使えます。ただ、入れれば偉いというものではありません。実際に手間が減るかどうかだけで、入れる・入れないを決めます。</dd>
-            </div>
-            <div class="row">
-              <dt>自分たちで続けられる形にしておく</dt>
-              <dd>公開後に自分で書き換える部分と、こちらに頼んだほうが早い部分を、最初に分けます。管理画面から更新できるWordPressでつくるか、一から組んだページにするかも、その分け方から決めます。ほとんど触らない前提のページを、無理に更新できる形にはしません。</dd>
-            </div>
-          </dl>
-        </div>
-        <div class="blk" id="issho-ni" data-provisional="修正回数の扱いが未確定。何度でも戻るのか、目安の回数を示すのかで書き方が変わるため、方針を決めてから確定させる。 / LINE公式アカウントが未取得。取得しない場合はこの一文を落とすか、フォームとメールだけの記述に差し替える必要がある。">
-          <p class="eyebrow mono">HOW WE WORK</p>
-          <h3>先に絵にして見せるので、違うと言ってください。</h3>
-          <p class="blead">引き出す作業なので、決めるのは最後まで会社の側です。</p>
-          <p>最初に、方向性をざっくりした形にして見せます。言葉だけの説明より、絵になっていたほうが「それは違う」と言いやすいからです。違うと言われたら、どこが違うのかを聞いて、材料まで戻ります。</p>
-          <p>決めるのが苦手なら、おまかせでも進められます。写真が無ければ撮りに行き、載せる文章が無ければ、話を聞いてこちらで書きます。やり取りはLINEでも構いません。打ち合わせはオンラインが中心で、近ければ伺います。</p>
-          <p>まだ形になっていない段階で構いません。何を載せればいいか分からない、というところを一緒に決めるところからが、この仕事です。</p>
         </div>
       </section>
       <section id="service" data-reveal>
-        <div class="blk" id="services" data-provisional="確定している実績2件は、いずれもWordPressでの制作ではない（自社サイトを含め、一から組む形）。WordPressでの制作を実際に請けられるのか、請けるとしてどこまで（構築のみ／既存サイトの引き継ぎ／プラグインの保守）を見るのかが未確認。請けない場合はこの段落ごと「更新は任せてもらう形」1本に書き換える。">
+        <div class="blk" id="blk-services" data-provisional="確定している実績2件は、いずれもWordPressでの制作ではない（自社サイトを含め、一から組む形）。WordPressでの制作を実際に請けられるのか、請けるとしてどこまで（構築のみ／既存サイトの引き継ぎ／プラグインの保守）を見るのかが未確認。請けない場合はこの段落ごと「更新は任せてもらう形」1本に書き換える。">
           <p class="eyebrow mono">SERVICE</p>
           <h2>できること</h2>
           <p class="blead">ホームページをつくる。AIを入れる。そのまわりを、まとめて。</p>
@@ -778,20 +1002,8 @@
           <p class="glabel mono">見せる</p>
           <dl class="dl">
             <div class="row">
-              <dt>動きをつける</dt>
-              <dd>速さと間の取り方を1組の設定に決めて、サイト全体で同じ速さに揃えます。演出ごとに変えると散らかって見えるためです。動きを止める設定の端末や古い端末では、動かさずに静止画で見せます。</dd>
-            </div>
-            <div class="row">
-              <dt>写真撮影</dt>
-              <dd>載せる写真が無ければ撮ります。店内、車両、作業中の手元、働いている所。撮る前に、どの写真がどのページのどこに入るかを決めてから行きます。</dd>
-            </div>
-            <div class="row">
-              <dt>原稿・コピー作成</dt>
-              <dd>話してもらった内容を文章にします。こちらから質問して、その答えを書き起こす形なので、事前に文章を用意しなくて構いません。</dd>
-            </div>
-            <div class="row">
-              <dt>バナー制作</dt>
-              <dd>サイト内のお知らせや、SNS・広告に使う画像。本文と同じ書体・同じ色で作るので、並べても他所から借りてきたようには見えません。</dd>
+              <dt>写真撮影・原稿づくり</dt>
+              <dd>載せる写真が無ければ撮ります。店内、車両、作業中の手元、働いている所。文章も、話してもらった内容をこちらで書き起こします。写真も文章も、事前に用意しておく必要はありません。</dd>
             </div>
           </dl>
           <p class="glabel mono">AIを入れる</p>
@@ -810,10 +1022,6 @@
             <div class="row">
               <dt>Googleビジネスプロフィール支援</dt>
               <dd>地図と検索に出る会社の情報。営業時間、写真、説明文を書き直して、地図から道順や連絡先までたどり着ける状態にします。</dd>
-            </div>
-            <div class="row is-soon">
-              <dt>LINEで相談してもらう仕組みづくり <span class="soon mono">準備中</span></dt>
-              <dd>見た人がLINEで話しかけるまでを短くします。ボタンをどこに置くか、何と書くか、押した先で最初に何を聞くかまで決めます。</dd>
             </div>
           </dl>
           <p class="glabel mono">公開したあと</p>
@@ -835,348 +1043,11 @@
             </div>
           </dl>
         </div>
-        <div class="blk" id="service-style" data-provisional="修正回数の扱いは未確定。事業上の約束になる箇所なので、どこまで（どの工程まで・どの規模まで）を無償で受けるかを決めてから言い方を固める。決めた文言はFAQと制作の流れの該当箇所にも同じ形で入れること（3か所で食い違うと約束が緩い方に読まれる）。 / 現地訪問に応じる範囲が未確定（site.config.js の area.visitRange も空）。北九州市内までか、福岡県内か、山口も含むかで書き方が変わる。確定後に差し替える。 / LINE公式アカウントが未取得。取得できない、または開設が遅れる場合は、この2項目と「LINEで相談してもらう仕組みづくり」の書き方をメール・フォーム側へ寄せる必要がある。">
-          <p class="eyebrow mono">HOW WE WORK</p>
-          <h3>進め方</h3>
-          <p class="blead">何が決まっていなくても、話すところから始められます。</p>
-          <p>手元に写真も文章も無い、何を載せればいいか分からない。その状態からで構いません。まず画面の形で方向性を見せて、そこから一緒に決めていきます。</p>
-          
-          <dl class="dl">
-            <div class="row">
-              <dt>方向性は先に見せる</dt>
-              <dd>最初にざっくりした案を画面の形で出します。文字だけの企画書ではなく、実際の見え方を見て判断してもらいます。</dd>
-            </div>
-            <div class="row">
-              <dt>おまかせもできる</dt>
-              <dd>決め手がなければ、こちらで組み立てた案から始めます。気になる所だけ言ってもらえれば直します。</dd>
-            </div>
-            <div class="row">
-              <dt>修正の回数は区切らない</dt>
-              <dd>回数では区切っていません。ただし、いったん決めた方向を作り直す規模の変更が続く場合は、内容と日程を相談し直します。</dd>
-            </div>
-            <div class="row is-soon">
-              <dt>LINEでやり取り <span class="soon mono">準備中</span></dt>
-              <dd>LINEで。写真も資料も、そのまま送れます。文章にまとめなくて構いません。</dd>
-            </div>
-            <div class="row">
-              <dt>打ち合わせはオンライン中心</dt>
-              <dd>届いたリンクをスマホで押すだけです。アプリを入れる必要も、顔を出す必要もありません。やり方が分からなければ、LINEで手順を送ります。</dd>
-            </div>
-            <div class="row">
-              <dt>近ければ伺う</dt>
-              <dd>北九州とその周辺なら、店や現場を見に伺います。写真の撮影も同じ日にまとめられます。</dd>
-            </div>
-            <div class="row">
-              <dt>素材はこちらで作れる</dt>
-              <dd>写真も文章も無い状態からで構いません。撮影と聞き取りから始めて、載せるものをこちらで用意します。</dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-      <section id="ai" data-reveal>
-        <div class="blk" id="ai-intro" data-provisional="在庫データや既存システムとどこまで連携するかは案件と体制次第。いまは「サイトに載せてある情報の範囲で」と限定して逃げてある。連携まで請けるなら言い切れるし、請けないならこの限定を残す。査読の指摘どおり、この項目から効果の言い切り（他店に流れにくくなる）は削除済み。 / 実績2件にAIを入れた例が無いことを正直に書いた。伏せるより信用が保てるという判断だが、（1）本当に1件も入れていないか、（2）それを自社サイトに明記してよいか、の2点は施主の確認が要る。入れた例があるならこの段落を実例の紹介に差し替える。 / 問い合わせ前に判断する材料が無い、という指摘への回答として置いた具体的な約束。「3つ」という数、無料でやること、どのくらいの手間をかけて作るかは全て未確定。実際にやれる範囲に合わせて数と条件を決めてほしい。やらないなら段落ごと落とす必要がある。 / 価格は出さない方針のまま、続けてか">
-          <p class="eyebrow mono">AI</p>
-          <h2>AI導入</h2>
-          <p class="blead">ホームページに、その会社のことだけを知っているAIを入れます。</p>
-          <p>AIというと難しく聞こえますが、やっていることは単純です。会社の説明、対応できる範囲、よくある質問、これまでの仕事——いま社長や事務の人が電話で毎回話していることを、AIに覚えてもらう。あとはお客さんが聞けば、その会社の言葉で答えが返ります。</p>
-          <p>汎用のAIは、公開されている一般的な情報から答えます。その会社にいま何の在庫があるか、どこまで出張できるかは知りません。ここで入れるのは、自社の情報だけを読ませたAIです。だから「この工場は何を作れるのか」「この会社はどこまで来てくれるのか」に答えられます。</p>
-          <p>入れる機能は会社ごとに変わります。目的と業種と、公開したあと誰が面倒を見るのか。そこを聞いてから、必要なものだけを選びます。</p>
-        </div>
-        <div class="blk" id="ai-examples" data-provisional="在庫データや既存システムとどこまで連携するかは案件と体制次第。いまは「サイトに載せてある情報の範囲で」と限定して逃げてある。連携まで請けるなら言い切れるし、請けないならこの限定を残す。査読の指摘どおり、この項目から効果の言い切り（他店に流れにくくなる）は削除済み。">
-          <p class="eyebrow mono">USE CASES</p>
-          <h3>たとえば、こう使えます</h3>
-          <p class="blead">機能の名前より、どの場面で使うかで書きます。</p>
-          <p class="glabel mono">お客さんに答える</p>
-          <dl class="dl">
-            <div class="row is-key">
-              <dt>サイトの中で質問に答える（チャット）</dt>
-              <dd>車屋なら、在庫の問い合わせに24時間答えられます。「この色の軽、まだありますか」「走行距離は」——サイトに載せてある情報の範囲で、夜中でも日曜でも返事が出ます。折り返しの電話ができるまでの間を、無人にしないで済みます。</dd>
-            </div>
-            <div class="row">
-              <dt>よくある質問に自動で答える</dt>
-              <dd>建設会社なら「どこまで施工に来てくれるのか」「見積もりだけでも頼めるのか」。工場なら「小ロットは受けるか」「対応できる材質は」。電話で毎回同じ説明をしている質問ほど、任せる価値があります。</dd>
-            </div>
-            <div class="row">
-              <dt>探しているサービスのページへ案内する</dt>
-              <dd>板金の会社なら、「バンパーを擦った」と書かれた時点で、その作業を説明したページへ案内します。お客さんは正式なサービス名を知らないまま相談してきます。その言い方を翻訳して、正しい入口へ渡す役割です。</dd>
-            </div>
-            <div class="row">
-              <dt>サイトの中を言葉で探す（AI検索）</dt>
-              <dd>「荷台を長くしたい」のように、正式な呼び名を知らない言葉で書かれても、近い内容のページを見つけて出します。ページ数が増えるほど、メニューをたどるだけでは目当てのページに行き着かなくなります。その分をこれで埋めます。</dd>
-            </div>
-          </dl>
-          <p class="glabel mono">社内の手間を減らす</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>問い合わせ内容の自動整理</dt>
-              <dd>届いた問い合わせを、新規か既存か、急ぎかどうか、どの種類の仕事か、で仕分けて手元に届けます。長い文章のときは要点を短くまとめます。どれから返すかを、本文を開く前に決められます。</dd>
-            </div>
-            <div class="row">
-              <dt>見積もりの前の聞き取り</dt>
-              <dd>工事の種類、広さ、希望の時期。見積もりに必要なことをAIが先に聞き取って、項目のそろった形に整理します。金額を出すのは人です。AIがやるのは、その手前の聞き取りと下ごしらえまでです。</dd>
-            </div>
-            <div class="row is-key">
-              <dt>自社の書類を読ませた、社内用のAI</dt>
-              <dd>施工事例、仕様書、過去の見積もり、製品の資料。自社の書類を読ませて、社内の誰でも聞ける相手にします。読ませた資料の範囲で、ベテランに聞く前に確認できる相手になります。</dd>
-            </div>
-            <div class="row">
-              <dt>文章の下書きを出す</dt>
-              <dd>施工実績の説明文、お知らせ、投稿の下書き。写真は撮ったのに文章が書けずに止まっている、という場面で使います。下書きまでAIに出させて、最後は自分の言葉に直す。白紙の状態から書き始めなくて済みます。</dd>
-            </div>
-          </dl>
-        </div>
-        <div class="blk" id="ai-value">
-          <p class="eyebrow mono">VALUE</p>
-          <h3>入れる意味</h3>
-          
-          <dl class="dl">
-            <div class="row is-key">
-              <dt>自社専用のAIを持てる</dt>
-              <dd>借り物ではなく、その会社の情報を読ませたAIです。話し方も、答える範囲も、こちらで決められます。分からないことは無理に答えさせず「確認します」と返して、そのまま問い合わせにつなぐ。そういう決め方もできます。</dd>
-            </div>
-            <div class="row">
-              <dt>答えが返るかどうかは、その場で分かる</dt>
-              <dd>聞いてその場で答えが返ってくるかどうかは、Webに詳しくない人でも触ればすぐ分かります。社内で見せて判断してもらうときも、説明が要りません。</dd>
-            </div>
-            <div class="row">
-              <dt>中身を入れてから公開する</dt>
-              <dd>窓口だけ置いて中身を入れないと、「担当者に確認します」しか返らないものになります。何を読ませるか、答えられない時にどこへ渡すか、公開したあとどう直すか。そこまで決めてから作ります。</dd>
-            </div>
-          </dl>
-        </div>
-        <div class="blk" id="ai-flow" data-provisional="価格は出さない方針のまま、続けてかかるお金の存在だけを書き切った。（1）利用料が月ごとの形になるか（従量・都度払いの形もある）、（2）契約名義を施主本人にするか代行するか、の2点が未確定。方針が決まれば言い方を確定できる。なお、サーバー代・ドメイン代・保守費まで含めた全体の一覧は制作の流れ／料金側に1か所置くべきで、このページには置いていない。 / 段階導入の方針（最初にいくつ入れるか、後から足す運用にするか）は実際の進め方として未確定。一括で作り切る形が基本なら、この項目ごと差し替えが要る。 / 紙資料のデータ化・入力までを引き受けるかどうかが未確定。請けない場合は「紙しか無い場合はどう進めるか一緒に決めます」程度に弱める必要がある。">
-          <p class="eyebrow mono">PROCESS</p>
-          <h3>進め方</h3>
-          <p class="blead">全部入れることはしません。話を聞いて、要るものだけ選びます。</p>
-          
-          
-          <dl class="dl">
-            <div class="row">
-              <dt>何に時間を取られているかを聞く</dt>
-              <dd>電話で毎回同じ説明をしていないか。問い合わせを読み解くのに時間がかかっていないか。まずそこを聞きます。困っていない所にAIは要りません。</dd>
-            </div>
-            <div class="row">
-              <dt>お客さん向けか、社内向けかを決める</dt>
-              <dd>同じAIでも、外に見せるものと社内で使うものでは作り方が変わります。両方やることもあれば、片方だけで十分なこともあります。</dd>
-            </div>
-            <div class="row">
-              <dt>手元にある情報を確かめる</dt>
-              <dd>会社案内、作業の内容、施工事例、これまでのやり取り。AIに読ませられる形に整えるところまでこちらでやります。紙の資料しか無くても、そこから相談できます。</dd>
-            </div>
-            <div class="row">
-              <dt>小さく始める</dt>
-              <dd>1つか2つの機能から始めて、実際にどんな質問が来るかを見ます。使われ方が分かってから足すほうが、無駄がありません。</dd>
-            </div>
-            <div class="row">
-              <dt>公開したあとに直す</dt>
-              <dd>答えがずれていたら、読ませる情報を足したり、言い方を変えたりします。公開後の保守の中で、SEOやアクセスの改善とあわせて調整していきます。</dd>
-            </div>
-            <div class="row is-key">
-              <dt>費用のこと</dt>
-              <dd>AIを入れると、使うAIサービスの利用料が月ごとにかかります。サーバー代やドメイン代とは別に、公開したあともかかり続けるお金です。どのサービスを使うか、どこまでやるかで変わるので、金額の目安は相談のときにその場でお伝えします。契約はご自身の名義で行い、こちらで勝手に申し込むことはしません。かかるものは先に全部お伝えしてから決めます。</dd>
-            </div>
-          </dl>
-        </div>
-        <div class="blk" id="ai-note" data-provisional="実績2件にAIを入れた例が無いことを正直に書いた。伏せるより信用が保てるという判断だが、（1）本当に1件も入れていないか、（2）それを自社サイトに明記してよいか、の2点は施主の確認が要る。入れた例があるならこの段落を実例の紹介に差し替える。 / 問い合わせ前に判断する材料が無い、という指摘への回答として置いた具体的な約束。「3つ」という数、無料でやること、どのくらいの手間をかけて作るかは全て未確定。実際にやれる範囲に合わせて数と条件を決めてほしい。やらないなら段落ごと落とす必要がある。">
-          <p class="eyebrow mono">NOTE</p>
-          <h3>このサイトにAIは載せていません</h3>
-          <p>デモを置いていないのは、AIの中身が会社ごとにまったく違うからです。どこの会社のものでもない汎用のAIを置いて動かしてみせても、自分の会社で使えるかどうかの判断にはなりません。</p>
-          <p>正直に書いておくと、これまでに公開した2件のサイトにも、まだAIは入れていません。「入れた実績が何件あります」と言える段階ではありません。</p>
-          <p>そのかわり、確かめる方法を用意しています。いま電話で実際に来ている質問を3つほど教えてください。その3つにAIがどう答えるかを実際に作ってお見せします。相談の段階なので費用はかかりません。それを見てから、入れるかどうかを決めてもらえれば十分です。</p>
-        </div>
-      </section>
-      <section id="seo" data-reveal>
-        <div class="blk" id="seo-intro">
-          <p class="eyebrow mono">SEO</p>
-          <h2>検索から、見つけてもらう</h2>
-          <p class="blead">つくったホームページを、探している人の目に触れるところまで運ぶ作業です。</p>
-          <p>ホームページは、公開しただけでは誰にも見つかりません。誰かが検索して、検索エンジンがその中身を読み取って、はじめて結果に並びます。SEOというのは、この「読み取ってもらう」までの道を整える作業のことです。</p>
-          <p>特別な裏技があるわけではなく、地味な確認と手直しの積み重ねです。ページの題名が中身と合っているか、見出しが話の順番どおりに並んでいるか、スマホで開いて何秒で読める状態になるか。人が読んで分かりやすいものは、検索エンジンにも伝わりやすい。順番としては、それだけのことです。</p>
-          <p>だからSEOは、つくり終わってから足すものにしていません。ページの構成や見出しは、あとから直すと組み直しになるものが多いので、デザインと同時に決めます。</p>
-        </div>
-        <div class="blk" id="seo-tasks">
-          <p class="eyebrow mono">WHAT WE DO</p>
-          <h3>SEOでやること</h3>
-          <p class="blead">11に分けています。名前が難しいだけで、やっていることは単純です。</p>
-          <p>全部を一度にやるわけではありません。すでにホームページがある場合は、いま何が足りていないかを先に見て、効きそうなところから手を付けます。</p>
-          <p class="glabel mono">サイトの中を整える</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>内部SEO</dt>
-              <dd>ページ同士のつながり方、リンクや画像の書き方など、サイトの内側を検索エンジンが読める形に整えます。見た目には出ない部分ですが、ここが崩れていると他の対策が効きにくくなります。</dd>
-            </div>
-            <div class="row">
-              <dt>タイトル設計</dt>
-              <dd>検索結果の一行目に出る文と、ブラウザのタブに出る名前です。クリックするかどうかがここで決まるので、社名だけで埋めず、ページごとに中身と合った言葉に書き分けます。</dd>
-            </div>
-            <div class="row">
-              <dt>見出し設計</dt>
-              <dd>大見出し・中見出しを、話の順番どおりに組み立てます。読む人の目線が迷わない構成は、そのまま検索エンジンにとっての「このページは何の話か」の手がかりになります。</dd>
-            </div>
-            <div class="row">
-              <dt>構造化データ</dt>
-              <dd>所在地・サービス内容・よくある質問などを、検索エンジンが誤解しない決まった書式で書き添えることです。人が見る画面は変わりませんが、検索結果での見え方が変わることがあります。</dd>
-            </div>
-            <div class="row">
-              <dt>表示速度改善</dt>
-              <dd>画像の重さと読み込みの順番を調整して、開いた瞬間に読める状態にします。電波の弱い場所で待たされないことが目的で、速さそのものも検索で見られています。</dd>
-            </div>
-          </dl>
-          <p class="glabel mono">近くの人に見つけてもらう</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>地域SEO</dt>
-              <dd>「北九州 ホームページ制作」のように、地域名と一緒に検索する人に向けた設計です。どこの誰で、どこまで対応できるのかを、サイトの中で曖昧にしないところから始めます。</dd>
-            </div>
-            <div class="row">
-              <dt>Googleビジネスプロフィール</dt>
-              <dd>Googleの検索結果や地図に出る、会社・お店の情報欄のことです。写真、営業時間、サービスの書き方を一緒に決めて、ホームページ側の内容とずれないようにします。</dd>
-            </div>
-          </dl>
-          <p class="glabel mono">言葉を決める</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>キーワード設計</dt>
-              <dd>お客さんが実際に打ち込みそうな言葉を先に決めてから、ページを書きます。同じものを指していても、業界の中で使う言い方と、外の人が使う言い方はよくずれます。そこを合わせる作業です。</dd>
-            </div>
-            <div class="row">
-              <dt>記事・ブログ設計</dt>
-              <dd>施工例やお知らせを、何を・どのくらいの長さで・どこに置くかを決めます。更新が続けられる形にしておくことが目的なので、書き方のひな型も一緒に用意します。</dd>
-            </div>
-          </dl>
-          <p class="glabel mono">公開してから確かめる</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>Search Console導入</dt>
-              <dd>Googleが無料で出している、検索の記録を見るための道具です。どんな言葉で見つけられたか、どのページが読まれたかが分かるので、公開後の手直しを勘で決めずに済みます。</dd>
-            </div>
-            <div class="row">
-              <dt>公開後の継続改善</dt>
-              <dd>Search Consoleの記録を見ながら、言葉や構成を直していきます。公開後も続けて手を入れる場合は、アクセスの動きやAI機能の調整まで、まとめて見ます。頼み方と費用は、下の「公開したあとに、続けてかかるお金」にまとめています。</dd>
-            </div>
-          </dl>
-        </div>
-        <div class="blk" id="seo-ranking" data-provisional="公開後にどの頻度で共有・報告するかが未確定。頻度(毎月・四半期など)を書くなら確定後にする。">
-          <p class="eyebrow mono">ABOUT RANKINGS</p>
-          <h3>順位について</h3>
-          <p class="blead">「必ず上位に出ます」とは言いません。</p>
-          <p>検索順位を決めているのはGoogleの仕組みで、同じ言葉を狙う他社の動きにも左右されます。こちらで動かせるのは、ページの中身と構造と速さまでです。その外側にあるものを約束することはできません。</p>
-          <p>代わりに、何をしたか、そのあと何が変わったかは、見える形で残します。Search Consoleの記録を一緒に見ながら、次に直す場所を決めていきます。上がらなかったときに理由を説明できることのほうが、長い目では効きます。</p>
-          <p>もうひとつ。規模の小さい会社ほど、全国で取り合いになっている大きな言葉より、地域名や具体的なサービス名との組み合わせのほうが届きます。狙う言葉は、そこから決めます。</p>
-        </div>
-      </section>
-      <section id="works" data-reveal>
-        <div class="blk" id="works-lead">
-          <p class="eyebrow mono">WORKS</p>
-          <h2>制作実績</h2>
-          <div class="shots">
-            <figure class="shot">
-              <img src="./shots/becool-pc.webp" width="1720" height="1075"
-                   alt="GARAGE BeCool のトップページ" loading="lazy" decoding="async">
-            </figure>
-            <figure class="shot">
-              <img src="./shots/trex-pc.webp" width="1720" height="1075"
-                   alt="T-REX CO., LTD. のトップページ" loading="lazy" decoding="async">
-            </figure>
-          </div>
-          <p class="blead">2件と、このサイト。</p>
-          <p>これまでにつくったのは2件です。数は多くありません。そのかわり、どんな会社で、何をつくって、どこをどう動かしたのかを1件ずつ書いています。</p>
-          <p>ここに並べるのは屋号と種別だけです。画面と中身は実績ページにまとめました。</p>
-          <p class="glabel mono">制作実績</p>
-          <dl class="dl">
-            <div class="row">
-              <dt><a class="go" href="../becool/">GARAGE BeCool <em>↗</em></a></dt>
-              <dd>コーポレートサイト / 中古車販売・整備 / 福岡県北九州市</dd>
-            </div>
-            <div class="row">
-              <dt><a class="go" href="../">T-REX CO., LTD. <em>↗</em></a></dt>
-              <dd>コーポレートサイト / 板金塗装・荷台換装・修理・出張修理 / 福岡・山口</dd>
-            </div>
-          </dl>
-          
-          <dl class="dl">
-            <div class="row is-key">
-              <dt><a class="go" href="./works/">制作実績を見る <em>↗</em></a></dt>
-              <dd>2件の画面と、このサイトの制作記。</dd>
-            </div>
-          </dl>
-        </div>
-        <div class="blk" id="works-this-site">
-          <p class="eyebrow mono">THE FOURTH</p>
-          <h3>3件目は、いま見ているこのサイトです。</h3>
-          <p>水面から海底600メートルまで、さっき潜ってきた景色は写真でも動画でもありません。ブラウザがその場で描いています。</p>
-          <p>使っているのはthree.jsとWebGL——ブラウザの中で立体を描くための技術です。スマートフォンでも動くように、端末の性能に合わせて描く量を変えています。</p>
-          <p>つくれるものを説明するより、実際に動かして見てもらうほうが早いと思ったので、自分のサイトでやりました。何をどう組んだかは実績ページに書いています。</p>
-          
-          <dl class="dl">
-            <div class="row">
-              <dt>汀ノ庭（このサイト）</dt>
-              <dd>コーポレートサイト / ホームページ制作 / 福岡県北九州市</dd>
-            </div>
-            <div class="row is-key">
-              <dt>このサイトの制作記を読む</dt>
-              <dd>海の描き方、スマホでの動かし方まで。</dd>
-            </div>
-          </dl>
-        </div>
       </section>
       <section id="flow" data-reveal>
-        <div class="blk" id="flow-intro" data-provisional="LINE公式アカウントが未取得。取得までは記載を伏せるか、個人アカウント運用として書くかを確定させる。フォーム送信先・メールアドレスも未確定なので、問い合わせ導線の実装先とあわせて管理する。 / 訪問できる範囲(北九州市内 / 福岡県内 / 山口県まで)が未確定。撮影の可否も同じ範囲に依存する。 / 費用の全体像はこの1か所に集約する前提で書いている。別ページの「進め方・費用」側に同じ内容を重ねて置くと、査読が問題視した「一言ずつ散っている」状態に戻るため、他セクションからはここへ寄せるか、逆にこちらを削って向こうへ一本化するかを施主に確認する。">
-          <p class="eyebrow mono">FLOW</p>
-          <h2>制作の流れ</h2>
-          <p class="blead">相談から公開後まで、8つの段階に分けています。</p>
-          <p>ホームページをつくるときにつまずきやすいのは、「時間がない」と「何を書けばいいか分からない」の2つだと思っています。どちらも、こちらで引き受けます。</p>
-          <p>原稿が無くても、写真が無くても始められます。話してもらった内容をこちらで文章に起こし、必要な写真は撮りに行きます。お願いするのは、だいたい「話すこと」と「見て、違うと言うこと」の2つだけです。</p>
-          <p>やり取りはLINEでかまいません。打ち合わせはオンライン中心で、近ければ伺います。</p>
-        </div>
-        <div class="blk" id="flow-steps" data-provisional="「無制限」と読まれる可能性がある。運用上の上限や打ち切りの基準を設けるなら、この一行の言い方を変える必要がある。 / 訪問できる範囲(北九州市内 / 福岡県内 / 山口県まで)が未確定。撮影の可否も同じ範囲に依存する。 / 月額保守という提供形態そのものを表に出すかが未確定。出す場合、含まれる作業範囲を先に決める必要がある(金額は記載していない)。査読の指示に従いぼかした言い方はやめたので、提供しないと決めた場合はこの2か所の記述をまとめて削る。 / 契約名義(施主名義か代行か)と、代行の手数料・立替の扱いが未確定。査読は「名義はご自身」と断定するよう求めているが、確定事実に無いため仮の記述として申告する。">
-          <p class="eyebrow mono">8 STEPS</p>
-          <h3>8つの段階</h3>
-          <p class="glabel mono">まず、話す</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>01 相談</dt>
-              <dd>いま困っていることを聞かせてください。ホームページが無い、古い、何を載せればいいか分からない。どの段階のままでも構いません。お願いするのは、今のサイトがあればそのURLと、やりたいことを一言だけです。</dd>
-            </div>
-            <div class="row">
-              <dt>02 ヒアリング</dt>
-              <dd>会社の歴史、いまの現場の様子、大事にしていることを聞きます。近ければ伺って、写真や現場の空気も直接見ます。お願いするのは、話すことだけです。まとめてもらう必要はありません。</dd>
-            </div>
-            <div class="row">
-              <dt>03 方向性提案</dt>
-              <dd>聞いた話をもとに、配色・写真の見せ方・言葉づかいの方向を、ざっくりした形にして先に見せます。お願いするのは「近い」「違う」を感覚で言ってもらうことだけで、理由は要りません。全部おまかせにしたい場合は、こちらで決めて進めます。</dd>
-            </div>
-          </dl>
-          <p class="glabel mono">つくる</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>04 デザイン</dt>
-              <dd>方向が決まったら、実際の画面として組み立てます。パソコンとスマホの両方を同時につくり、並べて確認してもらいます。ページの構成とSEOの設計も、ここで一緒に決めます。</dd>
-            </div>
-            <div class="row">
-              <dt>05 制作</dt>
-              <dd>デザインを、実際に動くホームページにします。アニメーションや3Dの表現、AI機能を入れる場合もこの段階です。原稿の足りないところはこちらで書き、必要なら写真も撮ります。</dd>
-            </div>
-            <div class="row">
-              <dt>06 確認・修正</dt>
-              <dd>公開後とまったく同じ状態のものを見てもらい、直したいところを言ってもらいます。回数は決めていません。文字ひとつでも、遠慮なく言ってください。</dd>
-            </div>
-          </dl>
-          <p class="glabel mono">公開してから</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>07 公開</dt>
-              <dd>ドメインとサーバーの手配から公開作業まで、こちらで進めます。用語が分からないままで大丈夫です。契約が必要なものは、その都度かみ砕いて説明してから決めます。こちらの判断で勝手に契約することはしません。公開したら検索エンジンに登録し、Search Consoleで見え方を確かめます。</dd>
-            </div>
-            <div class="row">
-              <dt>08 サポート</dt>
-              <dd>公開して終わりにはしません。文章や写真の差し替え、SEOの継続改善、AI機能の調整まで、必要なぶんだけ続けます。頼み方は、毎月決まった額でお願いする月額と、必要なときだけ頼む都度の2つ。どちらでも構いませんし、月額にしないと公開できない、ということもありません。</dd>
-            </div>
-          </dl>
-        </div>
-        <div class="blk" id="flow-prepare" data-provisional="査読の指摘どおり拘束時間の数字を入れたが、実際のヒアリングにかかる時間は未確定。施主が実際に必要とする長さに合わせて直す。">
+        <div class="blk" id="blk-flow-prepare" data-provisional="査読の指摘どおり拘束時間の数字を入れたが、実際のヒアリングにかかる時間は未確定。施主が実際に必要とする長さに合わせて直す。">
           <p class="eyebrow mono">WHAT TO PREPARE</p>
-          <h3>用意していただくもの</h3>
+          <h2>用意していただくもの</h2>
           <p class="blead">3つだけです。資料をつくって備えておく必要は、ありません。</p>
           
           <dl class="dl">
@@ -1194,13 +1065,13 @@
             </div>
           </dl>
         </div>
-        <div class="blk" id="flow-duration" data-provisional="実績2件のみで、平均的な制作期間の裏付けが無い。施主の実感と、写真撮影・原稿作成を含むかどうかで変わるため、公開前に実数へ差し替える。">
+        <div class="blk" id="blk-flow-duration" data-provisional="実績2件のみで、平均的な制作期間の裏付けが無い。施主の実感と、写真撮影・原稿作成を含むかどうかで変わるため、公開前に実数へ差し替える。">
           <p class="eyebrow mono">SCHEDULE</p>
           <h3>期間の目安</h3>
           <p>1枚で伝えるページ(LP)で3〜4週間、会社案内を数ページに分けたサイトで1〜2か月が目安です。写真撮影や原稿づくりから入る場合は、そのぶん前に時間を取ります。</p>
           <p>先に決まっている予定があれば、最初に言ってください。逆算して、どこまでを公開時点で出すかを決めます。</p>
         </div>
-        <div class="blk" id="flow-running-cost" data-provisional="月額保守という提供形態そのものを表に出すかが未確定。出す場合、含まれる作業範囲を先に決める必要がある(金額は記載していない)。査読の指示に従いぼかした言い方はやめたので、提供しないと決めた場合はこの2か所の記述をまとめて削る。 / 契約名義(施主名義か代行か)と、代行の手数料・立替の扱いが未確定。査読は「名義はご自身」と断定するよう求めているが、確定事実に無いため仮の記述として申告する。 / 採用するAIサービスと課金形態(従量か定額か)、誰の名義で契約するかが未確定。実装方針が決まり次第、書き方を実態に合わせる。 / 費用の全体像はこの1か所に集約する前提で書いている。別ページの「進め方・費用」側に同じ内容を重ねて置くと、査読が問題視した「一言ずつ散っている」状態に戻るため、他セクションからはここへ寄せるか、逆にこちらを削って向こうへ一本化するかを施主に確認する。">
+        <div class="blk" id="blk-flow-running-cost" data-provisional="月額保守という提供形態そのものを表に出すかが未確定。出す場合、含まれる作業範囲を先に決める必要がある(金額は記載していない)。査読の指示に従いぼかした言い方はやめたので、提供しないと決めた場合はこの2か所の記述をまとめて削る。 / 契約名義(施主名義か代行か)と、代行の手数料・立替の扱いが未確定。査読は「名義はご自身」と断定するよう求めているが、確定事実に無いため仮の記述として申告する。 / 採用するAIサービスと課金形態(従量か定額か)、誰の名義で契約するかが未確定。実装方針が決まり次第、書き方を実態に合わせる。 / 費用の全体像はこの1か所に集約する前提で書いている。別ページの「進め方・費用」側に同じ内容を重ねて置くと、査読が問題視した「一言ずつ散っている」状態に戻るため、他セクションからはここへ寄せるか、逆にこちらを削って向こうへ一本化するかを施主に確認する。">
           <p class="eyebrow mono">RUNNING COST</p>
           <h3>公開したあとに、続けてかかるお金</h3>
           <p class="blead">つくって終わりではありません。置いておくためのお金が、毎年かかります。</p>
@@ -1226,90 +1097,27 @@
           </dl>
         </div>
       </section>
-      <section id="faq" data-reveal>
-        <div class="blk" id="faq" data-provisional="金額そのものには触れていないが、見積もりの出し方(削った案も並べて出す・上限を満額使わない)は施主の実際の運用と一致している保証がない。とくに最後の一文は値付けの方針そのものなので、本人が守れる約束かを確認する必要がある。受けられる下限の考え方も未確定。 / 初稿の「原稿づくりとコピー作成は制作に含めているので」は料金の範囲の約束にあたり、確定事実に無いので削除した。ただしサービス一覧では「原稿・コピー作成」が独立した1項目として並んでおり、読み手は含むのか別料金なのかを必ず気にする。どちらで運用するかを本人が決めたうえで、含むなら明記、別なら「別で相談」の一文を足す。 / 確定している事実に納期の情報が無く、この数字は一般的な制作規模から置いた草案。同時に何件動かせるか、1件あたりどれだけ掛かるかは本人しか分からない。書いた期間はそのまま問い合わせ時の期待値になるので、公開前に実測値へ差">
-          <p class="eyebrow mono">FAQ</p>
-          <h2>よくある質問</h2>
-          <p class="blead">相談の前に決めておきたいこと、気になりそうなことを10問にまとめました。</p>
-          <p>答えのうち、費用の決め方・期間・伺える範囲・修正の考え方は目安です。案件の内容で変わるので、実際のところは最初のやり取りで決めます。</p>
-          <p>決まっていないことが多い段階でも構いません。まだ何も用意していない、という状態からの相談も受けています。</p>
-          
-          <dl class="dl">
-            <div class="row is-key">
-              <dt>相談だけして、やめてもいいですか。</dt>
-              <dd>構いません。話を聞いたうえで「今はまだ作らないほうがいい」とお伝えすることもあります。しつこく連絡することはしませんし、断りの連絡も要りません。聞きたいことだけ聞いて、そのまま終わって大丈夫です。</dd>
-            </div>
-            <div class="row">
-              <dt>費用はどのくらいかかりますか。</dt>
-              <dd>内容によって変わるので、まず何をしたいかを聞かせてください。そのうえで、この内容ならいくら、ここを削ればいくら、という形で選べるように出します。予算の上限が決まっている場合は先に言ってもらえると、その中に収まる組み方から考えます。上限いっぱいまで使う前提の見積もりは出しません。</dd>
-            </div>
-            <div class="row">
-              <dt>原稿が用意できていません。文章もお願いできますか。</dt>
-              <dd>文章はこちらで書けます。白紙の状態から始めて構いません。まずは話を聞くところからです。どんな仕事をしているか、これまでどうやってきたか、お客さんからよく聞かれることは何か。そのまま話してもらった内容を文章の形に整え、確認してもらいながら決めていきます。</dd>
-            </div>
-            <div class="row">
-              <dt>載せられる写真がありません。撮影もしてもらえますか。</dt>
-              <dd>撮影も対応しています。店舗や工場、作業中の様子、車両や設備など、何をどう見せたいかを先に打ち合わせてから撮ります。手元に写真がある場合は、使えるものを選んで、足りない分だけ撮り足す形でも構いません。撮り直しにはもう一度伺うことになるので、何を撮るかを決める打ち合わせには時間をかけます。</dd>
-            </div>
-            <div class="row">
-              <dt>どのくらいの期間でできますか。</dt>
-              <dd>内容によりますが、目安は1枚で伝えるページ(LPと呼ばれるもの)で3〜4週間、数ページの会社サイトで1〜2か月ほどです。原稿と写真がそろっているか、確認のやり取りにどれくらい時間を取れるかで前後します。公開したい日が決まっている場合は先に教えてください。そこから逆算して進め方を決めます。</dd>
-            </div>
-            <div class="row">
-              <dt>遠方でも対応できますか。</dt>
-              <dd>できます。打ち合わせはオンラインが中心で、日々のやり取りはLINEでも構いません。離れていても進め方は変わりません。北九州市内と、そこから車で1時間ほどの範囲(福岡県内と下関のあたり)までは直接伺い、現場を見たり写真を撮ったりもします。この範囲であれば交通費はいただきません。それより遠い場合も、写真とビデオ通話で同じように進められます。</dd>
-            </div>
-            <div class="row">
-              <dt>オンラインの打ち合わせに慣れていません。それでも大丈夫ですか。</dt>
-              <dd>大丈夫です。スマホに届いたリンクを押すだけで始められる方法をこちらで選びます。アプリを入れる必要も、顔を出す必要もありません。どこを押せばいいか分からなければ、その手順を先にLINEやメールで送ります。画面を見せるのが難しければ、文字のやり取りと写真だけでも進められます。</dd>
-            </div>
-            <div class="row">
-              <dt>修正は何回までですか。</dt>
-              <dd>回数では区切っていません。方向性が固まるまでは何度でも見てもらいますし、公開前の細かい調整も同じです。ただし、決まった方向を作り直す規模の変更が続く場合は、内容と日程を相談し直します。その際に追加の費用が出ることもありますが、作業に入る前に必ずお伝えして、やるかどうかを決めてもらいます。黙って足すことはしません。気になるところは早めに言ってもらったほうが、結果的に早く決まります。</dd>
-            </div>
-            <div class="row">
-              <dt>公開したあとも見てもらえますか。</dt>
-              <dd>見ます。基本は案件ごとの相談で、必要な分だけ頼めます。月々続ける形にした場合は、更新や修正に加えて、SEO(検索で見つけてもらうための手当て)の継続的な改善、アクセスの状況を見ながらの手直し、AI機能の調整までまとめて対応します。自分たちで更新したい場合は、更新しやすい作りにして、操作の手順もお渡しします。</dd>
-            </div>
-            <div class="row">
-              <dt>サーバーやドメインがよく分かりません。それでも頼めますか。</dt>
-              <dd>大丈夫です。ドメイン(サイトの住所にあたるもの)とサーバー(サイトの置き場所)の手配から公開までの設定は、こちらで進められます。すでに契約しているものがあれば、そのまま使えるかを確認します。契約はご自身の名義にしておくほうが後々安全なので、その手順もお伝えします。用語のまま話を進めることはしません。分からないところはその場で言い換えて説明します。</dd>
-            </div>
-          </dl>
-        </div>
-      </section>
-      <section id="news" data-reveal>
-        <div class="blk" id="news" data-provisional="公開日が未定。日付は公開当日の日付に差し替える。">
-          <p class="eyebrow mono">NEWS</p>
-          <h2>お知らせ</h2>
-          <p class="blead">知らせる必要のあることだけ、ここに出します。</p>
-          <p>公開のことや、受け付けの状況が変わったときなど、伝える必要のあることを出します。制作の裏話やコラムではなく、告知の置き場所です。</p>
-          <p class="glabel mono">お知らせ</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>サイトを公開しました</dt>
-              <dd>MIGIWA STUDIOのサイト「汀ノ庭」を公開しました。制作の相談はお問い合わせから受け付けています。</dd>
-            </div>
-          </dl>
-          <p class="glabel mono">お知らせが1件も無いときの表示文</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>いまお知らせはありません。</dt>
-              <dd>制作の相談はお問い合わせからどうぞ。</dd>
-            </div>
-          </dl>
+      <section id="philosophy" data-reveal>
+        <div class="blk" id="blk-rashisa" data-provisional="実績の中身に触れる唯一の具体。サービス紹介のカードが「上=画像 / 下=テキスト、写真に文字を重ねない」構成であることは制作時の決めごとと一致するが、実績の書き方として公開してよいか、また理由づけ（写っているものを隠さない）が施主の説明と食い違わないかの確認が要る。同サイトでも先頭の大きな写真にはロゴと文字を重ねているので、「一度も重ねていない」とは書いていない。">
+          <p class="eyebrow mono">PHILOSOPHY</p>
+          <h2>色は、現場でいちばん目に入るものから取ります。</h2>
+          <p class="blead">デザインの決めごとは、たいていその会社の中にもう転がっています。外から持ってくる前に、そこを探します。</p>
+          <p>作業着、機械、看板、扱っている商品。決まったブランドカラーを持っていない会社でも、毎日その色を見ています。色だけの話ではありません。写真の選び方も、言葉づかいも、動きの量も、同じやり方で決めます。</p>
+          <p>見栄えのいい型に社名と写真を差し替えれば、ホームページの形にはなります。ただ、その型はどの会社にも入るように作られたものです。入れ替わるのは社名と写真で、並び順も余白も、次の会社のときと同じまま残ります。</p>
+          <p>GARAGE BeCoolのサービス紹介では、写真の上に文字を重ねていません。上に写真、下に説明と分けて、写真は写真のまま見せています。そこに写っているものを、文字で隠す理由が無かったからです。</p>
+          <p>だから、デザインを描き始める前に、見る時間と聞く時間を取ります。ここを飛ばすと、その会社らしさではなく、つくった側の好みが出るだけのホームページになります。</p>
         </div>
       </section>
       <section id="contact" data-reveal>
-        <div class="blk" id="contact" data-provisional="取引条件であり、施主から確定値をもらっていない草案。指摘（致命）を受けて本文に入れたが、無料にするかどうかは施主の判断。ここが違うなら文面ごと差し替えが必要。 / 支払い条件が未確定。3回に分ける／全額後払い／着手金なし等、実際の運用に合わせて書き換える。途中でやめた場合の扱いを書くかどうかも要判断（現状は書いていない）。 / 価格そのものは書いていないが、何で変わるかの列挙は見積もりの実務に合っている必要がある。撮影は提供有無が不明なため意図的に外してある。 / 理由の言い方が施主の実態と合うか未確認。理由を書かずに黙って電話を出さないと不信だけが残るため草案として入れている。 / 折り返しの電話に応じられるかは施主の運用次第。できないなら削る（削っても文意は通る）。番号は載せていないので、この一文だけが電話の可能性を担保している。 / 返信の目安は未確定。初稿では本文に載せていなかった">
+        <div class="blk" id="blk-contact" data-provisional="取引条件であり、施主から確定値をもらっていない草案。指摘（致命）を受けて本文に入れたが、無料にするかどうかは施主の判断。ここが違うなら文面ごと差し替えが必要。 / 支払い条件が未確定。3回に分ける／全額後払い／着手金なし等、実際の運用に合わせて書き換える。途中でやめた場合の扱いを書くかどうかも要判断（現状は書いていない）。 / 価格そのものは書いていないが、何で変わるかの列挙は見積もりの実務に合っている必要がある。撮影は提供有無が不明なため意図的に外してある。 / 理由の言い方が施主の実態と合うか未確認。理由を書かずに黙って電話を出さないと不信だけが残るため草案として入れている。 / 折り返しの電話に応じられるかは施主の運用次第。できないなら削る（削っても文意は通る）。番号は載せていないので、この一文だけが電話の可能性を担保している。 / 返信の目安は未確定。初稿では本文に載せていなかった">
           <p class="eyebrow mono">CONTACT</p>
           <h2>お問い合わせ</h2>
-          <p class="blead">相談も見積もりも、入口はひとつです。</p>
-          <p>相談と見積もりは無料です。費用が発生するのは、内容と金額を見て「では、お願いします」となってからで、それより前に請求することはありません。金額はページの数、つくり直す範囲、AIを入れるかどうかで変わるので、話を聞いてから一件ずつ出します。支払いは着手のときと公開のときの2回に分けています。見積もりを見て頼まない、という返事でも構いません。</p>
-          <p>電話番号は載せていません。手が離せない時間があり、出られないまま折り返しを待たせるほうが失礼だと考えているためです。そのかわり、いただいた連絡には必ず目を通して、3営業日以内に、いただいたのと同じ方法で返事します。3営業日を過ぎても何も届かないときは、こちらに届いていない可能性があるので、別の方法でもう一度送ってください。文字より話したほうが早い内容なら、日時を決めてこちらから電話します。</p>
-          <p>つくるものが決まっていなくても構いません。「そろそろ何とかしたい」という段階で大丈夫です。いまのホームページがあれば中身を見たうえで、できることと、やらなくていいことをお伝えします。相談だけで終わっても構いません。</p>
-          <p>打ち合わせはオンライン中心で、近ければ伺います。</p>
+          <p class="blead">つくるものが決まっていなくても、話すところから始められます。</p>
+          <p>電話番号は載せていません。手が離せない時間があり、出られないまま折り返しを待たせるほうが失礼だと考えているためです。</p>
+          <p>「そろそろ何とかしたい」という段階で構いません。いまのホームページがあれば中身を見たうえで、できることと、やらなくていいことをお伝えします。相談だけで終わっても構いません。</p>
+          <p>打ち合わせはオンライン中心です。北九州とその周辺なら、店や現場を見に伺います。写真の撮影も同じ日にまとめられます。</p>
           <p class="glabel mono">連絡の方法（どれか一つで大丈夫です）</p>
+          <p class="soonNote">下の3つは、いま用意しているところです。開いたらここに出します。</p>
           <dl class="dl">
             <div class="row is-soon">
               <dt>LINE <span class="soon mono">準備中</span></dt>
@@ -1324,25 +1132,10 @@
               <dd>社内で回覧したいときや、資料を添えたいときに。</dd>
             </div>
           </dl>
-          <p class="glabel mono">書いてもらえると早いこと（分かる範囲で結構です）</p>
-          <dl class="dl">
-            <div class="row">
-              <dt>業種</dt>
-              <dd>何をしている会社か。一言で構いません。</dd>
-            </div>
-            <div class="row">
-              <dt>いまのホームページ</dt>
-              <dd>あるか、ないか。あるならURL（ページのアドレス）を教えてください。</dd>
-            </div>
-            <div class="row">
-              <dt>やりたいこと</dt>
-              <dd>新しくつくる、古いものをつくり直す、1枚のページで伝える、AIを入れてみたい。どれに近いか、くらいで大丈夫です。</dd>
-            </div>
-          </dl>
         </div>
       </section>
       <section id="about" data-reveal>
-        <div class="blk" id="footer" data-provisional="年を入れると創業年と読まれる可能性があるため外している。年を入れるかどうかは施主判断。">
+        <div class="blk" id="blk-footer" data-provisional="年を入れると創業年と読まれる可能性があるため外している。年を入れるかどうかは施主判断。">
           <h2>MIGIWA STUDIO</h2>
           <p class="blead">汀ノ庭</p>
           <p>ホームページをつくっています。福岡・北九州から。</p>
@@ -1361,7 +1154,7 @@
           <dl class="dl">
             <div class="row">
               <dt><a class="go" href="./">トップ <em>↗</em></a></dt>
-              <dd>できること、AI導入、SEO、制作の流れ。</dd>
+              <dd>実績、できること、進め方、考え方。</dd>
             </div>
             <div class="row">
               <dt><a class="go" href="./works/">制作実績 <em>↗</em></a></dt>
@@ -1372,7 +1165,7 @@
           <dl class="dl">
             <div class="row">
               <dt><a class="go" href="#contact">お問い合わせ <em>↗</em></a></dt>
-              <dd>LINE・フォーム・メール。電話番号は載せていません。相談と見積もりは無料です。</dd>
+              <dd>LINE・フォーム・メールを用意しているところです。電話番号は載せていません。</dd>
             </div>
           </dl>
           <p class="glabel mono">表記</p>
@@ -1384,8 +1177,14 @@
           </dl>
         </div>
       </section>
+      <!-- build-migiwa:top:end -->
 
-  <div id="contentFoot" class="mono">© MIGIWA STUDIO</div>
+  <footer id="outro">
+    <div id="contentFoot" class="mono">© MIGIWA STUDIO</div>
+    <a id="backTop" class="mono" href="#top">水面へもどる <em>↑</em></a>
+    <!-- 地色を抜いた窓。ここで海が戻る。文字は1つも置かない。 -->
+    <div id="outroOpen" aria-hidden="true"></div>
+  </footer>
 </main>
 
 <script type="application/ld+json">
@@ -1493,7 +1292,16 @@ const TIER = (() => {
   };
 })();
 
-function fail(){ document.getElementById('fallback').classList.add('on'); bootEl.classList.add('gone'); }
+function fail(){
+  document.getElementById('fallback').classList.add('on');
+  document.documentElement.dataset.nogl = '1';
+  const sp0 = document.getElementById('spacer'); if (sp0) sp0.style.height = '0';
+  /* ★ html.js body{opacity:0} は「起動が終わったら見せる」ための伏せ布。
+     ここで起こさないと、WebGL2 が無い端末は真っ白のまま何も読めない
+     (案内も本文も opacity:0 の下に埋まる)。必ず起こす。 */
+  document.body.classList.add('ready');
+  bootEl.classList.add('gone');
+}
 
 /* WebGL2 が使えない場合は静かに止める。例外を投げるとコンソールに
    未捕捉エラーが残るので、トップレベル await で停止させる
@@ -1608,6 +1416,8 @@ document.getElementById('dprv').textContent = DPR.toFixed(1);
 
 const scene  = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(56, innerWidth/innerHeight, 0.1, 2000);
+/* 基準画角。resize() だけが書き、frame() は速度ぶんを足して使う */
+let fovBase = 56;
 camera.position.set(0, 0.95, 0);
 
 /* 太陽。空・水面反射・シャフト・カードのスペキュラ・後処理の散乱、
@@ -2313,6 +2123,9 @@ function cardTexture(o){
   const w = 1024, h = 576;
   const pad = 34;
 
+  /* ★ 画像は後から届くので、描画はやり直せる形にしておく。
+     届くまでは地のグラデーションだけを出し、届いたら差し替える。 */
+  const paint = (shot) => {
   c.clearRect(0,0,w,h);
 
   /* --- 版面 --- */
@@ -2351,39 +2164,36 @@ function cardTexture(o){
   const sx = inner.x + inner.w*0.40, sy = inner.y+72;
   const sw = inner.w*0.60, sh = inner.h-72-58;
 
-  const sg = c.createLinearGradient(sx, sy, sx, sy+sh);
-  sg.addColorStop(0,   '#0a2b39');
-  sg.addColorStop(0.52,'#0d3d50');
-  sg.addColorStop(0.58,'#123f52');
-  sg.addColorStop(1,   '#061a24');
-  c.fillStyle = sg; c.fillRect(sx, sy, sw, sh);
-
-  // 水平線と、その上の光源
-  const hz = sy + sh*0.56;
-  const glow = c.createRadialGradient(sx+sw*0.5, hz, 0, sx+sw*0.5, hz, sw*0.46);
-  glow.addColorStop(0, o.glow);
-  glow.addColorStop(0.35,'rgba(150,215,230,0.22)');
-  glow.addColorStop(1, 'rgba(150,215,230,0)');
-  c.fillStyle = glow; c.fillRect(sx, sy, sw, sh);
-  c.fillStyle = 'rgba(214,244,250,0.5)'; c.fillRect(sx, hz, sw, 1);
-  // 水面に落ちる光の柱
-  const beam = c.createLinearGradient(sx+sw*0.5, hz, sx+sw*0.5, sy+sh);
-  beam.addColorStop(0,'rgba(220,246,250,0.34)');
-  beam.addColorStop(1,'rgba(220,246,250,0)');
-  c.fillStyle = beam; c.fillRect(sx+sw*0.40, hz, sw*0.20, sh*0.44);
-
-  // サムネイル内の小さなUI(これがあると"Webサイト"に見える)
-  c.fillStyle = 'rgba(226,246,250,0.62)';
-  c.fillRect(sx+16, sy+16, 34, 2);
-  c.fillStyle = 'rgba(226,246,250,0.30)';
-  c.fillRect(sx+sw-70, sy+16, 20, 2);
-  c.fillRect(sx+sw-44, sy+16, 20, 2);
-  c.font = '400 26px "Times New Roman", Georgia, serif';
-  c.fillStyle = 'rgba(236,250,252,0.92)';
-  c.fillText(o.thumbLine, sx+16, sy+sh-52);
-  c.fillStyle = 'rgba(226,246,250,0.28)';
-  c.fillRect(sx+16, sy+sh-36, 120, 1.5);
-  c.fillRect(sx+16, sy+sh-27, 86, 1.5);
+  /* ★ ここに「Webサイトらしい絵」を描いてはいけない。
+     以前は海のグラデーションと架空のキャッチ(Drive your life. /
+     Never stop the site.)を描いていた。実在の取引先の名前に、
+     こちらが作った英語の一行が付いている状態だった。
+     どちらも元にした試作(public/lab/trexworks_umiatari_v6.html)から
+     引き継いだ仮の文字で、先方のサイトにその一行は存在しない。
+     実写は shots/ に既にある。板は「実際に作ったもの」を見せる場所。 */
+  if (shot && shot.naturalWidth){
+    const ar = shot.naturalWidth / shot.naturalHeight;
+    let dw = sw, dh = sh, ox = 0;
+    /* cover。ただし上端を揃える —— サイトの顔は上にあるので、
+       中央合わせにすると必ずヒーローが切れる。 */
+    if (ar > sw/sh){ dw = sh*ar; ox = (sw-dw)/2; } else { dh = sw/ar; }
+    c.save();
+    c.beginPath(); c.rect(sx, sy, sw, sh); c.clip();
+    c.drawImage(shot, sx+ox, sy, dw, dh);
+    /* 水中の板なので、素のままだと明るすぎて背景から浮く */
+    const wash = c.createLinearGradient(sx, sy, sx, sy+sh);
+    wash.addColorStop(0, 'rgba(6,30,42,0.18)');
+    wash.addColorStop(1, 'rgba(4,20,30,0.46)');
+    c.fillStyle = wash; c.fillRect(sx, sy, sw, sh);
+    c.restore();
+  } else {
+    /* 届くまでの地。文字は1つも置かない。 */
+    const sg = c.createLinearGradient(sx, sy, sx, sy+sh);
+    sg.addColorStop(0,   '#0a2b39');
+    sg.addColorStop(0.62,'#0b3244');
+    sg.addColorStop(1,   '#061a24');
+    c.fillStyle = sg; c.fillRect(sx, sy, sw, sh);
+  }
 
   c.strokeStyle = 'rgba(214,244,250,0.34)'; c.lineWidth = 1;
   c.strokeRect(sx+0.5, sy+0.5, sw-1, sh-1);
@@ -2421,12 +2231,23 @@ function cardTexture(o){
     c.fillText(o.tag, inner.x+inner.w-tw-19, inner.y+82);
   }
   c.restore();
+  };
+  paint(null);
 
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   tex.generateMipmaps = true;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
+  /* 実写は後追いで届ける。潜航の開始を待たせない。
+     失敗しても地のまま続ける(console に1行だけ残す)。 */
+  if (o.shot){
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload  = () => { paint(img); tex.needsUpdate = true; };
+    img.onerror = () => console.warn('実績の画面が読めない: ' + o.shot);
+    img.src = o.shot;
+  }
   return tex;
 }
 
@@ -2434,11 +2255,11 @@ const WORKS = [
   /* url は「実在するものだけ」入れる。相対パスなので配信場所が変わっても追従する。
      url が無い作品はホバーもクリックもしない(存在しない先へ誘導しないため)。 */
   { num:'01', kind:'01 / Web site',     title:'GARAGE BeCool',   year:'2025', foot:'WEB SITE',
-    tag:'LIVE / SELECTED', glow:'rgba(255,208,150,0.40)', thumbLine:'Drive your life.',
+    tag:'LIVE / SELECTED', shot:'./shots/becool-pc.webp',
     url:'../becool/',
     lines:['DESIGN — IMPLEMENT — SEO','FUKUOKA / KITAKYUSHU','PERIOD — 2025 / IN OPERATION'] },
   { num:'02', kind:'02 / Corporate',    title:'T-REX CO., LTD.', year:'2026', foot:'CORPORATE SITE',
-    tag:'', glow:'rgba(255,170,150,0.34)', thumbLine:'Never stop the site.',
+    tag:'', shot:'./shots/trex-pc.webp',
     url:'../',
     lines:['STRATEGY — DESIGN — BUILD','CMS / RECRUIT / MEO','PERIOD — 2026 / IN OPERATION'] },
 ];
@@ -2652,6 +2473,19 @@ const cards = [];
    ランダムに撒くのではなく、層ごとに 大きさ・速度・被写界深度・
    光への応答 を変える。これが"奥行き"の正体。
    ================================================================ */
+/* マリンスノーを押しのける。姿が見えないほど強く押す。
+   「魚が居る」と分かる手段を、明るさに依存しないものへ1本持たせる
+   ―― 屋外のスマホでも、雪の割れは輝度に関係なく読める。
+   ★ 品質の梯子でこれを切らない。落としてよいのは「距離」だけ。 */
+const wakeU = {
+  uFishPos:{ value:[new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
+  uFishDir:{ value:[new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
+  uFishSide:{value:[new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
+  uFishWake:{value:[0,0,0]},
+  uWakeAny:{ value:0 },
+  uOrigin:{  value:new THREE.Vector3() },   // 層ごとに毎フレーム書き替える
+};
+
 function makeMotes(count, opt){
   const pos = new Float32Array(count*3);
   const seed= new Float32Array(count);
@@ -2675,18 +2509,36 @@ function makeMotes(count, opt){
     uTime:{value:0}, uSun:{value:SUN}, uDepth:{value:0},
     uPix:{value:DPR}, uGain:{value:opt.gain}, uSoft:{value:opt.soft},
     uWobble:{value:opt.wobble||0},
+    /* 魚が押しのける分。3層で同じオブジェクトを共有するので1回書けば効く。
+       層はワールド原点を持つので、比較のために原点も渡す。 */
+    uFishPos:wakeU.uFishPos, uFishDir:wakeU.uFishDir, uFishSide:wakeU.uFishSide,
+    uFishWake:wakeU.uFishWake, uWakeAny:wakeU.uWakeAny,
+    uOrigin:{value:new THREE.Vector3()},
   };
   const mat = new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
     uniforms: uni,
     vertexShader:`
-      uniform float uTime, uPix, uWobble;
+      uniform float uTime, uPix, uWobble, uWakeAny;
+      uniform vec3 uFishPos[3], uFishDir[3], uFishSide[3], uOrigin;
+      uniform float uFishWake[3];
       attribute float aSeed, aSize, aSpeed;
       varying float vFade, vSeed, vDist;
       void main(){
         vec3 p = position;
         p.x += sin(uTime*0.5 + aSeed)*uWobble;
         p.z += cos(uTime*0.37 + aSeed*1.7)*uWobble*0.6;
+        /* 姿が見えなくても、雪が割れれば「そこに居る」と分かる。
+           明るさに依存しない読み取り手段なので、品質を落としても切らない。
+           固定3回展開・分岐1つ・テクスチャ参照なし。 */
+        if (uWakeAny > 0.0){
+          vec3 wp = p + uOrigin;
+          for (int k = 0; k < 3; k++){
+            vec3 dd = wp - uFishPos[k];
+            float f = exp(-dot(dd,dd) * 2.8) * uFishWake[k];
+            p += uFishDir[k] * 0.30 * f + uFishSide[k] * 0.12 * f;
+          }
+        }
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vDist = -mv.z;
         // 距離減衰。近すぎる粒は巨大化してノイズになるので上限を切る
@@ -2745,51 +2597,164 @@ const fore = makeMotes(TIER.fore, {
 /* ================================================================
    7) 魚群 — 大きさの基準を与えるための"生き物"
    ================================================================ */
+/* 描くのは姿ではなく「間合い」。
+   - 画面の中央に来るほど薄れる(周辺視でしか捉えられない)
+   - 逃げるときは半径方向ではなく必ず横へ抜ける(画面の端から出る)
+   - 近づかれ方(速さ・正対)で警戒の半径が変わる
+   - 深く潜るほどこちらを無視する
+   InstancedMesh に束ねる。個体別マテリアルにすると描画呼び出しが
+   魚の数だけ増え、あとから軽くする逃げ道を自分で塞ぐことになる。 */
+const NF = TIER.fish;
 const fishUniforms = { uTime:{value:0}, uDepth:{value:0}, uSun:{value:SUN}, uFog:{value:fogCol} };
 const fishMat = new THREE.ShaderMaterial({
-  transparent:true, depthWrite:false, side:THREE.DoubleSide,
+  /* ★ depthWrite を切ると、被写界深度が魚の画素で「魚の奥にある景色」の
+     深さを読む。汀の魚はカメラの手前 5〜8m に居るのに、背後の砂(30m超)の
+     ボケ量が当たって永久にぼやけたままになる(実際そうなっていた)。
+     形は discard で抜いているので、深度を書いても輪郭は濁らない。
+     ついでに魚どうしの前後も正しくなる。 */
+  transparent:true, depthWrite:true, side:THREE.DoubleSide,
   uniforms: fishUniforms,
   vertexShader:`
-    varying vec2 vUv; varying vec3 vW;
+    attribute float aPhase, aAmp, aSquash, aAlpha, aTurn;
+    varying vec2 vUv; varying vec3 vW; varying float vAlpha, vTurn;
     void main(){
-      vUv = uv;
-      vec4 wp = modelMatrix * vec4(position,1.0);
+      /* uv.x=0 が頭、1 が尾。板は両面なので、どちら側から見ても頭が前を向く
+         (左右反転は「頭と尾の入れ替え」になるので入れない)。 */
+      vec2 uvv = uv;
+      vUv = uvv; vAlpha = aAlpha; vTurn = aTurn;
+      vec3 p = position;
+      /* 身を翻すときに横幅を潰す。★下限を切らないと真横で線になって消える */
+      p.x *= max(aSquash, 0.22);
+      /* 尾のしなり。頭(uvv.x=0)は動かさず、尾へ向かって振幅が立つ */
+      p.y += sin(aPhase) * aAmp * smoothstep(0.15, 1.0, uvv.x);
+      vec4 wp = modelMatrix * instanceMatrix * vec4(p,1.0);
       vW = wp.xyz;
       gl_Position = projectionMatrix * viewMatrix * wp;
     }`,
   fragmentShader:`
     uniform float uDepth; uniform vec3 uSun;
-    varying vec2 vUv; varying vec3 vW;
+    varying vec2 vUv; varying vec3 vW; varying float vAlpha, vTurn;
     ${G_WATER}
     void main(){
-      // 楕円の胴 + 三角の尾。テクスチャを持たない
-      vec2 p = vUv - vec2(0.42, 0.5);
-      float body = 1.0 - smoothstep(0.16, 0.20, length(p*vec2(1.0, 2.5)));
-      vec2 t = vUv - vec2(0.80, 0.5);
-      float tail = (vUv.x > 0.62) ? 1.0 - smoothstep(0.0, 0.14, abs(t.y) - (vUv.x-0.62)*0.42) : 0.0;
-      float m = clamp(body + tail, 0.0, 1.0);
-      if (m < 0.02) discard;
-      // 背は暗く腹は明るい(カウンターシェーディング)
-      float belly = smoothstep(0.62, 0.38, vUv.y);
-      vec3 col = mix(vec3(0.020,0.055,0.075), vec3(0.16,0.30,0.33), belly);
+      /* 姿は uv ではなく「実寸の比」で描く。★板は 0.42×0.20(=2.1:1)なので、
+         uv.y をそのまま高さに使うと胴が横へ 2.1 倍伸びる。以前これで
+         胴が 4.3:1 の平たい楕円になり、ぼけた途端ただの棒に見えていた。
+         X は体長を1とした前後、Y は同じ尺の上下。両方同じ単位なので
+         length() がそのまま円になる。 */
+      float X = vUv.x;
+      float Y = (vUv.y - 0.5) * 0.4762;
+      float aa = 0.011;
+
+      /* 胴。頭は丸く、尾柄へ細る。背びれと尻びれをわずかに立てる。 */
+      float u  = clamp((X - 0.03) / 0.70, 0.0, 1.0);
+      float hb = 0.118 * sin(3.14159265 * pow(u, 0.60));
+      /* 尾柄は絞り切らない。ここが 0 まで落ちると胴と尾が切り離れて
+         「2つの塊」に見える(以前の実装は 0.60〜0.66 が空白だった)。 */
+      hb = max(hb, 0.026 * smoothstep(0.03, 0.09, X) * (1.0 - smoothstep(0.70, 0.80, X)));
+      float up = step(0.0, Y);
+      hb += 0.042 * exp(-pow((X - 0.44) / 0.13,  2.0)) * up;
+      hb += 0.030 * exp(-pow((X - 0.60) / 0.085, 2.0)) * (1.0 - up);
+      float mBody = 1.0 - smoothstep(hb - aa, hb + aa, abs(Y));
+
+      /* 尾。付け根(0.72)で胴と重ねてから開く。後縁を V に切って二叉にする。 */
+      float tv   = clamp((X - 0.72) / 0.26, 0.0, 1.0);
+      /* ★ ここを tv*tv にすると鰭が軸に貼りついたまま先端だけ開き、
+         上下の葉が細い筋になって「燕の尾」に見える。0.8乗で早めに開かせる。 */
+      float ht   = mix(0.026, 0.145, pow(tv, 0.80));
+      float xEnd = 0.980 - 0.105 * (1.0 - smoothstep(0.0, 0.145, abs(Y)));
+      float mTail = (1.0 - smoothstep(ht - aa, ht + aa, abs(Y)))
+                  * smoothstep(0.68, 0.72, X)
+                  * (1.0 - smoothstep(xEnd - 0.012, xEnd + 0.012, X));
+
+      float m = clamp(max(mBody, mTail), 0.0, 1.0);
+      if (m < 0.02 || vAlpha < 0.004) discard;
+      /* 背は暗く腹は明るい(カウンターシェーディング)。
+         身を翻すと明暗が入れ替わる。加算の発光は使わない —— 「光る」ではなく
+         「翻る」で読ませる(過剰なブルームは要綱で禁止)。 */
+      /* ★ 濃淡の幅は「実際の胴の高さ」に合わせる。胴を厚くした時に
+         ここを直し忘れると、明るい腹が下端の数画素だけになり、
+         暗い海の中で魚が丸ごと沈んで見えなくなる(実際そうなった)。 */
+      float belly = smoothstep(0.105, -0.105, Y);
+      belly = mix(belly, 1.0 - belly, vTurn);
+      /* 背は暗く腹は明るい。★ ここを弱くすると、屋外のスマホでも暗いノートでも
+         「板が浮いている」だけになって姿が読めない。濃さではなく明暗差で読ませる。 */
+      vec3 col = mix(vec3(0.016,0.044,0.062), vec3(0.21,0.38,0.41), belly);
+      col *= 1.0 + vTurn * 0.55;
+      // 眼。これ1点で「紙の切り抜き」が「生き物」になる
+      float eye = 1.0 - smoothstep(0.014, 0.024, length(vec2(X - 0.115, Y - 0.030)));
+      col = mix(col, vec3(0.015,0.030,0.038), eye*0.85);
       float d = length(vW - cameraPosition);
       vec3 Vv = normalize(vW - cameraPosition);
+      /* ★ ここに「魚だけ水を薄くする」係数を入れたくなるが、入れても
+         変わらない。実測: d を 45% にしても魚の明るさは sRGB で 1 しか
+         動かなかった(600m の階調圧縮の方が支配的なので)。
+         この場面の水は中央値 sRGB 12、魚は 20。魚は既に「水の中で
+         いちばん明るいもの」になっている。これ以上明るくすると
+         暗い海に発光体が1つ浮くだけになる。 */
       col = waterFogV(col, d, uDepth, mix(1.0,0.3,uDepth), vW.y, Vv, uSun);
       col = mix(col, uFog, farFade(d));
-      gl_FragColor = vec4(col, m * 0.86 * (1.0 - smoothstep(12.0, 22.0, d)));
+      gl_FragColor = vec4(col, m * 0.95 * (1.0 - smoothstep(13.0, 24.0, d)) * vAlpha);
     }`,
 });
-const fishGroup = new THREE.Group();
-{
-  const g = new THREE.PlaneGeometry(0.42, 0.20);
-  for (let i=0;i<TIER.fish;i++){
-    const f = new THREE.Mesh(g, fishMat);
-    f.position.set((Math.random()-0.5)*2.6, (Math.random()-0.5)*1.0, (Math.random()-0.5)*1.4);
-    f.userData = { oy:f.position.y, ph:Math.random()*6.28 };
-    fishGroup.add(f);
-  }
-  fishGroup.renderOrder = 3;
-  scene.add(fishGroup);
+
+/* 乱数は固定の種から取る。撮影・回帰・第三者の確認が毎回同じ絵になる。 */
+function mulberry32(a){
+  return function(){
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const FISH_SEED = (() => {
+  const v = parseInt(new URLSearchParams(location.search).get('fishSeed') || '', 10);
+  return Number.isFinite(v) ? v : 1848;
+})();
+const frnd = mulberry32(FISH_SEED);
+
+/* ★ 分割を入れないと頂点が四隅の4つしかなく、頂点シェーダの
+   smoothstep(0.15,1.0,uv.x) が 0 と 1 でしか評価されない。
+   曲線が消えて板が平行四辺形に傾くだけになり、「泳ぐ」ではなく「傾く」に見える。
+   横10分割で胴がしなる。頂点は22個、instancing なので費用はほぼ0。 */
+const fishGeo  = new THREE.PlaneGeometry(0.42, 0.20, 10, 1);
+const fishMesh = new THREE.InstancedMesh(fishGeo, fishMat, NF);
+fishMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+fishMesh.frustumCulled = false;         // 位置はCPUが持つ。境界球は当てにならない
+fishMesh.renderOrder = 3;
+scene.add(fishMesh);
+
+const fAttr = {};
+for (const k of ['aPhase','aAmp','aSquash','aAlpha','aTurn']){
+  const a = new THREE.InstancedBufferAttribute(new Float32Array(NF), 1);
+  a.setUsage(THREE.DynamicDrawUsage);
+  fishGeo.setAttribute(k, a);
+  fAttr[k] = a;
+}
+/* 個体の状態。すべて素の配列で持ち、毎フレーム1回だけ書き出す。 */
+const fPos   = new Float32Array(NF*3);
+const fDir   = new Float32Array(NF*3);   // 進行方向(正規化)
+const fEsc   = new Float32Array(NF*3);   // 逃避の横速度
+const fPrevD = new Float32Array(NF);     // 前フレームのカメラ距離(近づかれ方)
+const fBeat  = new Float32Array(NF);     // 尾を振る速さ
+const fSize  = new Float32Array(NF);     // 個体の大きさ
+const fPause = new Float32Array(NF);     // 一拍止まる残り秒
+const fTurnT = new Float32Array(NF);     // 身を翻している残り秒
+const fScr   = new Float32Array(NF*2);   // 前フレームの画面座標(半径, 奥行き)
+const fStart = new Float32Array(NF);     // 驚き(0..1)。近い個体へ伝わる
+const fOff   = new Float32Array(NF*3);   // 群れの中でのもち場
+for (let i=0;i<NF;i++){
+  fSize[i] = 1.15 + frnd()*1.15;
+  fBeat[i] = 6.0 + frnd()*3.4;
+  fAttr.aPhase.array[i]  = frnd()*6.2831;
+  fAttr.aAmp.array[i]    = 0.018 + frnd()*0.010;
+  fAttr.aSquash.array[i] = 1;
+  fAttr.aAlpha.array[i]  = 0;
+  fDir[i*3]   = Math.cos(i*2.399);        // 初期の向き(黄金角で散らす)
+  fDir[i*3+2] = Math.sin(i*2.399);
+  fOff[i*3]   = (frnd()-0.5)*3.4;
+  fOff[i*3+1] = (frnd()-0.5)*1.5;
+  fOff[i*3+2] = (frnd()-0.5)*3.0;
+  fPrevD[i] = 9;
 }
 
 /* ================================================================
@@ -3109,10 +3074,13 @@ const GRADE = {
   uniforms:{
     tDiffuse:{value:null}, uDepth01:{value:0}, uTime:{value:0},
     uRes:{value:new THREE.Vector2(1,1)},
+    /* 汀線。uSeam は「描画上の汀」= cEff(hpR) を入れる(hpR ではない)。 */
+    uSeam:{value:0.5}, uLand:{value:0}, uRim:{value:0},
   },
   vertexShader:`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader:`
     uniform sampler2D tDiffuse; uniform float uDepth01, uTime; uniform vec2 uRes;
+    uniform float uSeam, uLand, uRim;
     varying vec2 vUv;
     void main(){
       // 端だけの極めて弱い色収差。中心では完全に0
@@ -3136,6 +3104,15 @@ const GRADE = {
       float l = dot(col, vec3(0.2126,0.7152,0.0722));
       col = mix(vec3(l), col, mix(1.07, 1.16, uDepth01));
 
+      /* 汀の1本。砂は消失線の手前でフォグに溶けるので、色の段差としての
+         「砂の側の線」は存在しない。見える1本はここで描く。
+         上が濡れた紙の接地影、下が波打ち際の細い明線(約3.5px)。 */
+      if (uLand + uRim > 0.001){
+        float above = max(vUv.y - uSeam, 0.0);
+        col *= 1.0 - 0.34 * exp(-above * 8.5) * uLand;
+        col += vec3(0.055,0.105,0.118) * exp(-above * 180.0) * uRim;
+      }
+
       // 暗部の階調を守るディザ。無いと深海のグラデが縞になる
       float dth = fract(sin(dot(gl_FragCoord.xy + uTime, vec2(12.9898,78.233))) * 43758.5453);
       col += (dth - 0.5) / 255.0;
@@ -3153,6 +3130,13 @@ composer.addPass(gradePass);
    1px 動かしただけで画面が飛ぶのを避けるため、生の値は一切
    シーンへ渡さない。SmoothDamp(常に安定)で重さを作る。
    ================================================================ */
+/* ★ 一次遅れの係数。reduced-motion では必ず 1(=即座に当てる)。
+   個別の行に reduced を書いて回ると必ず1つ書き漏らし、「海は止まって
+   いるのに何かだけがゆっくり動き続ける」状態が残る。実際、魚を止めた
+   あとも被写界深度のピントだけが寄り続けていた。窓口を1つにする。 */
+function ease1(k, dt){ return reduced ? 1 : Math.min(1, dt*k); }
+/* 同じ理由で、追従の時定数も reduced では 0 にする */
+function lag1(t){ return reduced ? 0 : t; }
 function smoothDamp(cur, target, ref, smoothTime, dt){
   const omega = 2 / Math.max(smoothTime, 1e-4);
   const x = omega * dt;
@@ -3190,12 +3174,138 @@ if (fine && !reduced){
   }, { passive:true });
 }
 
-function scrollToP(p, smooth){
-  const max = document.documentElement.scrollHeight - innerHeight;
-  scrollTo({ top: max * p, behavior: (reduced || !smooth) ? 'auto' : 'smooth' });
+/* 潜航の進み具合 p(0..1) の位置へ飛ぶ。
+   ★ 除数は「本文まで含めた文書全体」ではなく readScroll と同じ #spacer の
+   span でなければならない。document.scrollHeight で割ると本文2万px を
+   含んだ長さの3割へ飛ぶので、海底を通り越して本文の途中に着地する
+   (実際そうなっていた)。読む式と飛ぶ式は必ず同じ分母を使う。 */
+function diveSpan(){
+  return Math.max(1, (spacerEl ? spacerEl.offsetHeight
+                               : document.documentElement.scrollHeight) - innerHeight);
 }
-const toWorks = (e) => { e.preventDefault(); scrollToP(0.30, true); };
-document.getElementById('cta').addEventListener('click', toWorks);
+/* ================================================================
+   9.5) 受け渡しの時計 — 汀線(ていせん)
+   ----------------------------------------------------------------
+   潜航が終わって本文へ渡る区間だけを測る時計を、2本持つ。
+     hpR … 生。平滑化しない。汀線の幾何(ピッチ / シートの見かけの
+           上端 / 明線 / 汀の魚)を全部これで駆動する。毎フレームの
+           実測値なので、どんなスクロール速度でも遅れが0になる。
+     hp  … 平滑(0.09秒)。幾何でないもの(カメラの沈み込み・計器の
+           不透明度・時間の倍率)を駆動する。
+   幾何を平滑化しないのが要。混ぜると速く送ったときに線がずれる。
+   ================================================================ */
+const contentEl = document.getElementById('content');
+let hpR = 0, hp = 0, readP = 0, rp = 0;
+const hpV = { v:0 };
+let seamDelta = 0;                    // いま #content に当てている translateY(px)
+let contentTopDoc = 0, contentSpan = 1;
+let outroOpenEl = null;               // 第三幕の窓(無ければ rp は 0 のまま)
+
+function measureLayout(){
+  if (!contentEl) return;
+  /* 自分が当てている transform を消してから測る(でないと自分の分だけ狂う) */
+  if (seamDelta){ seamDelta = 0; contentEl.style.transform = ''; contentEl.style.willChange = 'auto'; }
+  contentTopDoc = contentEl.getBoundingClientRect().top + scrollY;
+  contentSpan   = Math.max(1, contentEl.scrollHeight - innerHeight);
+  if (typeof layoutRulerIndex === 'function') layoutRulerIndex();
+}
+/* 読み取り点を目盛りの 0..1 に写す。目次の行と同じ分母を使う。 */
+function readHeadP(){
+  return Math.min(1, Math.max(0, (scrollY + innerHeight*READ_HEAD - contentTopDoc) / contentSpan));
+}
+function measureSeam(){
+  if (!contentEl) return;
+  /* ★ 自分が当てている transform を必ず引く。
+     引かないと rect → hpR → seamDelta → rect の自己参照になって発振する。
+     この案でいちばん踏みやすい地雷はここ。 */
+  const topNat = contentEl.getBoundingClientRect().top - seamDelta;
+  hpR   = Math.min(1, Math.max(0, (innerHeight - topNat) / innerHeight));
+  readP = Math.min(1, Math.max(0, (scrollY - contentTopDoc) / contentSpan));
+  rp    = outroOpenEl
+    ? Math.min(1, Math.max(0, 1 - (outroOpenEl.getBoundingClientRect().top - seamDelta) / innerHeight))
+    : 0;
+}
+
+/* 汀の窓。
+   ピッチ θ の透視投影では、無限に広がる床の消失線は必ず
+   ndc.y = -tan(θ)/tan(fov/2) に出る(カメラの高さにも床までの距離にも
+   依存しない)。一方、本文シートの上端は被覆率 c に対して ndc.y = 2c-1。
+   よって θ=0 かつ c=0.50 のとき、砂の消失線と本文の上端罫は同じ1本になる。
+   その一致が一瞬で終わらないよう、汀の前後 ±SEAM_D だけシートの
+   「見かけの」上端を実スクロールの SEAM_K 倍しか動かさない。
+   実スクロールは1pxも奪わない(位置を hpR の純関数でずらすだけ)。 */
+/* 窓は前後で非対称にする。上側を 0.10 に縮めて hpR=0.60 で閉じ切るのが要:
+   本文へ渡って描画が止まるのは 0.62 なので、そこで窓がまだ開いていると
+   数px ぶんずれたまま本文が固まり、二度と 0 に戻らない。
+
+   形は「平らな踊り場 + エルミートの継ぎ」。
+   |x| ≤ SEAM_A では傾き SEAM_K(=6%)。つまり画面を 118px 送るあいだ
+   シートの上端は 7px しか動かない ―― これが汀の一致が保たれる窓。
+   ただし 0 にはしない。完全に止めると「スクロールが効いていない」
+   (＝スクロールの乗っ取り)に読まれる。6%は「近づいている」に読める。
+   窓の外側でシートが最大2.4倍の速さで追いつくが、両端で傾きは 1 に
+   戻る(C1連続)ので継ぎ目は出ない。 */
+const SEAM_C = 0.50, SEAM_D0 = 0.14, SEAM_D1 = 0.10, SEAM_K = 0.06, SEAM_A = 0.45;
+function fSeam(x){
+  const s = x < 0 ? -1 : 1;
+  x = Math.abs(x);
+  if (x >= 1) return s * x;                 // 窓の外は素通り(見かけ = 実際)
+  if (x <= SEAM_A) return s * SEAM_K * x;   // 踊り場
+  const L = 1 - SEAM_A, u = (x - SEAM_A) / L;
+  const uu = u*u, uuu = uu*u;
+  return s * ((2*uuu - 3*uu + 1) * (SEAM_K*SEAM_A)   // f(a)
+            + (uuu - 2*uu + u) * L * SEAM_K          // f'(a)
+            + (-2*uuu + 3*uu)                        // f(1) = 1
+            + (uuu - uu) * L);                       // f'(1) = 1
+}
+function cEff(h){
+  /* reduced-motion では窓を開かない。見かけと実際を一致させる
+     (シートは動かさないのに明線だけ最大57pxずれる、を防ぐ)。
+     主役の「水平線と上端が重なる」はピッチ0の透視投影の性質なので、
+     窓が無くても hpR=0.50 でそのまま成立する。 */
+  if (reduced) return h;
+  const D = h < SEAM_C ? SEAM_D0 : SEAM_D1;
+  const x = (h - SEAM_C) / D;
+  if (x <= -1 || x >= 1) return h;
+  return SEAM_C + D * fSeam(x);
+}
+
+/* 値が動かないフレームでは1バイトも書かない。
+   透明になった要素がタップを食う事故も同時に防ぐ。 */
+function setOp(el, v){
+  if (!el) return;
+  const t = (v < 0.005 ? 0 : v).toFixed(3);
+  if (el.dataset.op === t) return;
+  el.dataset.op = t;
+  el.style.opacity = t;
+  /* 透明になった要素がタップを食う事故を防ぐ。
+     ★ pointer-events だけでは足りない: 子孫の #hud a{pointer-events:auto} が
+     打ち消すので、見えないリンクが押せるまま残る。visibility で消すと
+     読み上げの対象からも同時に外れる。 */
+  el.style.pointerEvents = (v < 0.06) ? 'none' : '';
+  el.style.visibility = (v < 0.005) ? 'hidden' : '';
+}
+
+function scrollToP(p, smooth){
+  scrollTo({ top: diveSpan() * Math.min(1, Math.max(0, p)),
+             behavior: (reduced || !smooth) ? 'auto' : 'smooth' });
+}
+/* camY = 0.95 - 9.55*smoothstep(sp) の逆関数。飛び先をハードコードせず
+   「カードが焦点に入るカメラ高さ」から幾何で導く。カードを動かしたら
+   飛び先も自動で追従する。 */
+const invEase = (e) => { e = Math.min(1, Math.max(0, e));
+                         return 0.5 - Math.sin(Math.asin(1 - 2*e) / 3); };
+const spForCamY = (y) => invEase((0.95 - y) / 9.55);
+
+const toWorks = (e) => {
+  e.preventDefault();
+  const c = cards[1] || cards[0];
+  scrollToP(c ? spForCamY(c.userData.base.y) : 0.58, true);
+};
+/* ヒーローの「スクロールで、潜ります。」は works ではなく
+   「潜り始めた」位置(camY=-1.11 / 約77M)へ。 */
+const toDive = (e) => { e.preventDefault(); scrollToP(0.30, true); };
+document.getElementById('cta').addEventListener('click', toDive);
 document.getElementById('navWorks').addEventListener('click', toWorks);
 
 /* ---- カードのホバーとクリック --------------------------------------
@@ -3266,8 +3376,111 @@ const workTitle=document.getElementById('workTitle');
 const workMeta =document.getElementById('workMeta');
 const workLink =document.getElementById('workLink');
 const legibilityEl = document.getElementById('legibility');
+/* ---- 計器の転生に使う要素 ---------------------------------------- */
+const headerEl  = document.querySelector('#hud header');
+const counterEl = document.getElementById('counter');
+const simEl     = document.getElementById('sim');
+const meterEl   = document.getElementById('meter');
+const vertEl    = document.getElementById('vert');
+const diveNavEl = document.getElementById('dive');
+const rulerEl   = document.getElementById('ruler');
+const footEl    = document.getElementById('foot');
+const locCapEl  = document.getElementById('locCap');
+const seamNameEl= document.getElementById('seamName');
+const footScrimEl = document.getElementById('footScrim');
+const tickEls   = [...document.querySelectorAll('#ruler .tick')];
+const rIdxEls   = [...document.querySelectorAll('#ruler .idx')];
+outroOpenEl     = document.getElementById('outroOpen');
 
-let lastDepth='', lastLoc='', lastSec=-1, lastWork=-1, splashed=false;
+/* 本文の立ち上がり。一度だけ。高さに依存しないよう threshold は使わない
+   (本文のブロックはビューポートより高いものがあり、面積比では発火しない)。 */
+if (!reduced && 'IntersectionObserver' in window){
+  document.documentElement.dataset.anim = '1';
+  const rio = new IntersectionObserver((es) => {
+    for (const e of es){
+      if (!e.isIntersecting) continue;
+      e.target.classList.add('isIn');
+      rio.unobserve(e.target);
+    }
+  }, { threshold:0, rootMargin:'0px 0px -8% 0px' });
+  for (const el of document.querySelectorAll('#content .blk, #landing')) rio.observe(el);
+}
+
+/* 本文の節。深度の帯名が、そのまま読んでいる場所の名前に変わる。 */
+const SEC_NAME = {
+  works:'実績', service:'できること', flow:'進め方',
+  philosophy:'考え方', contact:'お問い合わせ', about:'汀ノ庭について',
+};
+/* ★ 「いま読んでいる点」は1つだけ。画面の上から 45% の高さ。
+   目次の行・針・見出しの3つが必ずこの1点を見る。
+   以前は針が readP(=画面の上端)、見出しが IntersectionObserver の
+   画面中央の帯、と別々の基準だったので、行の真上に針が乗っているのに
+   その行が光らない、という食い違いが常時見えていた。
+   さらに IO は「交差が変わった時」しか鳴らないので、目次のリンクで
+   飛んだ先に節が1つも無い(=あとがき)と、前の見出しが居座り続けた。 */
+const READ_HEAD = 0.45;
+const SEC_LIST = [...document.querySelectorAll('#content section[id]')].filter(el => SEC_NAME[el.id]);
+const secTops  = SEC_LIST.map(() => 0);
+function measureSections(){
+  for (let i = 0; i < SEC_LIST.length; i++) secTops[i] = SEC_LIST[i].getBoundingClientRect().top + scrollY;
+}
+/* ★ curSecId の初期値を先頭の節にすると、最初の呼び出しが
+   「変わっていない」で早期returnし、.now が一度も付かない。空で始める。 */
+let curSecName = '思想', curSecId = '';
+function updateSection(){
+  if (!SEC_LIST.length) return;
+  const head = scrollY + innerHeight * READ_HEAD;
+  let k = 0;
+  for (let i = 0; i < SEC_LIST.length; i++) if (secTops[i] <= head) k = i;
+  const id = SEC_LIST[k].id;
+  if (id === curSecId) return;
+  curSecId = id; curSecName = SEC_NAME[id] || curSecName;
+  for (const a of rIdxEls) a.classList.toggle('now', a.dataset.sec === curSecId);
+}
+/* 目次の行は等分ではなく、実際の節の位置に置く(針と食い違わせない)。 */
+let seamNameH = 14;
+function layoutRulerIndex(){
+  seamNameH = seamNameEl ? (seamNameEl.offsetHeight || 14) : 14;
+  /* 目次を出さない幅でも見出しの判定に要るので、先に必ず測る */
+  measureSections();
+  if (!rIdxEls.length) return;
+  const wide = innerWidth >= 1280;
+  document.documentElement.toggleAttribute('data-index', wide);
+  if (!wide) return;
+  const h = rulerEl ? (rulerEl.getBoundingClientRect().height || 460) : 460;
+  /* 実測の位置に置くが、短い節が続くと行が重なる(お知らせ / お問い合わせ)。
+     下から順に最小の間隔だけ空ける。順序は入れ替えない。 */
+  const GAP = 14;
+  const tops = [];
+  for (const el of rIdxEls){
+    const k = SEC_LIST.findIndex(x => x.id === el.dataset.sec);
+    const t = k >= 0 ? (secTops[k] - contentTopDoc) / contentSpan * h : 0;
+    tops.push(Math.min(h, Math.max(0, t)));
+  }
+  for (let i = tops.length - 2; i >= 0; i--){
+    if (tops[i+1] - tops[i] < GAP) tops[i] = tops[i+1] - GAP;
+  }
+  for (let i = 0; i < rIdxEls.length; i++){
+    rIdxEls[i].style.top = (tops[i] / h * 100).toFixed(2) + '%';
+  }
+}
+
+let lastDepth='', lastSec=-1, lastWork=-1, splashed=false;
+/* 現在地・見出しの差し替えは、位置を1pxも動かさず 200ms で一度消してから戻す */
+const SITE_LOC = '汀ノ庭 MIGIWA STUDIO';
+let locWant = 'SURFACE', capWant = 'Current location';
+const locSt = { cur:'SURFACE', next:'', at:0 };
+const capSt = { cur:'Current location', next:'', at:0 };
+function xfade(el, st, want){
+  if (!el) return;
+  const now = performance.now();
+  if (want !== st.cur && want !== st.next){ st.next = want; el.style.opacity = '0'; st.at = now + 210; }
+  if (st.next && now >= st.at){
+    el.textContent = st.next; st.cur = st.next; st.next = ''; el.style.opacity = '1';
+  }
+}
+function tickLabels(){ xfade(locEl, locSt, locWant); xfade(locCapEl, capSt, capWant); }
+let lastDepthM = 0;                    // 診断用。表示中の深度(M)
 let lastHop=-1, hudTextAt=0, depthShown=0;
 const SPLASH_DUR = 0.42;
 let splashT = 0, splashCool = 0, splashPow = 1, prevCamY = 0.95;
@@ -3287,8 +3500,11 @@ let prevNow = performance.now();
 let rawDt = 0;   // 丸める前の実フレーム時間(秒)。FPS計測とコスト計測はこちらを使う
 function tick(){ const n = performance.now(); const d = (n - prevNow)/1000; prevNow = n; rawDt = d; return d; }
 let t = 0, running = true, visible = true;
-/* 自発的な動き(波・粒子・魚・揺らぎ)は止め、スクロール連動だけ残す */
-const timeScale = reduced ? 0 : 1;
+/* 自発的な動き(波・粒子・魚・揺らぎ)は止め、スクロール連動だけ残す。
+   ★ 潜り終わりに 0 へ落として海の時間そのものを止める(汀線)。
+   t が全ユニフォームの供給源なので、この1つで集光・砂紋・光芒のノイズ・
+   マリンスノー・気泡・魚・ガラス板の揺れが同時に、同じ倍率で止まる。 */
+let timeScale = reduced ? 0 : 1;
 
 /* ---- 実測FPS(直近5秒の平均と最低) --------------------------------
    最低FPSは「一番重かった1フレーム」の逆数。平均だけ見ていると
@@ -3432,6 +3648,40 @@ window.__diag = {
   get fps(){ return fpsStats(); },
   get cost(){ return CAL && CAL.result; },
   get quality(){ return { step: qStep, dropped: LADDER.slice(0, qStep).map(l => l.name) }; },
+  /* 潜航の進捗。進捗バーは transform で動かしているので style.width は
+     常に空になる。外から収束を待つには、この値を見る。 */
+  get dive(){ return sp; },
+  /* 汀線を外から機械的に測るための読み出し口 */
+  /* 診断用。何が写っているかを切り分けるために、魚だけ消せるようにする。 */
+  set hideFish(v){ fishMesh.visible = !v; },
+  get hideFish(){ return !fishMesh.visible; },
+  /* 魚を外から数える。姿が出ているか / 何匹が濃いかを目視でなく数で見る。 */
+  get fish(){
+    const A = fAttr, out = [];
+    for (let i=0;i<NF;i++){
+      const o=i*3;
+      _fp.set(fPos[o],fPos[o+1],fPos[o+2]);
+      const d = _fp.distanceTo(camera.position);
+      _fp.project(camera);
+      out.push({ i, a:+A.aAlpha.array[i].toFixed(3), d:+d.toFixed(2),
+                 x:+_fp.x.toFixed(2), y:+_fp.y.toFixed(2), z:+_fp.z.toFixed(2),
+                 turn:+A.aTurn.array[i].toFixed(2) });
+    }
+    return { n:NF, vis: out.filter(f => f.a > 0.12 && Math.abs(f.x)<1 && Math.abs(f.y)<1 && f.z<1).length,
+             wake:+wakeU.uWakeAny.value.toFixed(2), list: out };
+  },
+  get seam(){ return {
+    hpR, hp, cEff: cEff(hpR), seamDelta,
+    seamPx: innerHeight * (1 - cEff(hpR)),
+    theta: camera.rotation.x, fov: camera.fov, timeScale,
+    uLand: gradePass.uniforms.uLand.value, uRim: gradePass.uniforms.uRim.value,
+    readP, rp, reading, settledDone, depthM: lastDepthM,
+    camY: camera.position.y,
+    contentTopDoc, contentSpan,
+    /* 水平線の画面上の位置(px)。ndc.y = -tan(θ)/tan(fov/2) */
+    horizonPx: innerHeight * 0.5 *
+      (1 + Math.tan(camera.rotation.x) / Math.tan(camera.fov * Math.PI/360)),
+  }; },
   /* 水面の映り込みとガラスの屈折が「実際に効いているか」を外から読めるようにする。
      絵を見て判断すると、シェーダが黙って落ちた時に気付けない。 */
   get effects(){ return {
@@ -3492,6 +3742,8 @@ function setQuality(step){
   const target = Math.max(0, Math.min(LADDER.length, step));
   while (qStep < target) LADDER[qStep++].down();
   while (qStep > target) LADDER[--qStep].up();
+  /* 魚は数も振る舞いも減らさない。落とすのは近寄る距離だけ。 */
+  fishQuality(qStep);
 }
 
 /* 適応DPR。品質を落とすのは"実測で遅い時だけ" */
@@ -3516,19 +3768,51 @@ function applyDPR(next){
   document.getElementById('dprv').textContent = DPR.toFixed(1);
 }
 
-function frame(){
-  if (!running) return;
-  requestAnimationFrame(frame);
-  const dt = Math.min(tick(), 0.05);
-  /* 本文を読んでいる間は、シミュレーションも描画も回さない。
-     tick() は上で呼んでいるので、復帰時に巨大な dt が飛ばない。 */
-  if (reading) return;
+/* 記録の1枚を描くときの合図。rAF はコールバックに数値(時刻)を渡すので、
+   Symbol と比べれば通常のフレームと取り違えない。 */
+const SETTLED = Symbol('settled');
+let settledDone = false;
+
+function frame(mode){
+  const settled = (mode === SETTLED);
+  if (!settled){
+    if (!running) return;
+    requestAnimationFrame(frame);
+  }
+  /* ★ tick() は必ず先に呼ぶ(復帰時に巨大な dt を飛ばさない既存の構造)。 */
+  const dt = settled ? 0 : Math.min(tick(), 0.05);
+  if (!settled){
+    measureSeam();
+    /* 本文が画面の62%を覆ったら計器は退く。
+       IntersectionObserver は1〜2フレーム遅れ、最後のライブフレームと
+       凍結フレームの姿勢がずれるので、ここで同期的に決める。 */
+    const readingUI = hpR >= 0.62;
+    /* ★ ここで呼ぶ。writeReadingHud だけに置くと、第三幕(rp>0)は
+       本流の frame() を通るので見出しが前の節のまま居座る。 */
+    if (readingUI) updateSection();
+    if (readingUI !== reading){
+      reading = readingUI;
+      document.documentElement.dataset.reading = reading ? '1' : '0';
+      if (!reading){
+        resetFishState();                      // 本文から戻った直後の入力は捨てる
+        recallUp = 0; recallOn = false;
+        if (headerEl) headerEl.classList.remove('recall');
+      }
+    }
+    /* 第三幕(rp>0)に入っていれば描画は続ける。海だけが戻る。 */
+    if (readingUI && rp <= 0){
+      if (!settledDone){ settledDone = true; renderSettledFrame(); }
+      writeReadingHud();
+      return;
+    }
+    settledDone = false;
+  }
   t += dt * timeScale;
 
   /* --- 減衰。スクロールは"重い"、ポインタは"軽いが遅れる" --- */
-  sp = smoothDamp(sp, targetP, spV, reduced ? 0.05 : 0.42, dt);
-  px = smoothDamp(px, pxT, pxV, 0.55, dt);
-  py = smoothDamp(py, pyT, pyV, 0.55, dt);
+  sp = smoothDamp(sp, targetP, spV, lag1(0.42), dt);
+  px = smoothDamp(px, pxT, pxV, lag1(0.55), dt);
+  py = smoothDamp(py, pyT, pyV, lag1(0.55), dt);
   /* 実フレーム時間で割る(丸めた dt で割ると低フレーム時に過大評価される)。
      一次遅れではなく二次のばね: 行き過ぎ約10%・揺り戻し1回・収束0.7秒。
      可変dtで積分すると低フレーム時に発散するので固定ステップで回す。 */
@@ -3549,25 +3833,71 @@ function frame(){
      単なる縦移動ではなく、俯角と画角も一緒に動かす。
      水面直下で見上げ、海底へ近づくと見下ろす。 */
   const ease = sp*sp*(3-2*sp);
-  const camY = 0.95 - 9.55*ease;
-  const bob  = reduced ? 0 : Math.sin(t*0.85)*0.045*(1-ease); // 水面の揺れ
-  const depth01 = Math.min(1, Math.max(0, -camY/8.6));
+  /* ★ 計器はこの「潜航ぶんの高さ」だけを見る。着地の沈み込み(land)や
+     水面の揺れ(bob)を混ぜると、最深部で 701M まで回って計器が壊れる。 */
+  const camYBase = 0.95 - 9.55*ease;
+  /* 汀の受け渡し。
+     hPose … カメラの姿勢はここで凍る(記録の姿勢)。
+     calm  … 着地でノイズ(ポインタ追従・速度でののけぞり)を殺す。
+     land  … 海底へ 1.45m 沈む。目線が砂の 0.35m 上に来る。 */
+  const hPose = Math.min(hpR, 0.62);
+  const calm  = 1 - ss(0.06, 0.44, hp);
+  /* ★ reduced でも 1 に固定してはいけない。sp=0 の水面で
+     カメラが 1.45m 沈み、最初から水中で始まってしまう。 */
+  const land  = ss(0.00, 0.50, hp);
+  const camY  = camYBase - 1.45*land;
+  const bob   = reduced ? 0 : Math.sin(t*0.85)*0.045*(1-ease)*calm; // 水面の揺れ
+  const depth01 = Math.min(1, Math.max(0, -camYBase/8.6));
 
-  camera.position.set(px*0.30*(1-ease*0.55), camY + bob, py*0.10);
+  camera.position.set(px*0.30*(1-ease*0.55)*calm, camY + bob, py*0.10*calm);
   camera.rotation.order = 'YXZ';
   /* 縦画面は水面を見下ろす面積が大きく、近景の波ばかりになる。
      水面に入るまでの間だけカメラを上へ振り、水平線を画面の下寄りへ送る
      (＝空を多く見せ、1枚目のカードを本文の下に落とす)。 */
   const portraitLift = PORTRAIT_LIFT * (1 - ss(0.02, 0.20, sp));
-  camera.rotation.x = -0.06 + portraitLift
-                    + 0.21*ss(0.10,0.46,sp) - 0.32*ss(0.60,0.97,sp)
-                    + py*-0.030
-                    + Math.max(-0.055, Math.min(0.055, scrollVel*0.20));   // 速度でのけぞる
+  /* 最後の項が汀線。潜航の終端でピッチは -0.170rad(-9.7°)。そこへ
+     +0.170 を足して hpR≥0.44 で厳密に 0 にする。θ=0 の透視投影では
+     床の消失線が必ず画面の垂直中央に出るので、水平線がそこへ「駐車」する。 */
+  camera.rotation.x = (-0.06 + portraitLift
+                    + 0.21*ss(0.10,0.46,sp) - 0.32*ss(0.60,0.97,sp))
+                    + 0.170*ss(0.04, 0.44, hPose)
+                    + (py*-0.030
+                       + Math.max(-0.055, Math.min(0.055, scrollVel*0.20))) * calm;   // 速度でのけぞる
   /* 同じ速度源からヨーとロールへも分配する。モバイルにも二軸目が入る */
-  camera.rotation.y = -px*0.055 + Math.max(-0.030, Math.min(0.030, scrollVel*0.10));
-  camera.rotation.z = -px*0.014 + Math.max(-0.012, Math.min(0.012, scrollVel*0.040));
-  const fov = 56 + Math.max(-1.6, Math.min(2.6, scrollVel*7.0));
+  camera.rotation.y = (-px*0.055 + Math.max(-0.030, Math.min(0.030, scrollVel*0.10))) * calm;
+  camera.rotation.z = (-px*0.014 + Math.max(-0.012, Math.min(0.012, scrollVel*0.040))) * calm;
+  /* ★ 基準画角は resize() が決める(縦画面 64 / 横画面 56)。
+     ここで 56 を直書きすると縦画面の画角指定が毎フレーム消され、
+     solvePortraitLift() は誰も使わない 64 に対して解くことになる。 */
+  const fov = fovBase + calm * Math.max(-1.6, Math.min(2.6, scrollVel*7.0));
   if (Math.abs(camera.fov - fov) > 0.01){ camera.fov = fov; camera.updateProjectionMatrix(); }
+
+  /* --- 汀線の駆動 -------------------------------------------------
+     幾何(シートの見かけの上端・明線の位置)は hpR、
+     幾何でないもの(時間の倍率・接地影の濃さ)は hp。 */
+  hp = smoothDamp(hp, hpR, hpV, lag1(0.09), dt);
+  /* 海の時間。hp 0.34→0.56 で 0 へ。第三幕(rp)で 0→1 に戻る。 */
+  timeScale = reduced ? 0 : Math.max(1 - ss(0.34, 0.56, hp), ss(0.10, 0.70, rp));
+  {
+    const cE = cEff(hpR);
+    /* シートの実オフセット。実スクロールは奪わず、見かけの位置だけずらす。
+       小数pxで書くと端末によって文字がにじむので必ず整数に丸める。 */
+    const want = reduced ? 0 : Math.round(innerHeight * (hpR - cE));
+    if (want !== seamDelta){
+      seamDelta = want;
+      contentEl.style.transform = want ? `translate3d(0,${want}px,0)` : '';
+      contentEl.style.willChange = want ? 'transform' : 'auto';
+    }
+    let uLand = ss(0.00,0.16,hp) * (1 - ss(0.46,0.60,hp));
+    let uRim  = ss(0.02,0.14,hp) * (1 - ss(0.50,0.60,hp));
+    /* ★ 構造的ガード。フリックで hp が遅れているあいだに hpR だけが
+       0.62 を越えて凍る経路が実在する。ss のカーブ任せにすると、
+       止まった位置に黒い帯が焼き付いた1枚が本文の裏に残り続ける。 */
+    if (settled || hpR >= 0.60){ uLand = 0; uRim = 0; }
+    gradePass.uniforms.uSeam.value = cE;
+    gradePass.uniforms.uLand.value = uLand;
+    gradePass.uniforms.uRim.value  = uRim;
+  }
 
   /* --- 共有ユニフォーム --- */
   const T = t*0.8;
@@ -3612,29 +3942,31 @@ function frame(){
     c.rotation.y = u.baseRotY + px*0.045 + Math.sin(t*0.29 + u.sway)*0.012;
     const near = 1 - Math.min(1, Math.abs(camera.position.y - u.base.y)/(isMobile ? 2.2 : 2.7));
     const f = near*near;
-    u.uni.uFocus.value += (f - u.uni.uFocus.value) * Math.min(1, dt*3.2);
+    u.uni.uFocus.value += (f - u.uni.uFocus.value) * ease1(3.2, dt);
     /* ホバーは縁の強調と、ごく僅かに手前へ寄るだけ。大きく動かすと
        板が飛んで「浮いている物」ではなくUI部品に見える。 */
     const hv = (hovered === i && !reduced) ? 1 : 0;
-    u.uni.uHover.value += (hv - u.uni.uHover.value) * Math.min(1, dt*6.0);
+    u.uni.uHover.value += (hv - u.uni.uHover.value) * ease1(6.0, dt);
     c.position.z = u.base.z + u.uni.uHover.value * 0.12;
     /* 水面は不透明なので、水面より上のカードは潜った瞬間に見えなくなるのが
        正しい。放っておくと波の稜線でカードが切り取られたように見える。 */
     const vis = u.base.y > 0.4 ? 1 - ss(0.004, 0.050, depth01) : 1;
-    u.uni.uVis.value += (vis - u.uni.uVis.value) * Math.min(1, dt*4.0);
+    u.uni.uVis.value += (vis - u.uni.uVis.value) * ease1(4.0, dt);
     u.uni.uDepth.value = depth01;
     u.uni.uTime.value = T;
     if (f > focusAmt){ focusAmt = f; focusI = i; focusDist = camera.position.distanceTo(c.position); }
   }
 
-  /* --- 魚群。カメラの少し先を旋回する --- */
-  const fa = t*0.085;
-  fishGroup.position.set(Math.cos(fa)*3.4, -4.4 + Math.sin(t*0.21)*0.55, -8.2 + Math.sin(fa)*2.2);
-  fishGroup.rotation.y = Math.atan2(Math.sin(fa)*3.4, -Math.cos(fa)*2.2) + Math.PI/2;
-  for (const f of fishGroup.children){
-    f.position.y = f.userData.oy + Math.sin(t*2.6 + f.userData.ph)*0.045;
-    f.rotation.z = Math.sin(t*5.4 + f.userData.ph)*0.10;
-  }
+  /* ★ 魚の時計は2つ。位置と姿勢は timeScale(reduced-motion では0)で進め、
+     出入りの濃度だけ実時間で進める。位置まで実時間にすると、
+     reduced-motion で海が止まっているのに魚だけ泳ぎ続ける(実測で
+     3.5秒あけた2枚が一致しなかった)。逆に濃度まで止めると、
+     alpha が 0 のまま一匹も出てこない。 */
+  const fdtRaw = Math.min(dt, 1/30);
+  /* reduced-motion では濃度も「寄せる」のではなく即座に当てる(fdtA=1 で
+     一次遅れの係数が 1 になる)。ゆっくり現れるのも演出なので、
+     静止画として1フレーム目から完成していること。 */
+  updateFish(reduced ? 0 : fdtRaw, focusAmt, reduced ? 1 : fdtRaw);
 
   /* --- 粒子。層ごとに違う遅れ・違う速度で流す ---
      海流は Gerstner の主方向と揃え、深いほど弱める。 */
@@ -3670,12 +4002,15 @@ function frame(){
        ずれ量はレイヤーのスパンの15%で頭打ちにし、折り返しが視界に入るのを防ぐ。 */
     const ud = layer.userData;
     const span = opt.yMax - opt.yMin;
-    const lag = reduced ? 0 : opt.lag;
+    const lag = lag1(opt.lag);
     ud.fy = lag ? smoothDamp(ud.fy, camY, ud.fyv, lag, dt) : camY;
     ud.fx = lag ? smoothDamp(ud.fx, camera.position.x, ud.fxv, lag, dt) : camera.position.x;
     const cap = span * 0.15;
     layer.position.y = camY + Math.max(-cap, Math.min(cap, ud.fy - camY));
     layer.position.x = camera.position.x + Math.max(-cap, Math.min(cap, ud.fx - camera.position.x));
+    /* 魚が押しのける計算はワールド座標で比べるので、層の原点を渡す。
+       ★ 位置を動かした「あと」に渡す(先に渡すと1フレーム古い値になる)。 */
+    uni.uOrigin.value.copy(layer.position);
   }
 
   /* --- ポストの駆動 ------------------------------------------ */
@@ -3688,17 +4023,21 @@ function frame(){
   // 水中でだけ強く出す(水上は空の描画そのものが眩しさを持っている)
   const rayAmt = (inFront ? (0.10 + 0.62*ss(0.03,0.34,depth01)) * (1 - ss(0.80,1.0,depth01)*0.55) : 0)
                  * (RENDER.godrayOcclusion ? 1 : 0.55);   // 遮蔽できないぶん控えめに
-  atmosPass.uniforms.uRay.value += (rayAmt - atmosPass.uniforms.uRay.value) * Math.min(1, dt*2.5);
+  atmosPass.uniforms.uRay.value += (rayAmt - atmosPass.uniforms.uRay.value) * ease1(2.5, dt);
   atmosPass.uniforms.uDepth01.value = depth01;
   atmosPass.uniforms.uTime.value = t;
   // 被写界深度。焦点は"いま見ている作品"、絞りは深いほど開く
-  const targetFocus = focusAmt > 0.12 ? focusDist : 8.5;
-  atmosPass.uniforms.uFocus.value += (targetFocus - atmosPass.uniforms.uFocus.value) * Math.min(1, dt*1.6);
+  /* 汀では、線の上を通る1匹へピントを送る。ここだけ背景ではなく生き物に
+     合わせる(奥はどのみち霧で柔らかいので、失うものが無い)。
+     被写界深度でにじんだままだと、せっかくの1匹が光の筋にしか見えない。 */
+  const targetFocus = (hpR > 0.26 && fishHeroDist > 0) ? fishHeroDist
+                    : (focusAmt > 0.12 ? focusDist : 8.5);
+  atmosPass.uniforms.uFocus.value += (targetFocus - atmosPass.uniforms.uFocus.value) * ease1(1.6, dt);
   atmosPass.uniforms.uAperture.value = 0.16 + 0.42*depth01;
   /* 潜水カメラの順応。深いほど僅かに開き、暗部の階調を残す
      (黒潰れは禁止事項)。振れ幅は現行値の +10% まで、時定数0.45秒。 */
   const expTarget = RENDER.exposure * (1 + 0.10 * ss(0.15, 0.90, depth01));
-  expShown = smoothDamp(expShown, expTarget, expVel, 0.45, dt);
+  expShown = smoothDamp(expShown, expTarget, expVel, lag1(0.45), dt);
   renderer.toneMappingExposure = expShown;
 
   gradePass.uniforms.uDepth01.value = depth01;
@@ -3717,23 +4056,63 @@ function frame(){
     heroEl.style.willChange = (hop > 0.002 && hop < 0.998) ? 'opacity,transform' : 'auto';
   }
 
-  const depthM = Math.max(0, -camera.position.y) * DEPTH_PER_UNIT;
+  /* ★ camera.position.y ではなく camYBase。着地の沈み込みと水面の揺れを
+     混ぜない。最下段の目盛り(600M)でクランプして、計器と目盛りが
+     最後に食い違わないようにする。 */
+  const depthM = Math.min(DEPTH_MAX, Math.max(0, -camYBase) * DEPTH_PER_UNIT);
+  lastDepthM = depthM;
   /* 計器の針は即応、数字は0.55秒の一次遅れ。数字が瞬間値だと桁が暴れて読めない */
-  depthShown = smoothDamp(depthShown, depthM, depthVel, 0.55, dt);
+  depthShown = smoothDamp(depthShown, depthM, depthVel, lag1(0.55), dt);
   const nowMs = performance.now();
   if (nowMs - hudTextAt > 100){
     hudTextAt = nowMs;
     const dTxt = (depthShown<100 ? (depthShown<10?'00':'0') : '') + depthShown.toFixed(1);
     if (dTxt !== lastDepth){ depthEl.innerHTML = dTxt + '<small>M</small>'; lastDepth = dTxt; }
-    const loc = depthM < LOC_BLUE ? 'SURFACE' : (depthM < LOC_ABYSS ? 'THE BLUE' : 'THE ABYSS');
-    if (loc !== lastLoc){ locEl.textContent = loc; lastLoc = loc; }
+  }
+  /* 現在地の名前。潜航中は深度の帯、汀を過ぎたら店の名前。 */
+  locWant = hpR > 0.16 ? SITE_LOC
+    : (depthM < LOC_BLUE ? 'SURFACE' : (depthM < LOC_ABYSS ? 'THE BLUE' : 'THE ABYSS'));
+  capWant = hp > 0.56 ? 'Reading' : 'Current location';
+  tickLabels();
+
+  /* ---- 計器の転生 --------------------------------------------------
+     測り終えた順に退く。位置は1pxも動かさない(不透明度だけ)。
+     #foot と #ruler だけは退役せず、測る対象を深度から読了へ替える。 */
+  const retire = (a,b) => 1 - ss(a,b,hp);
+  setOp(headerEl,  retire(0.20,0.42));        // 名前は #seamName が引き継ぐ
+  setOp(counterEl, retire(0.08,0.30));        // 章が終わったので最初に退く
+  setOp(simEl,     0.42*retire(0.16,0.36));
+  setOp(vertEl,    0.50*retire(0.08,0.30));
+  setOp(diveNavEl, retire(0.08,0.30));
+  setOp(meterEl,   retire(0.34,0.52));        // 600.0M を出したまま最後に消える
+  /* #ruler は画面幅で運命が変わる。1240px 以上は目次へ転生、
+     それ未満は場所を譲って退役する(本文カラムと重なるため)。 */
+  const wideIdx  = document.documentElement.hasAttribute('data-index');
+  /* ★ ヒーローが消えてから出す。前は sp>0.02 で出していたので、
+     目盛りの「300M / 450M」がヒーローの本文とCTAの上に重なっていた
+     (水面の1枚を撮って初めて見えた)。 */
+  setOp(rulerEl, ss(0.17, 0.26, sp) * (wideIdx ? 1 : retire(0.30,0.50)));
+  footEl.classList.toggle('isIndex', hp > 0.56);
+  writeSurvivors(wideIdx);
+
+  /* 名前を、いま出来たばかりの1本の上に置く。 */
+  if (seamNameEl){
+    const on = ss(0.40,0.48,hpR) * (1 - ss(0.58,0.66,hpR));
+    if (on > 0.002){
+      const ty = `translate3d(0,${Math.round(innerHeight*(1 - cEff(hpR)) - seamNameH - 20)}px,0)`;
+      if (seamNameEl.dataset.ty !== ty){ seamNameEl.dataset.ty = ty; seamNameEl.style.transform = ty; }
+    }
+    setOp(seamNameEl, on);
   }
 
   /* 進捗バーはスクロール量、ルーラーの針は「深度」。
-     深度は sp の非線形関数なので、針を sp で置くと目盛りと約112Mずれる。 */
+     深度は sp の非線形関数なので、針を sp で置くと目盛りと約112Mずれる。
+     汀を過ぎると、どちらも「読了」を測る物へ入れ替わる。 */
   /* width/top はレイアウトを触る。transform なら合成だけで済む。 */
-  fillEl.style.transform = `scaleX(${sp.toFixed(4)})`;
-  rdotEl.style.transform = `translate3d(0, ${(Math.min(1, depthM / DEPTH_MAX) * rulerH).toFixed(1)}px, 0)`;
+  const wmix = ss(0.50, 0.62, hp);
+  fillEl.style.transform = `scaleX(${(sp*(1-wmix) + readP*wmix).toFixed(4)})`;
+  rdotEl.style.transform = `translate3d(0, ${
+    ((Math.min(1, depthM/DEPTH_MAX)*(1-wmix) + readHeadP()*wmix) * rulerH).toFixed(1)}px, 0)`;
 
   const SECN = Math.max(1, cards.length);
   const sec = Math.min(SECN - 1, Math.floor(sp * SECN));
@@ -3745,7 +4124,7 @@ function frame(){
   }
 
   // 作品名。カードに寄った時だけ出す
-  const showWork = focusAmt > 0.42 && sp > 0.05;
+  const showWork = focusAmt > 0.42 && sp > 0.05 && hpR < 0.05;
   workEl.classList.toggle('on', showWork);
   if (showWork && focusI !== lastWork){
     lastWork = focusI;
@@ -3769,13 +4148,6 @@ function frame(){
 
   const bop = Math.max(0, 1 - sp*2.0);
   diveBtn.style.opacity = bop.toFixed(2);
-  /* 水面では深度の目盛りを出さない。巨大なブランドマークと場所が
-     重なって、数字が字画に食い込むため。少し潜ったら出す。 */
-  const dived = sp > 0.02;
-  const rootEl = document.documentElement;
-  if (dived !== (rootEl.dataset.dived === '1')){
-    if (dived) rootEl.dataset.dived = '1'; else delete rootEl.dataset.dived;
-  }
   diveBtn.style.pointerEvents = bop < 0.1 ? 'none' : 'auto';
 
   /* 水面を切る瞬間。60msの一発ではなく、速度に応じた0.42秒の包絡線。
@@ -3797,8 +4169,11 @@ function frame(){
     splashEl.style.opacity = '0';
   }
 
-  if (CAL && CAL.step < 5) calibrate(rawDt);
+  if (!settled && CAL && CAL.step < 5) calibrate(rawDt);
   else renderComposer();
+
+  /* 記録の1枚は「1フレーム」として数えない(FPSも品質の梯子も汚さない) */
+  if (settled) return;
 
   pushFrame(performance.now(), rawDt);
 
@@ -3831,6 +4206,448 @@ function frame(){
     } else { slowFor = 0; fastFor = 0; }
     frameAcc = 0; frameN = 0;
   }
+}
+
+/* ================================================================
+   11.5) 魚 — 「間合い」
+   ----------------------------------------------------------------
+   状態はすべて素の配列に持ち、毎フレーム1回だけ書き出す。
+   落としてよいのは「距離」だけで、振る舞い(横へ避ける / 中央で薄れる /
+   止まると寄る / 深いと無視する)と、雪を押しのける文法は最下段でも残す。
+   ================================================================ */
+const _fp = new THREE.Vector3(), _fq = new THREE.Vector3(), _fr = new THREE.Vector3();
+const _fs = new THREE.Vector3(), _fm = new THREE.Matrix4(), _fquat = new THREE.Quaternion();
+const _fscale = new THREE.Vector3();
+const F_UP = new THREE.Vector3(0,1,0);
+let fishReady = false;          // 助走を済ませたか
+let fishIdleT = 0, fishVSm = 0, fishPrevCamY = 0.95, fishT = 0;
+let heroFlashCool = 0, hero1Fired = false, hero1T = -1;
+let fishHeroDist = 0;           // 汀の魚までの距離。ピントを送るのに使う
+let fishBudget = 3;
+/* 品質の梯子は「距離」だけを落とす。数も振る舞いも1つも減らさない。
+   重い端末では魚が近寄ってこない ＝ 塗る面積を自動的に払わない。
+   降格が「粗くなる」ではなく「今日は警戒が強い」に見える。 */
+const F_APPROACH = [2.3, 2.3, 3.1, 3.1, 3.9, 3.9, 4.6];
+let fApproach = 2.3, fApproachT = 2.3;
+
+function fishQuality(step){
+  fApproachT = F_APPROACH[Math.min(step, F_APPROACH.length-1)];
+  fishBudget = step <= 1 ? 3 : step <= 5 ? 2 : 1;
+}
+
+/* 洗ってよいのは「入力の履歴」だけ。
+   ★ 位置・向き・もち場・種・不透明度は絶対に触らない。洗うと本文から
+   戻ったときに世界がやり直されたと判り、「読んでいた間もそこに居た」
+   という無料で手に入る証拠が嘘になる。 */
+function resetFishState(){
+  fishVSm = 0; fishIdleT = 0; heroFlashCool = 0;
+  fishPrevCamY = camera.position.y;
+  for (let i=0;i<NF;i++){ fPrevD[i] = 9; fStart[i] = 0; fPause[i] = 0;
+    fEsc[i*3] = fEsc[i*3+1] = fEsc[i*3+2] = 0; }
+}
+
+function updateFish(fdt, focusAmt, fdtA = fdt){
+  const A = fAttr;
+  /* 深いほどこちらを認識しなくなる。600m先で最も近くを通る生き物が
+     こちらを見ない ―― それが「汀 = どちらの側とも言えない境目」の実演。 */
+  const flee = 1 - ss(0.30, 0.92, sp);
+  const alive = timeScale > 0.001 && !reduced;
+
+  camera.getWorldDirection(camFwd);
+  const cam = camera.position;
+  fishT += fdt * (alive ? 1 : 0);
+
+  /* カメラの速さ。0.15秒の移動平均。止まっているかの判定に使う。 */
+  const dY = cam.y - fishPrevCamY;
+  const big = Math.abs(dY) > 1.5;                 // アンカー移動・bfcache復帰など
+  fishPrevCamY = cam.y;
+  if (rawDt > 0.08 || big) fishVSm = 0;
+  else fishVSm += (Math.abs(dY)/Math.max(fdt,1e-3) - fishVSm) * Math.min(1, fdt/0.15);
+
+  /* 止まると寄ってくる。スクロールを1pxも奪わずに双方向性を作る唯一の手。
+     ★ ゲート3つは全部必須。1つでも欠けると、実績カードを読むために手を
+     止めた人の周辺視で魚が動き続け、読字が確実に遅くなる。 */
+  if (alive && fishVSm < 0.15 && focusAmt <= 0.35 && hpR <= 0.05) fishIdleT += fdt;
+  else fishIdleT = Math.max(0, fishIdleT - fdt*2.2);
+  const idle = ss(1.8, 4.2, fishIdleT);
+
+  fApproach += (fApproachT - fApproach) * Math.min(1, fdt/2.5);   // 段をまたいでも引っぱらない
+
+  heroFlashCool = Math.max(0, heroFlashCool - fdt);
+  /* 出来事1「差す」。光芒を横切って体側が翻る。決まった深さで1回だけ。
+     ★ 時間で起こす。sp で駆動するとフリックで一瞬に通過して見えない。 */
+  if (!hero1Fired && !reduced && hpR === 0 && sp >= 0.355){ hero1Fired = true; hero1T = 0; }
+  if (sp < 0.30) hero1Fired = false;               // 上へ戻れば、もう一度だけ起きる
+  if (hero1T >= 0){ hero1T += fdt; if (hero1T > 1.60) hero1T = -1; }
+
+  /* 出来事2「汀」。水平線の上を横切る1匹。
+     ★ hpR の純関数。時間で駆動すると巻き戻したとき違う場所に出る。 */
+  const heroSeam = hpR > 0.24 && hpR < 0.99;
+  if (!heroSeam) fishHeroDist = 0;
+  /* ★ 汀の一匹だけは「実寸」ではなく「距離」を固定する。
+     この水は濃く、実測で 3.45m でも光の約96%を吸う。遠くに置くと
+     真っ黒の中の真っ黒になり、体験の受け渡しに誰も気付かない。
+     発光を足して誤魔化さない —— 間にある水を減らす。
+     ★ 実寸を固定して placeNdc に距離を解かせると、縦画面では
+     狙う画面幅が広い(0.30)ぶん距離が倍以上になり、スマホだけ
+     魚が消える。距離を固定して実寸の方を解くと、どの端末でも
+     間にある水の厚みが同じになる。 */
+  const HERO2_DIST = 2.05;
+
+  const tanH = Math.tan(camera.fov * Math.PI/360);
+  const aspect = camera.aspect;
+  /* NDC の狙った場所へ、狙った画面幅で置く(端末と画角に依存しない)。
+     ★ 実寸は板の 0.42 ではなく「板 × その個体の倍率」。倍率を忘れると
+     狙った幅の倍以上に大きく写る(実測 3.98m のところ 8.1m が正しい)。 */
+  /* wantW は NDC の幅。画面に占める割合はその半分になる(NDCは -1..1)。 */
+  const placeNdcAt = (out, nx, ny, dist) => {
+    _fs.copy(camFwd).cross(F_UP).normalize();                    // 右
+    out.copy(cam).addScaledVector(camFwd, dist)
+       .addScaledVector(_fs, nx * dist * tanH * aspect)
+       .addScaledVector(F_UP, ny * dist * tanH);
+  };
+  const placeNdc = (out, nx, ny, wantW, len) =>
+    placeNdcAt(out, nx, ny, len / Math.max(1e-4, wantW * tanH * aspect));
+  /* 距離を決めた時、狙った画面幅になる板の倍率 */
+  const sizeForNdc = (wantW, dist) => (dist * wantW * tanH * aspect) / 0.42;
+
+  /* 濃く出せる数に硬い天井を置く。空白を作らないと、その次の1匹が
+     「出来事」にならない。 */
+  const budget = Math.min(fishBudget, Math.round(4 - 2*ss(0.30, 0.62, sp)));
+  const cand = [];
+
+  for (let i=0;i<NF;i++){
+    const o = i*3;
+
+    if (i === 0 && heroSeam){
+      /* 右端から入り、汀のところで画面の中ほどへ寄り、そこで凍る。
+         ワールドYをカメラの目線に厳密に合わせる ―― 目線と同じ高さの物は
+         距離に関係なく必ず水平線の上に投影される。
+         0.56 で止めるのは、海の時間が止まるのと同じ場所で止めないと
+         尾を振らないまま滑る「硬い魚」になるから。 */
+      /* ★ 縦画面は名前が画面の中央に来るので、そのままだと魚が名前の裏に
+         重なる(実機幅の1枚で重なっていた)。重ならない位置まで左へ送る。 */
+      const nxEnd = aspect < 1 ? -0.70 : -0.42;
+      const nx = 0.82 + (nxEnd - 0.82)*ss(0.28, 0.50, hpR) - 0.12*ss(0.50, 0.56, hpR);
+      /* ★ 目線とぴったり同じ高さに置くと、汀の線とシートの上端が同じ場所に
+         来るので体の下半分が紙の裏へ回り、光の滲みにしか見えない。
+         線のすぐ上（画面高の 5.5%）を泳がせて、腹が線をかすめる形にする。
+         画角に対する比で置くので、端末が変わっても同じ絵になる。 */
+      const heroW = aspect < 1 ? 0.30 : 0.18;
+      const heroSize = sizeForNdc(heroW, HERO2_DIST);
+      placeNdcAt(_fp, nx, 0.055, HERO2_DIST);
+      fishHeroDist = HERO2_DIST;
+      fPos[o] = _fp.x; fPos[o+1] = _fp.y; fPos[o+2] = _fp.z;
+      _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(-1);   // 真横(左向き)
+      fDir[o] = _fs.x; fDir[o+2] = _fs.z;
+      A.aSquash.array[i] = 1; A.aTurn.array[i] = 0;
+      A.aAlpha.array[i] += (0.92*ss(0.24,0.31,hpR) - A.aAlpha.array[i]) * Math.min(1, fdtA/0.35);
+      A.aPhase.array[i] += fBeat[i]*0.62*fdt*timeScale;
+      writeFish(i, heroSize);
+      continue;
+    }
+
+    /* 居場所はワールドに置く。カメラが降りて「通り抜ける」ので、
+       潜っているあいだ何度でも間合いが起きる。
+       ★ 群れをカメラの周りに置くと、常に5m以上離れたまま一度も
+       警戒の半径に入らない(最初そう書いて、反応が一度も出なかった)。 */
+    _fr.set(fPos[o]-cam.x, fPos[o+1]-cam.y, fPos[o+2]-cam.z);
+    let dist = Math.max(0.05, _fr.length());
+    /* 置き直すのは「見えていない」かつ「画角の外か遠い」フレームだけ。
+       ★ 画角に入る範囲へ置くこと。前は 6〜13m 真下へ置いていたので
+       画角(縦±28°)の外にあり続け、1匹も見えないまま終わっていた。 */
+    const gone = fScr[i*2] > 1.25 || fScr[i*2+1] > 1 || dist > 15;
+    if (!fishReady || (gone && A.aAlpha.array[i] < 0.06)){
+      const down = targetP >= sp ? -1 : 1;                  // 潜っている向き
+      const zd = 3.5 + frnd()*6.0;                          // 前方の距離
+      fPos[o]   = cam.x + (frnd()-0.5)*0.88*zd;
+      fPos[o+1] = cam.y + down*(0.3 + frnd()*0.35*zd);
+      fPos[o+2] = cam.z - zd;
+      const a0 = frnd()*6.2831;
+      fDir[o] = Math.cos(a0); fDir[o+2] = Math.sin(a0);
+      fEsc[o] = fEsc[o+1] = fEsc[o+2] = 0;
+      A.aAlpha.array[i] = 0;
+      fScr[i*2] = 0; fScr[i*2+1] = 0;
+      _fr.set(fPos[o]-cam.x, fPos[o+1]-cam.y, fPos[o+2]-cam.z);
+      dist = Math.max(0.05, _fr.length());
+    }
+
+    /* 自分の泳ぎ。ゆっくり向きを変えながら進む。 */
+    const swim = 0.30 + 0.22*fSize[i];
+    let tx = fPos[o]   + fDir[o]  *swim*1.25;
+    let ty = fPos[o+1] + Math.sin(fishT*1.55 + fOff[o+1]*3.1)*0.05;
+    let tz = fPos[o+2] + fDir[o+2]*swim*1.25;
+
+    if (hero1T >= 0 && i === 1){
+      /* 1.60秒。NDC を決め打ちして端末に依らず同じ画面位置に出す */
+      const u = hero1T/1.60, e = u*u*(3-2*u);
+      placeNdc(_fs, 0.74 - 0.44*e, 0.30 - 0.18*e, aspect < 1 ? 0.24 : 0.115, 0.42*fSize[i]);
+      tx = _fs.x; ty = _fs.y; tz = _fs.z;
+    }
+
+    /* 間合い。近づかれ方(速さ・正対)で警戒の半径が変わる。
+       同じ深さへ2回行っても、ゆっくり降りたときは散らない。 */
+    const rush = Math.min(1, Math.max(0, (fPrevD[i]-dist)/Math.max(fdt,1e-3) / 1.6));
+    fPrevD[i] = dist;
+    const look = Math.max(0, (_fr.x*camFwd.x + _fr.y*camFwd.y + _fr.z*camFwd.z) / dist);
+    const rad = fApproach * (0.60 + 0.40*flee) * (1 + 0.55*rush) * (1 + 0.35*look) * (1 - 0.43*idle);
+    const isHero1 = (hero1T >= 0 && i === 1);
+
+    if (alive && dist < rad && !isHero1){
+      if (fPause[i] <= 0 && fStart[i] < 0.2){ fPause[i] = 0.22; fStart[i] = 1; }   // 逃げる前に一拍
+      /* 横へ抜ける。半径方向に逃がすと画面の真ん中で小さくなって消えるだけで、
+         「避けられた」と読めない。必ず画面の端から出す。 */
+      const dot = _fr.x*camFwd.x + _fr.y*camFwd.y + _fr.z*camFwd.z;
+      _fs.set(_fr.x - camFwd.x*dot, _fr.y - camFwd.y*dot, _fr.z - camFwd.z*dot);
+      if (_fs.lengthSq() < 0.0025){
+        /* 真正面。符号が毎フレーム暴れるので、個体の偶奇で決定的に割る */
+        _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(i % 2 ? 1 : -1);
+      } else _fs.normalize();
+      const push = (1 - dist/rad) * (1.1 + 1.4*fStart[i]);
+      tx += _fs.x * rad * push; ty += _fs.y * rad * push * 0.45; tz += _fs.z * rad * push;
+    } else if (alive && !isHero1 && idle > 0.02 && dist > rad*1.7){
+      /* 止まっていると近づく。ただし警戒の半径の 1.7倍までで止める
+         (そこから内側は上の逃避が受け持つので、寄っては離れる間合いになる)。 */
+      tx += (cam.x - fPos[o])   * 0.22 * idle;
+      ty += (cam.y - fPos[o+1]) * 0.10 * idle;
+      tz += (cam.z - fPos[o+2]) * 0.22 * idle;
+    }
+    /* 驚きは近くへ伝わる。0.1〜0.25秒の着火間隔が「生き物」に読ませる。 */
+    if (alive && fStart[i] > 0.55){
+      for (let j=0;j<NF;j++){
+        if (j === i) continue;
+        const q = j*3;
+        const dx = fPos[q]-fPos[o], dy = fPos[q+1]-fPos[o+1], dz = fPos[q+2]-fPos[o+2];
+        if (dx*dx + dy*dy + dz*dz < 3.2) fStart[j] = Math.max(fStart[j], fStart[i]*0.78);
+      }
+    }
+    fStart[i] = Math.max(0, fStart[i] - fdt*0.9);
+    fPause[i] = Math.max(0, fPause[i] - fdt);
+
+    /* ガラス板の裏だけを通る。手前を通ると、あとから別のシーンで上描きされる
+       板に食われて縁でポップする。 */
+    for (const c of cards){
+      const b = c.userData.base;
+      const dx = fPos[o]-b.x, dy = fPos[o+1]-b.y;
+      if (dx*dx + dy*dy > 6.8 || Math.abs(fPos[o+2]-b.z) > 1.3) continue;
+      const side = (cam.z - b.z) >= 0 ? 1 : -1;
+      if (((fPos[o+2]-b.z) >= 0 ? 1 : -1) === side) tz = b.z - side*1.4;
+    }
+
+    /* 追随。速度に一次遅れを掛けるので行き過ぎない・揺り戻さない。 */
+    const k = alive ? (fPause[i] > 0 ? 1.0 : 2.6) : 0;
+    for (let a=0;a<3;a++){
+      const tgt = a === 0 ? tx : a === 1 ? ty : tz;
+      fEsc[o+a] += ((tgt - fPos[o+a])*k - fEsc[o+a]) * Math.min(1, fdt*6.0);
+      fPos[o+a] += fEsc[o+a] * fdt;
+    }
+
+    /* 向きは速度から取る。こちらを向く / 背を向ける瞬間を作らない。 */
+    const vl = Math.hypot(fEsc[o], fEsc[o+2]);
+    if (vl > 0.02){
+      const bl = Math.min(1, fdt*3.0);
+      fDir[o]   += (fEsc[o]  /vl - fDir[o])   * bl;
+      fDir[o+2] += (fEsc[o+2]/vl - fDir[o+2]) * bl;
+    } else {
+      /* ゆっくりした徘徊。個体ごとに違う周期で向きを変える。 */
+      const rot = Math.sin(fishT*0.31 + fOff[o]*2.7) * 0.30 * fdt;
+      const cx = Math.cos(rot), sn = Math.sin(rot);
+      const nx = fDir[o]*cx - fDir[o+2]*sn, nz = fDir[o]*sn + fDir[o+2]*cx;
+      fDir[o] = nx; fDir[o+2] = nz;
+    }
+    const dl = Math.hypot(fDir[o], fDir[o+2]) || 1;
+    fDir[o] /= dl; fDir[o+2] /= dl;
+
+    /* 中央で薄れる ―― 周辺視の実装。
+       床 0.22 と 0.6秒の鈍りは交渉不可。速いと演出ではなくバグに読まれる。 */
+    _fp.set(fPos[o], fPos[o+1], fPos[o+2]).project(camera);
+    const r = Math.hypot(_fp.x, _fp.y);
+    fScr[i*2] = r; fScr[i*2+1] = _fp.z;
+    /* 画面の外に居る個体は 0。★ ここを半径だけで切ると、画面の横外
+       (x=1.2, y=0 → r=1.2)が「端＝濃く出す」と判定され、見えない魚に
+       可視予算を全部使ってしまう。 */
+    const onScreen = _fp.z <= 1 && Math.abs(_fp.x) <= 1.12 && Math.abs(_fp.y) <= 1.12;
+    let want = onScreen ? 0.34 + 0.66*ss(0.18, 0.55, r) : 0;
+    cand.push([i, want, isHero1 ? 99 : (onScreen ? r : -1)]);
+
+    /* 尾。位相は CPU で進める。★ timeScale を掛け忘れると、凍った海の中で
+       尾だけが振れ続ける —— その瞬間「止まっている＝記録」が全部無効になる。 */
+    const beat = fBeat[i] * (fPause[i] > 0 ? 0 : (0.5 + Math.min(1.3, vl*0.9)));
+    A.aPhase.array[i] += beat * fdt * timeScale;
+
+    /* 身を翻す。加算の発光は使わない。明暗の反転と横幅の潰れで読ませる。 */
+    let turn = 0;
+    if (isHero1){
+      const u = Math.min(1, Math.max(0, (hero1T - 0.62)/0.38));
+      turn = u <= 0 ? 0 : Math.sin(u*Math.PI);
+    } else if (alive && fStart[i] > 0.6 && heroFlashCool <= 0){
+      heroFlashCool = qStep >= 4 ? 5.0 : 2.5;      // 同時に2匹が翻るのを構造的に禁じる
+      fTurnT[i] = 0.38;
+    }
+    if (fTurnT[i] > 0){
+      fTurnT[i] = Math.max(0, fTurnT[i] - fdt);
+      turn = Math.max(turn, Math.sin((1 - fTurnT[i]/0.38) * Math.PI));
+    }
+    A.aTurn.array[i]   += (turn - A.aTurn.array[i]) * Math.min(1, fdt/0.10);
+    A.aSquash.array[i] += ((1 - 0.65*A.aTurn.array[i]) - A.aSquash.array[i]) * Math.min(1, fdt/0.12);
+  }
+
+  /* 濃く出せるのは budget 匹まで。中央から遠い順に選ぶ(出来事の個体は別枠)。 */
+  cand.sort((a,b) => b[2] - a[2]);
+  for (let n=0;n<cand.length;n++){
+    const i = cand[n][0];
+    const cap = n < budget ? cand[n][1] : Math.min(cand[n][1], 0.04);
+    const a = A.aAlpha.array;
+    a[i] += (cap - a[i]) * Math.min(1, fdtA/0.6);
+    writeFish(i, fSize[i]);
+  }
+
+  /* 雪を押しのけるのは、カメラに最も近い3匹。見えない魚ほど強く押す。 */
+  {
+    const near = [];
+    for (let i=0;i<NF;i++){
+      const o=i*3, dx=fPos[o]-cam.x, dy=fPos[o+1]-cam.y, dz=fPos[o+2]-cam.z;
+      near.push([i, dx*dx+dy*dy+dz*dz]);
+    }
+    near.sort((a,b)=>a[1]-b[1]);
+    let mx = 0;
+    for (let k=0;k<3;k++){
+      const i = near[k] ? near[k][0] : 0, o = i*3;
+      const w = alive ? (0.55 + 0.75*(1 - Math.min(1, A.aAlpha.array[i]/0.30))) : 0;
+      wakeU.uFishPos.value[k].set(fPos[o], fPos[o+1], fPos[o+2]);
+      wakeU.uFishDir.value[k].set(fDir[o], 0, fDir[o+2]);
+      wakeU.uFishSide.value[k].copy(wakeU.uFishDir.value[k]).cross(F_UP).normalize();
+      wakeU.uFishWake.value[k] = w;
+      if (w > mx) mx = w;
+    }
+    wakeU.uWakeAny.value = mx;
+  }
+
+  for (const k in fAttr) fAttr[k].needsUpdate = true;
+  fishMesh.instanceMatrix.needsUpdate = true;
+  fishReady = true;
+}
+
+function writeFish(i, scale){
+  const o = i*3;
+  _fp.set(fPos[o], fPos[o+1], fPos[o+2]);
+  const yaw = Math.atan2(fDir[o], fDir[o+2]) + Math.PI/2;
+  _fquat.setFromAxisAngle(F_UP, yaw);
+  _fscale.setScalar(scale);
+  _fm.compose(_fp, _fquat, _fscale);
+  fishMesh.setMatrixAt(i, _fm);
+}
+
+/* ---- 記録の1枚 -----------------------------------------------------
+   本文へ渡ったフレームで1回だけ描く「canonical frame」。
+   フリックで一気に飛んだ人も、ゆっくり降りた人も、本文の裏に残る海は
+   まったく同じ1枚になる(camY=-10.05 / ピッチ0 / 水平線は画面中央)。
+   呼ぶのは3箇所だけ: 凍った瞬間 / 本文中のリサイズ / 本文中の復帰。 */
+function renderSettledFrame(){
+  if (!contentEl) return;
+  hpR = 0.62; hp = 0.62; hpV.v = 0;
+  /* フリックで飛ぶと sp がまだ 0 近くのまま凍る経路がある。
+     hpR≥0.62 の位置では targetP は必ず 1 なので、ここで合わせる。 */
+  sp = 1; spV.v = 0; prevSp = 1;
+  px = py = pxT = pyT = 0; pxV.v = 0; pyV.v = 0;
+  scrollVel = 0; velX = 0; velV = 0;
+  frame(SETTLED);
+  captureLiveShot();
+}
+
+/* 記録の1枚を、実績の3件目のタイルへ写す。
+   ★ 描いた直後の同じ処理の中で写すこと。WebGLの描画バッファは
+   合成が終わると消えることがあり、あとから写すと白紙になる。
+   preserveDrawingBuffer は使わない(常に2枚分のメモリを持つので
+   モバイルで効いてくる)。失敗しても静止画のままにする。 */
+function captureLiveShot(){
+  const fig = document.querySelector('#content .shot-live');
+  if (!fig || fig.dataset.live === '1') return;
+  const dst = fig.querySelector('canvas'), src = renderer && renderer.domElement;
+  if (!dst || !src || !src.width || !src.height) return;
+  try {
+    const w = 720, h = Math.round(w * 10 / 16);
+    dst.width = w; dst.height = h;
+    /* 上端から 16:10 で切る。実績の他の2枚と同じ切り方に揃える。 */
+    const sh = Math.min(src.height, Math.round(src.width * 10 / 16));
+    const g = dst.getContext('2d');
+    g.drawImage(src, 0, 0, src.width, sh, 0, 0, w, h);
+    /* 真っ黒しか写らなかったときは主張が嘘になるので静止画へ戻す */
+    const px = g.getImageData(0, 0, Math.min(w, 64), Math.min(h, 40)).data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += px[i] + px[i+1] + px[i+2];
+    if (sum / (px.length / 4) < 6) return;
+    fig.dataset.live = '1';
+  } catch (e){ /* 写せなければ静止画のまま */ }
+}
+
+/* 本文を読んでいるあいだに書いてよいのは transform と opacity と
+   textContent だけ。レイアウトを触る書き込みを1つでも混ぜると
+   毎フレーム強制リフローが走る。 */
+/* 本文の途中で「上へ戻ろうとした」ことを検出して、名前と行き先を返す。
+   常時出す帯にはしない。下向きに動き出したらすぐ引っ込める。 */
+let recallY = 0, recallUp = 0, recallOn = false;
+function tickRecall(){
+  const y = scrollY;
+  const d = recallY - y;                   // 正 = 上へ戻っている
+  recallY = y;
+  if (Math.abs(d) > 400){ recallUp = 0; }  // アンカー移動などの大跳びは捨てる
+  else if (d > 0) recallUp = Math.min(260, recallUp + d);
+  else recallUp = Math.max(0, recallUp + d*3);
+  const want = recallUp > 140 && y > innerHeight * 0.6;
+  if (want !== recallOn){
+    recallOn = want;
+    if (headerEl) headerEl.classList.toggle('recall', want);
+  }
+}
+
+/* 潜航のあとも生きている計器の見え方。frame() からも、描画を止めたあとの
+   writeReadingHud() からも同じ式で書く。
+   ★ 本文中は frame() が止まるので、ここで書かないと 0.62 の手前の
+   中途半端な値のまま凍る。 */
+function writeSurvivors(wideIdx){
+  /* ★ 「本文に渡ったか」は呼び出し元ではなく hpR から決める。
+     第三幕(rp>0)では frame() が動き直すので、引数で渡していると
+     計器が「潜航中の値」で書かれて消える(実際、海が戻ると同時に
+     読了の計器まで消えていた)。 */
+  const reading = hpR >= 0.62;
+  /* 汀の一枚では下端の計器を引く。画面に残すのは 線・名前・紙 の3つだけ。
+     幅で条件を変えない ―― 1280px の画面でも本文の左端は 140px しかなく、
+     計器と見出しが必ず当たる。 */
+  const fo = reading ? 1 : 1 - ss(0.18, 0.30, hpR);
+  setOp(footEl, fo);
+  /* 本文が下端を通るあいだだけ敷く。計器が引いている間は敷きも要らない。
+     第三幕では引く(戻ってきた海を汚さない)。 */
+  setOp(footScrimEl, fo * ss(0.04, 0.14, hpR) * (1 - ss(0.15, 0.55, rp)));
+  const tOn = reading ? 0 : 1 - ss(0.30, 0.50, hpR);
+  const iOn = wideIdx ? (reading ? 1 : ss(0.52, 0.62, hpR)) : 0;
+  for (const el of tickEls) setOp(el, wideIdx ? tOn : 1);
+  for (const el of rIdxEls) setOp(el, iOn);
+}
+
+function writeReadingHud(){
+  /* 保険。窓は hpR=0.60 で閉じ切るので通常ここは 0 のままだが、
+     万一ずれたまま凍ると本文が数pxずれた位置で固まって戻らない。 */
+  if (seamDelta){
+    seamDelta = 0;
+    contentEl.style.transform = '';
+    contentEl.style.willChange = 'auto';
+  }
+  /* 書いてよいのは transform と opacity と textContent だけ。
+     レイアウトを触る書き込みを1つでも混ぜると毎フレーム強制リフローが走る。 */
+  const q = readP.toFixed(4);
+  if (footEl.dataset.rp !== q){
+    footEl.dataset.rp = q;
+    fillEl.style.transform = `scaleX(${q})`;
+    /* 針は目次の行と同じ物差しで置く。バーはスクロール量のまま
+       (読み取り点で置くと、下端に着く前に 100% になってしまう)。 */
+    rdotEl.style.transform = `translate3d(0, ${(readHeadP()*rulerH).toFixed(1)}px, 0)`;
+  }
+  writeSurvivors(document.documentElement.hasAttribute('data-index'));
+  locWant = curSecName;
+  capWant = 'Reading';
+  tickLabels();
+  tickRecall();
 }
 
 /* ================================================================
@@ -3889,7 +4706,8 @@ function resize(){
   camera.aspect = w/h;
   /* 縦画面はそのままだと画角が狭く、カードが見切れる。
      モバイルは"縮小版"にせず、画角そのものを組み替える。 */
-  camera.fov = h > w ? 64 : 56;
+  fovBase = h > w ? 64 : 56;
+  camera.fov = fovBase;
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
   composer.setSize(w, h);
@@ -3900,35 +4718,38 @@ function resize(){
   atmosPass.uniforms.uNear.value = camera.near;
   atmosPass.uniforms.uFar.value  = camera.far;
   solvePortraitLift();
+  measureLayout();
+  resetFishState();
+  /* 本文中のリサイズはキャンバスが張り直されて中身が消える。
+     記録の1枚を描き直す。 */
+  if (reading) settledDone = false;
   /* 針の移動量は目盛りの実高から取る(CSSのvh指定なので画面ごとに変わる) */
   const rl = document.getElementById('ruler');
   if (rl) rulerH = rl.getBoundingClientRect().height || 220;
   readScroll();
 }
 /* フォントの入れ替わりでCTAの位置が動くので、確定後にもう一度解く */
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(solvePortraitLift);
+if (document.fonts && document.fonts.ready){
+  document.fonts.ready.then(() => { solvePortraitLift(); measureLayout(); });
+}
 addEventListener('resize', resize);
 
 /* 本文セクションが画面の大半を占めている間は、潜航の描画を完全に止める。
-   絵が動かない区間なので体感は変わらず、そのぶん最低FPSに余裕が出る。 */
+   絵が動かない区間なので体感は変わらず、そのぶん最低FPSに余裕が出る。
+   ★ 判定は frame() の中で hpR から同期的に決める(IntersectionObserver は
+   1〜2フレーム遅れ、最後のライブフレームと凍結フレームの姿勢がずれる)。 */
 let reading = false;
-{
-  const contentEl = document.getElementById('content');
-  if (contentEl && 'IntersectionObserver' in window){
-    /* threshold は「要素の面積比」なので、本文がビューポートより高いと
-       intersectionRatio は viewportH/elementH までしか上がらず、
-       0.55 に永久に届かない。被覆した"画面の高さ"で判定する。 */
-    new IntersectionObserver((entries) => {
-      for (const e of entries) reading = e.intersectionRect.height > innerHeight * 0.6;
-      document.documentElement.dataset.reading = reading ? '1' : '0';
-    }, { threshold:[0, 0.05, 0.1, 0.25, 0.5, 0.75, 1] }).observe(contentEl);
-  }
-}
 
 document.addEventListener('visibilitychange', ()=>{
   visible = !document.hidden;
   if (!visible){ running = false; }
-  else if (!running){ running = true; tick(); frame(); }
+  else if (!running){
+    running = true; tick(); resetFishState();
+    /* 本文中に戻ってきた場合、キャンバスの中身は失われている。
+       記録の1枚を描き直す(でないと本文の裏の海が白紙になる)。 */
+    settledDone = false;
+    frame();
+  }
 });
 
 /* ================================================================

@@ -70,7 +70,10 @@ function grouped(items){
 }
 
 /* 連絡の方法は、宛先が決まっていれば a、決まっていなければ準備中の表示にする */
-const isContactTitle = (s) => /^(LINE|フォーム|メール)/.test(String(s));
+/* ★ 前方一致だけだと広すぎる。サービス名「LINEで相談してもらう仕組みづくり」まで
+   自社の窓口と誤判定し、提供している仕事に「準備中」が付いていた。
+   窓口として扱うのは、その3語だけで完結している項目に限る。 */
+const isContactTitle = (s) => /^(LINE|フォーム|メール)$/.test(String(s).trim());
 function contactRow(it, w){
   const key = /LINE/i.test(it.title) ? 'line' : /メール/.test(it.title) ? 'mail'
             : /フォーム/.test(it.title) ? 'form' : '';
@@ -91,6 +94,12 @@ function defList(b, w){
   return grouped(b.items).map(g => {
     const gh = g.g ? `<p class="glabel mono">${esc(g.g)}</p>` : '';
     const isContact = /連絡の方法/.test(g.g);
+    /* ★ 宛先が1つも決まっていないときは、その状態を先に1行で言う。
+       「準備中」バッジが3つ並ぶだけだと、準備中の店ではなく
+       壊れたサイトに見える。1つでも開いたらこの行は自動で消える。 */
+    const soonNote = (isContact && !LINK.line && !LINK.mail && !LINK.form)
+      ? `<p class="soonNote">下の3つは、いま用意しているところです。開いたらここに出します。</p>\n          `
+      : '';
     const rows = g.items.map(it => (isContact || isContactTitle(it.title)) ? contactRow(it, w) : `
             <div class="row${it.emphasis ? ' is-key' : ''}">
               <dt>${href(it.title)
@@ -98,7 +107,7 @@ function defList(b, w){
                 : t(it.title, w)}</dt>
               <dd>${t(it.text, w)}</dd>
             </div>`).join('');
-    return `${gh}\n          <dl class="dl">${rows}
+    return `${gh}\n          ${soonNote}<dl class="dl">${rows}
           </dl>`;
   }).join('\n          ');
 }
@@ -147,6 +156,18 @@ const pic = (base, key, alt, cls) => `
               <img src="${base}shots/${key}-pc.webp" width="1720" height="1075"
                    alt="${esc(alt)}" loading="lazy" decoding="async">
             </figure>`;
+/* ★ 3件目(このサイト)だけは静止画にしない。
+   「さっき潜ってきた景色はブラウザがその場で描いています」と本文で
+   言い切っているのに、その証拠が他所と同じ静止画だと主張が死ぬ。
+   記録の1枚を描いた直後に、その画素をここへ写す。
+   写せない環境(WebGL非対応・JS無効)では静止画がそのまま残る。 */
+const picLive = (base, key, alt) => `
+            <figure class="shot shot-live">
+              <canvas class="liveShot" role="img" aria-label="${esc(alt)}（いま描画された画面）"></canvas>
+              <img src="${base}shots/${key}-pc.webp" width="1720" height="1075"
+                   alt="${esc(alt)}" loading="lazy" decoding="async">
+              <figcaption class="mono">この1枚は写真ではありません。いま、このブラウザが描いたものです。</figcaption>
+            </figure>`;
 const picSp = (base, key, alt) => `
             <figure class="shot-sp">
               <img src="${base}shots/${key}-sp.webp" width="780" height="1688"
@@ -164,9 +185,13 @@ function shot(id, base){
       + `\n          </div>`;
   }
   if (id === 'works-lead'){
-    return `\n          <div class="shots">`
+    /* ★ 実績が本文の先頭に来たので、ここが訪問者の見る最初の中身になる。
+       3件とも出す(3件目＝このサイト自身)。文字だけの一覧より、
+       何を作る人なのかが1画面で伝わる。 */
+    return `\n          <div class="shots shots-3">`
       + pic(base, 'becool', 'GARAGE BeCool のトップページ', 'shot')
       + pic(base, 'trex',   'T-REX CO., LTD. のトップページ', 'shot')
+      + picLive(base, 'migiwa', '汀ノ庭 のトップページ')
       + `\n          </div>`;
   }
   const s = SHOTS[id];
@@ -188,7 +213,10 @@ function renderBlock(key, ref, level){
     ? ` data-provisional="${esc(prov.map(p => p.why).join(' / ').slice(0, 400))}"`
     : '';
   const H = level === 2 ? 'h2' : 'h3';
-  let out = `\n        <div class="blk" id="${esc(b.id)}"${attr}>`;
+  /* ★ 節のidと同じ名前のブロックがある(faq / news / contact)。
+     接頭辞を付けないと文書内に同じidが2つできて、#contact の
+     リンクがどちらへ飛ぶか不定になる。 */
+  let out = `\n        <div class="blk" id="blk-${esc(b.id)}"${attr}>`;
   if (b.eyebrow) out += `\n          <p class="eyebrow mono">${esc(b.eyebrow)}</p>`;
   out += `\n          <${H}>${t(b.heading, w)}</${H}>`;
   out += shot(b.id, BASE || './');
@@ -200,15 +228,19 @@ function renderBlock(key, ref, level){
 }
 
 /* TOPの本文。大見出し(h2)1つに、続くブロックをh3でぶら下げる */
+/* ★ ホームページであって読み物ではない。順番は「訪問者が判断する順」。
+   以前は自己説明(思想2806 + できること1884 + AI2506 + SEO1855 = 7051字)を
+   読ませてから、6番目にやっと実績が543字で出ていた。証拠を先に出す。
+   落とした節: ai / seo / faq / news。
+   - ai と seo は service#services の中に1行ずつ既に入っているので中身は消えない
+   - faq 10問は site.config.js が自分で「未確定」と印を付けた事業上の約束
+     (納期・修正回数・交通費)。消せば字数と риск が同時に落ちる
+   - お知らせは知らせることが1件も無い。空の欄はHPでは信用を減らす */
 const TOP_SECTIONS = [
-  { id: 'philosophy', key: 'shiso',    refs: ['shiso#rashisa','shiso#miru-kiku','shiso#otoshikomi','shiso#design-de-owaranai','shiso#issho-ni'] },
-  { id: 'service',    key: 'service',  refs: ['service#services','service#service-style'] },
-  { id: 'ai',         key: 'ai',       refs: ['ai#ai-intro','ai#ai-examples','ai#ai-value','ai#ai-flow','ai#ai-note'] },
-  { id: 'seo',        key: 'seo-flow', refs: ['seo-flow#seo-intro','seo-flow#seo-tasks','seo-flow#seo-ranking'] },
   { id: 'works',      key: 'works-contact', refs: ['works-contact#works-lead','works-contact#works-this-site'] },
-  { id: 'flow',       key: 'seo-flow', refs: ['seo-flow#flow-intro','seo-flow#flow-steps','seo-flow#flow-prepare','seo-flow#flow-duration','seo-flow#flow-running-cost'] },
-  { id: 'faq',        key: 'faq',      refs: ['faq#faq'] },
-  { id: 'news',       key: 'works-contact', refs: ['works-contact#news'] },
+  { id: 'service',    key: 'service',       refs: ['service#services'] },
+  { id: 'flow',       key: 'seo-flow',      refs: ['seo-flow#flow-prepare','seo-flow#flow-duration','seo-flow#flow-running-cost'] },
+  { id: 'philosophy', key: 'shiso',         refs: ['shiso#rashisa'] },
   { id: 'contact',    key: 'works-contact', refs: ['works-contact#contact'] },
   { id: 'about',      key: 'works-contact', refs: ['works-contact#footer'] },
 ];
@@ -225,6 +257,28 @@ BASE = '';
 
 fs.writeFileSync(path.join(DIR, '.content.html'), topHtml);
 fs.writeFileSync(path.join(DIR, '.works.html'), worksHtml);
+
+/* ★ 生成物を手でHTMLへ貼り直さない。貼り直しは必ずズレる
+   (このファイルの冒頭がそもそもそう書いてあるのに、最後の1歩だけ手作業で残っていた)。
+   印で挟んだ範囲をそのまま差し替える。印が無ければ黙って通さず落とす。 */
+function inject(file, tag, html){
+  const p = path.join(DIR, file);
+  const src = fs.readFileSync(p, 'utf8');
+  const open = new RegExp(`([ \\t]*)<!--\\s*build-migiwa:${tag}:start[^>]*-->`);
+  const close = new RegExp(`[ \\t]*<!--\\s*build-migiwa:${tag}:end\\s*-->`);
+  const mo = open.exec(src), mc = close.exec(src);
+  if (!mo || !mc || mc.index < mo.index){
+    console.error(`${file} に build-migiwa:${tag} の印が無い。手で貼らずに印を戻すこと。`);
+    process.exit(4);
+  }
+  const head = src.slice(0, mo.index + mo[0].length);
+  const tail = src.slice(mc.index);
+  const next = head + html + '\n' + tail;
+  if (next === src) return 0;
+  fs.writeFileSync(p, next);
+  return 1;
+}
+const wrote = inject('index.html', 'top', topHtml) + inject('works/index.html', 'works', worksHtml);
 
 /* --- 公開前チェックリスト --- */
 const uniq = [];
@@ -269,5 +323,5 @@ fs.writeFileSync(path.join(DIR, 'NOTES.md'),
 ${NOTES.map(n => `### ${n.where}\n\n${n.text}\n`).join('\n')}
 `);
 
-console.log(`TOP ${topHtml.length}字 / 実績 ${worksHtml.length}字`);
+console.log(`TOP ${topHtml.length}字 / 実績 ${worksHtml.length}字 / 差し替え ${wrote}ファイル`);
 console.log(`印を付けたブロック ${new Set(ALL_PROV.map(p => p.block)).size}件 / チェック項目 ${uniq.length}件 / 反論メモ ${NOTES.length}件`);
