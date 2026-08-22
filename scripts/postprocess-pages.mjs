@@ -5,11 +5,40 @@
  * - Jekyll処理を無効化する .nojekyll を配置
  * - 旧URL(/engine/)に meta refresh を差し込んで / へ転送
  *   (静的エクスポートでは next.config の redirects が効かないため)
+ * - 制作用のファイルを out/ から取り除く(下記)
  */
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const OUT = "out";
+
+/* ★ public/ に置いたものは Next が out/ へ丸ごう写すので、制作用のファイルも
+   そのまま公開される。実際、公開URLで次が誰でも読める状態になっていた:
+     migiwa/公開前チェック.md … 未確定の約束52件と「仮でいいから草案を」という経緯
+     migiwa/copy.json        … 本文の生成元。査読への反論コメントと構成の意図つき
+     migiwa/NOTES.md         … 制作メモ
+     migiwa/site.config.js   … PENDING(ドメイン・宛先・訪問範囲)の理由つき
+   いずれも実行時には1つも読んでいない(ビルド時に fs で読むだけ)ので、
+   配信物からは外す。リポジトリ側には残るので作業には影響しない。 */
+const BUILD_ONLY = [
+  "migiwa/copy.json",
+  "migiwa/site.config.js",
+  "migiwa/README.md",
+  "migiwa/NOTES.md",
+  "migiwa/公開前チェック.md",
+  "migiwa/.content.html",
+  "migiwa/.works.html",
+];
+{
+  let dropped = 0;
+  for (const rel of BUILD_ONLY) {
+    const f = join(OUT, rel);
+    if (!existsSync(f)) continue;
+    rmSync(f, { force: true });
+    dropped++;
+  }
+  console.log(`制作用ファイルを配信物から除外: ${dropped}件`);
+}
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const walk = (dir) =>
