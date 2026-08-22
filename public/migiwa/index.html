@@ -2518,6 +2518,9 @@ function makeMotes(count, opt){
     uTime:{value:0}, uSun:{value:SUN}, uDepth:{value:0},
     uPix:{value:DPR}, uGain:{value:opt.gain}, uSoft:{value:opt.soft},
     uWobble:{value:opt.wobble||0},
+    /* ★ 真円が正しいのは気泡だけ。マリンスノーは不定形の凝集体(floc)で、
+       ゆっくり回りながら沈む。全部を真円にすると「点の集合」に見える。 */
+    uFloc:{value:opt.floc == null ? 1 : opt.floc},
     /* 魚が押しのける分。3層で同じオブジェクトを共有するので1回書けば効く。
        層はワールド原点を持つので、比較のために原点も渡す。 */
     uFishPos:wakeU.uFishPos, uFishDir:wakeU.uFishDir, uFishSide:wakeU.uFishSide,
@@ -2528,12 +2531,17 @@ function makeMotes(count, opt){
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
     uniforms: uni,
     vertexShader:`
-      uniform float uTime, uPix, uWobble, uWakeAny;
+      uniform float uTime, uPix, uWobble, uWakeAny, uFloc;
       uniform vec3 uFishPos[3], uFishDir[3], uFishSide[3], uOrigin;
       uniform float uFishWake[3];
       attribute float aSeed, aSize, aSpeed;
       varying float vFade, vSeed, vDist;
+      varying vec3 vSpin;          // xy=回転の基底 / z=細長さ
       void main(){
+        /* ★ 回転はここで作る。フラグメントで三角関数を回すと、手前の
+           大きな粒(最大90px)ぶん全部にコストが乗る。頂点なら1粒1回。 */
+        float rot = aSeed*6.2831 + uTime*(0.10 + fract(aSeed*7.3)*0.22) * uFloc;
+        vSpin = vec3(cos(rot), sin(rot), mix(1.0, 1.55, fract(aSeed*13.1)*uFloc));
         vec3 p = position;
         p.x += sin(uTime*0.5 + aSeed)*uWobble;
         p.z += cos(uTime*0.37 + aSeed*1.7)*uWobble*0.6;
@@ -2558,12 +2566,19 @@ function makeMotes(count, opt){
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader:`
-      uniform float uGain, uSoft, uDepth, uTime;
+      uniform float uGain, uSoft, uDepth, uTime, uFloc;
       varying float vFade, vSeed, vDist;
+      varying vec3 vSpin;
       ${G_MEDIUM}
       void main(){
         vec2 q = gl_PointCoord - 0.5;
+        /* 回して、少し細長くする。基底は頂点で作ってあるので掛けるだけ。 */
+        q = vec2(q.x*vSpin.x - q.y*vSpin.y, q.x*vSpin.y + q.y*vSpin.x);
+        q.x /= vSpin.z;
         float r = length(q)*2.0;
+        /* 輪郭を崩す。★ atan は使わない(手前の粒は最大90pxあり、
+           1粒で8000画素になる)。q の直交する2つの波の積で十分に不定形になる。 */
+        r *= 1.0 + uFloc * 0.30 * sin(q.x*15.0 + vSeed*9.0) * sin(q.y*12.0 - vSeed*5.0);
         if (r > 1.0) discard;
         /* 近い粒ほどボケる(擬似DOF)。層ごとの固定値だと、同じ層の粒が
            手前へ流れてきても輪郭が硬いままで、奥行きが読めない。 */
@@ -2594,6 +2609,8 @@ const motes = makeMotes(TIER.motes, {
 });
 /* 中景: 気泡。上へ昇り、少し大きく、輪郭が残る */
 const bubbles = makeMotes(TIER.bubbles, {
+  /* 気泡は真円。表面張力で丸くなるので、崩すと嘘になる。 */
+  floc:0,
   spread:[13,0,12], zNear:-1.2, yMin:-9.6, yMax:0.2,
   size:[0.9,2.6], speed:[0.16,0.52], gain:0.42, soft:1.5, wobble:0.16, lag:0.45, drift:0.022,
 });
@@ -2634,8 +2651,14 @@ const fishMat = new THREE.ShaderMaterial({
       vec3 p = position;
       /* 身を翻すときに横幅を潰す。★下限を切らないと真横で線になって消える */
       p.x *= max(aSquash, 0.22);
-      /* 尾のしなり。頭(uvv.x=0)は動かさず、尾へ向かって振幅が立つ */
-      p.y += sin(aPhase) * aAmp * smoothstep(0.15, 1.0, uvv.x);
+      /* 体を走るうねり。★ sin(aPhase) だけだと体の全部が同じ位相で
+         同時に曲がる ―― 「しなる」ではなく「折れる」。実際の魚は
+         波が頭から尾へ抜けていく。位相を uvv.x ぶん遅らせると波が走る。
+         2.6rad は体長のおよそ 0.4 波長。アジ型(carangiform)の泳ぎ方。 */
+      p.y += sin(aPhase - uvv.x * 2.6) * aAmp * smoothstep(0.12, 1.0, uvv.x);
+      /* 頭は波と逆へわずかに振れる(反作用)。これが無いと頭が
+         固定された棒に見える。振幅は尾の12%。 */
+      p.y -= sin(aPhase) * aAmp * 0.12 * (1.0 - smoothstep(0.0, 0.42, uvv.x));
       vec4 wp = modelMatrix * instanceMatrix * vec4(p,1.0);
       vW = wp.xyz;
       gl_Position = projectionMatrix * viewMatrix * wp;
@@ -2660,10 +2683,14 @@ const fishMat = new THREE.ShaderMaterial({
       /* 尾柄は絞り切らない。ここが 0 まで落ちると胴と尾が切り離れて
          「2つの塊」に見える(以前の実装は 0.60〜0.66 が空白だった)。 */
       hb = max(hb, 0.026 * smoothstep(0.03, 0.09, X) * (1.0 - smoothstep(0.70, 0.80, X)));
+      /* ★ 胴と鰭を別に持つ。1つの輪郭にまとめると鰭が胴と同じ濃さで
+         塗られ、輪郭の一部にしか見えない。鰭は薄く透ける。 */
+      float hCore = hb;
       float up = step(0.0, Y);
       hb += 0.042 * exp(-pow((X - 0.44) / 0.13,  2.0)) * up;
       hb += 0.030 * exp(-pow((X - 0.60) / 0.085, 2.0)) * (1.0 - up);
       float mBody = 1.0 - smoothstep(hb - aa, hb + aa, abs(Y));
+      float fin   = smoothstep(hCore - 0.004, hCore + 0.014, abs(Y));
 
       /* 尾。付け根(0.72)で胴と重ねてから開く。後縁を V に切って二叉にする。 */
       float tv   = clamp((X - 0.72) / 0.26, 0.0, 1.0);
@@ -2677,21 +2704,60 @@ const fishMat = new THREE.ShaderMaterial({
 
       float m = clamp(max(mBody, mTail), 0.0, 1.0);
       if (m < 0.02 || vAlpha < 0.004) discard;
-      /* 背は暗く腹は明るい(カウンターシェーディング)。
-         身を翻すと明暗が入れ替わる。加算の発光は使わない —— 「光る」ではなく
-         「翻る」で読ませる(過剰なブルームは要綱で禁止)。 */
-      /* ★ 濃淡の幅は「実際の胴の高さ」に合わせる。胴を厚くした時に
-         ここを直し忘れると、明るい腹が下端の数画素だけになり、
-         暗い海の中で魚が丸ごと沈んで見えなくなる(実際そうなった)。 */
-      float belly = smoothstep(0.105, -0.105, Y);
-      belly = mix(belly, 1.0 - belly, vTurn);
-      /* 背は暗く腹は明るい。★ ここを弱くすると、屋外のスマホでも暗いノートでも
-         「板が浮いている」だけになって姿が読めない。濃さではなく明暗差で読ませる。 */
-      vec3 col = mix(vec3(0.016,0.044,0.062), vec3(0.21,0.38,0.41), belly);
-      col *= 1.0 + vTurn * 0.55;
-      // 眼。これ1点で「紙の切り抜き」が「生き物」になる
-      float eye = 1.0 - smoothstep(0.014, 0.024, length(vec2(X - 0.115, Y - 0.030)));
-      col = mix(col, vec3(0.015,0.030,0.038), eye*0.85);
+
+      /* ---- 断面と光 -----------------------------------------------------
+         ★ 上下に1本グラデーションを引くだけだと「塗り分け」にしか見えない。
+         水中の光は上から来る。逆行迷彩の魚は「背＝暗い色素・よく当たる」
+         「腹＝明るい色素・当たらない」で、掛け合わせた結果いちばん明るく
+         なるのは腹の縁でも背でもなく **体側の帯** になる。そこが本物の顔。
+         ny は胴の高さで正規化した断面上の位置。-1が腹、+1が背。 */
+      float ny = clamp(Y / max(hCore, 1e-3), -1.0, 1.0);
+      float nyT = mix(ny, -ny, vTurn);                    // 翻ると裏返る
+      float lam = 0.30 + 0.70 * clamp(0.5 + 0.5*nyT, 0.0, 1.0);   // 上から来る光
+      /* ★ 切り替わりを急にすると背が黒に潰れ、明暗の境目が硬い線になる。
+         暗い側も 0 まで落とさない(落とすと逆行迷彩ではなく影になる)。 */
+      vec3  pig = mix(vec3(0.235,0.405,0.435), vec3(0.032,0.074,0.098),
+                      smoothstep(-0.80, 0.90, nyT));               // 色素
+      vec3 col = pig * lam;
+      /* 体側の帯。面ではなく1本。魚が光るのはここだけ。 */
+      float flank = exp(-pow((nyT - 0.16) / 0.28, 2.0));
+      col += vec3(0.085,0.150,0.170) * flank * (0.50 + 0.60*vTurn);
+      /* 縁は落とす。★ 明るいまま切ると「縁取りをしたステッカー」に見える。 */
+      float edge = smoothstep(0.0, 0.26, 1.0 - abs(ny));
+      col *= 0.88 + 0.12 * edge;
+      /* ---- 実際の魚に付いている標識 -------------------------------------
+         ★ 形が正しくても、標識が1つも無いと「なめらかな塊」に見える。
+         側線・鰓蓋・鱗の3つは、小さくても脳が魚と判定する手がかり。 */
+      /* 側線。鰓の後ろから尾柄まで、体側をわずかに反る1本。 */
+      float llY = 0.030 - 0.055 * smoothstep(0.18, 0.78, X);
+      float lline = exp(-pow((ny - llY/max(hCore,1e-3)) / 0.16, 2.0))
+                  * smoothstep(0.17, 0.26, X) * (1.0 - smoothstep(0.70, 0.80, X));
+      col *= 1.0 - 0.10 * lline;
+      /* 鰓蓋。眼の後ろの弧。頭と胴の境目はどの魚にもある。 */
+      float gill = exp(-pow((length(vec2((X - 0.055)*0.62, Y*0.42)) - 0.106) / 0.010, 2.0))
+                 * smoothstep(0.13, 0.17, X) * (1.0 - smoothstep(0.26, 0.31, X));
+      col *= 1.0 - 0.13 * gill;
+      /* 鱗。体側の帯が出ている所にだけ、ごく浅く。★ 強くすると網に見える。 */
+      col *= 1.0 + 0.045 * flank * sin(X*118.0) * sin(Y*300.0);
+      /* 鰭は薄い膜。胴と同じ濃さで塗ると輪郭の一部にしか見えない。 */
+      col = mix(col, col*0.84 + vec3(0.020,0.046,0.058), fin*0.50);
+      /* 尾の条。付け根から扇に走る筋。均一な三角形だと紙に見える。 */
+      float rays = sin(atan(Y, max(X - 0.72, 1e-4)) * 24.0) * 0.5 + 0.5;
+      col *= 1.0 - 0.13 * rays * smoothstep(0.76, 0.94, X);
+      /* 胸鰭。体の手前側に1枚。これがあると「板」から「体」になる。 */
+      float pec = 1.0 - smoothstep(0.030, 0.050,
+                    length(vec2(X - 0.295, Y + 0.042) * vec2(1.0, 1.75)));
+      col = mix(col, col*0.78 + vec3(0.010,0.026,0.032), pec*0.55);
+
+      /* ---- 眼 -----------------------------------------------------------
+         ★ 黒い点1つだと漫画になる。虹彩・瞳・ハイライトの3つで初めて
+         「濡れた球」に見える。ハイライトはこの魚で唯一の鏡面反射。 */
+      float er = length(vec2(X - 0.124, Y - 0.028));
+      col = mix(col, vec3(0.075,0.112,0.122), (1.0 - smoothstep(0.023, 0.032, er)) * 0.80);
+      col = mix(col, vec3(0.008,0.016,0.022), (1.0 - smoothstep(0.012, 0.018, er)) * 0.94);
+      float glint = 1.0 - smoothstep(0.0032, 0.0072,
+                      length(vec2(X - 0.1172, Y - 0.0356)));
+      col += vec3(0.50,0.66,0.70) * glint * 0.80;
       float d = length(vW - cameraPosition);
       vec3 Vv = normalize(vW - cameraPosition);
       /* ★ ここに「魚だけ水を薄くする」係数を入れたくなるが、入れても
@@ -2702,7 +2768,11 @@ const fishMat = new THREE.ShaderMaterial({
          暗い海に発光体が1つ浮くだけになる。 */
       col = waterFogV(col, d, uDepth, mix(1.0,0.3,uDepth), vW.y, Vv, uSun);
       col = mix(col, uFog, farFade(d));
-      gl_FragColor = vec4(col, m * 0.95 * (1.0 - smoothstep(13.0, 24.0, d)) * vAlpha);
+      /* 鰭と尾の先は透ける。不透明な三角形は必ず紙に見える。 */
+      /* ★ 透かしすぎると尾が消える。膜だと分かる最小に留める。 */
+      float trans = 1.0 - 0.26*fin - 0.14*smoothstep(0.88, 0.99, X);
+      gl_FragColor = vec4(col, m * 0.95 * max(trans, 0.55)
+                               * (1.0 - smoothstep(13.0, 24.0, d)) * vAlpha);
     }`,
 });
 
@@ -2751,11 +2821,19 @@ const fTurnT = new Float32Array(NF);     // 身を翻している残り秒
 const fScr   = new Float32Array(NF*2);   // 前フレームの画面座標(半径, 奥行き)
 const fStart = new Float32Array(NF);     // 驚き(0..1)。近い個体へ伝わる
 const fOff   = new Float32Array(NF*3);   // 群れの中でのもち場
+/* ★ 姿勢。以前はヨーだけで、旋回しても体が傾かず、上下にも泳がなかった
+   (fDir が x,z しか持っていない)。板が滑って見えていた本体はここ。 */
+const fYaw   = new Float32Array(NF);     // 前フレームのヨー(旋回の速さを取る)
+const fRoll  = new Float32Array(NF);     // バンク角(曲がる側へ倒れる)
+const fPitch = new Float32Array(NF);     // 頭の上下(垂直の速度から)
+const fSpd   = new Float32Array(NF);     // 速さの移動平均
+const fAmp0  = new Float32Array(NF);     // 個体ごとの尾の振り幅(上限)
 for (let i=0;i<NF;i++){
   fSize[i] = 1.15 + frnd()*1.15;
   fBeat[i] = 6.0 + frnd()*3.4;
   fAttr.aPhase.array[i]  = frnd()*6.2831;
-  fAttr.aAmp.array[i]    = 0.018 + frnd()*0.010;
+  fAmp0[i]               = 0.018 + frnd()*0.010;
+  fAttr.aAmp.array[i]    = fAmp0[i];
   fAttr.aSquash.array[i] = 1;
   fAttr.aAlpha.array[i]  = 0;
   fDir[i*3]   = Math.cos(i*2.399);        // 初期の向き(黄金角で散らす)
@@ -3674,7 +3752,16 @@ window.__diag = {
       _fp.project(camera);
       out.push({ i, a:+A.aAlpha.array[i].toFixed(3), d:+d.toFixed(2),
                  x:+_fp.x.toFixed(2), y:+_fp.y.toFixed(2), z:+_fp.z.toFixed(2),
-                 turn:+A.aTurn.array[i].toFixed(2) });
+                 turn:+A.aTurn.array[i].toFixed(2),
+                 /* 姿勢。度で出す(ラジアンだと目で異常が読めない) */
+                 roll:+(fRoll[i]*57.3).toFixed(1), pitch:+(fPitch[i]*57.3).toFixed(1),
+                 spd:+fSpd[i].toFixed(2), amp:+A.aAmp.array[i].toFixed(4),
+                 /* 体の向きと視線のなす角。90度=真横(板が正面を向く)、
+                    0/180度=正面か真後ろ(板が線になる)。 */
+                 view:+(Math.acos(Math.min(1, Math.abs(
+                   (fPos[o]-camera.position.x)*fDir[o] + (fPos[o+2]-camera.position.z)*fDir[o+2]
+                 ) / Math.max(1e-4, Math.hypot(fPos[o]-camera.position.x, fPos[o+2]-camera.position.z))
+                 ))*57.3).toFixed(0) });
     }
     return { n:NF, vis: out.filter(f => f.a > 0.12 && Math.abs(f.x)<1 && Math.abs(f.y)<1 && f.z<1).length,
              wake:+wakeU.uWakeAny.value.toFixed(2), list: out };
@@ -4408,6 +4495,9 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
       _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(-1);   // 真横(左向き)
       fDir[o] = _fs.x; fDir[o+2] = _fs.z;
       A.aSquash.array[i] = 1; A.aTurn.array[i] = 0;
+      /* ★ 汀の一匹は必ず水平。前のフレームのバンク/ピッチが残っていると
+         体が傾き、腹が線をかすめる形にならない。 */
+      fRoll[i] = fPitch[i] = 0; fYaw[i] = Math.atan2(fDir[o], fDir[o+2]);
       A.aAlpha.array[i] += (0.92*ss(0.24,0.31,hpR) - A.aAlpha.array[i]) * Math.min(1, fdtA/0.35);
       A.aPhase.array[i] += fBeat[i]*0.62*fdt*timeScale;
       writeFish(i, heroSize);
@@ -4433,6 +4523,10 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
       const a0 = frnd()*6.2831;
       fDir[o] = Math.cos(a0); fDir[o+2] = Math.sin(a0);
       fEsc[o] = fEsc[o+1] = fEsc[o+2] = 0;
+      /* ★ 姿勢も戻す。戻さないと、前に居た個体の傾きを引き継いだまま
+         新しい場所に現れる。 */
+      fRoll[i] = fPitch[i] = fSpd[i] = 0;
+      fYaw[i] = Math.atan2(fDir[o], fDir[o+2]);
       A.aAlpha.array[i] = 0;
       fScr[i*2] = 0; fScr[i*2+1] = 0;
       _fr.set(fPos[o]-cam.x, fPos[o+1]-cam.y, fPos[o+2]-cam.z);
@@ -4441,8 +4535,13 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
 
     /* 自分の泳ぎ。ゆっくり向きを変えながら進む。 */
     const swim = 0.30 + 0.22*fSize[i];
+    /* ★ 上下に泳ぐ意志。以前は振幅0.05の小刻みな揺れだけで、深さを
+       変える個体が1匹もいなかった。周期の違う2つの波を重ねて
+       「いま降りている魚」と「いま昇っている魚」が混ざるようにする。 */
+    const vWander = Math.sin(fishT*0.23 + fOff[o]*4.1) * 0.62
+                  + Math.sin(fishT*0.11 + fOff[o+2]*2.3) * 0.38;
     let tx = fPos[o]   + fDir[o]  *swim*1.25;
-    let ty = fPos[o+1] + Math.sin(fishT*1.55 + fOff[o+1]*3.1)*0.05;
+    let ty = fPos[o+1] + vWander*0.22 + Math.sin(fishT*1.55 + fOff[o+1]*3.1)*0.05;
     let tz = fPos[o+2] + fDir[o+2]*swim*1.25;
 
     if (hero1T >= 0 && i === 1){
@@ -4525,6 +4624,35 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
     const dl = Math.hypot(fDir[o], fDir[o+2]) || 1;
     fDir[o] /= dl; fDir[o+2] /= dl;
 
+    /* ---- 姿勢 ---------------------------------------------------------
+       ★ 旋回してもバンクしない生き物はいない。曲がる側へ倒れる。
+       ヨーの変化率から傾ける。角度の差は必ず ±π へ畳むこと ――
+       畳まないと -179°→179° の1フレームで「358°回った」ことになり、
+       体が一瞬で裏返る。 */
+    const yawNow = Math.atan2(fDir[o], fDir[o+2]);
+    let dYaw = yawNow - fYaw[i];
+    while (dYaw >  Math.PI) dYaw -= 2*Math.PI;
+    while (dYaw < -Math.PI) dYaw += 2*Math.PI;
+    fYaw[i] = yawNow;
+    const spd3 = Math.hypot(fEsc[o], fEsc[o+1], fEsc[o+2]);
+    fSpd[i] += (spd3 - fSpd[i]) * Math.min(1, fdt*4.0);
+    /* 速いほど深く倒れる(止まって向きを変えるときは倒れない)。上限45度。 */
+    /* ★ 上限24度。板は平面なので、これ以上倒すと「バンクする魚」ではなく
+       「回転する切り抜き」に見える。倒れているのが分かる最小で止める。 */
+    const rollWant = Math.max(-0.42, Math.min(0.42,
+      -(dYaw / Math.max(fdt, 1e-3)) * 0.26 * Math.min(1, fSpd[i]*0.7)));
+    fRoll[i]  += (rollWant  - fRoll[i])  * Math.min(1, fdt*3.4);
+    /* 頭は進む向きへ向く。垂直の速度 ÷ 水平の速さ。 */
+    const pitchWant = Math.max(-0.62, Math.min(0.62,
+      Math.atan2(fEsc[o+1], Math.max(0.05, Math.hypot(fEsc[o], fEsc[o+2])))));
+    fPitch[i] += (pitchWant - fPitch[i]) * Math.min(1, fdt*3.0);
+    /* 振り幅も速さに従う。★ 周期(fBeat)は前から速度連動だったが、
+       振り幅は固定だったので、滑空している魚が全開で尾を振っていた。 */
+    /* ★ 上限は fAmp0 を超えさせない。速度で「増やす」と、元の上限 0.028 を
+       25%超えて 0.035 まで振れ、体が折れて見えた(実測)。
+       速さが効くのは「遅いときに振らない」方向だけ。 */
+    A.aAmp.array[i] = fAmp0[i] * (0.40 + 0.60*Math.min(1, fSpd[i]*0.6));
+
     /* 中央で薄れる ―― 周辺視の実装。
        床 0.22 と 0.6秒の鈍りは交渉不可。速いと演出ではなくバグに読まれる。 */
     _fp.set(fPos[o], fPos[o+1], fPos[o+2]).project(camera);
@@ -4535,6 +4663,19 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
        可視予算を全部使ってしまう。 */
     const onScreen = _fp.z <= 1 && Math.abs(_fp.x) <= 1.12 && Math.abs(_fp.y) <= 1.12;
     let want = onScreen ? 0.34 + 0.66*ss(0.18, 0.55, r) : 0;
+    /* ★ 板は平面なので、体の軸が視線と重なると幾何学的に線になる。
+       実測では可視の魚の 8.3% が真正面±15度に入る。
+       完全に直すには体の断面を向いた3枚目の面が要る(体の軸を含む2枚を
+       十字に組んでも、正面から見れば両方とも線になるので効かない)。
+       そこまでの改造に見合う頻度ではないので、線になる手前で薄れさせて
+       「向こうを向いた魚が見えにくくなる」に読み替える。 */
+    {
+      const hx = fPos[o]-cam.x, hz = fPos[o+2]-cam.z;
+      const hl = Math.max(1e-4, Math.hypot(hx, hz));
+      const cosPhi = Math.abs((hx*fDir[o] + hz*fDir[o+2]) / hl);
+      const sinPhi = Math.sqrt(Math.max(0, 1 - cosPhi*cosPhi));
+      want *= 0.42 + 0.58*ss(0.05, 0.42, sinPhi);
+    }
     cand.push([i, want, isHero1 ? 99 : (onScreen ? r : -1)]);
 
     /* 尾。位相は CPU で進める。★ timeScale を掛け忘れると、凍った海の中で
@@ -4595,11 +4736,19 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
   fishReady = true;
 }
 
+const _fq2 = new THREE.Quaternion();
+const F_FWD  = new THREE.Vector3(1,0,0);   // 板の長辺＝体の前後
+const F_SIDE = new THREE.Vector3(0,0,1);   // 板の法線＝体の左右
 function writeFish(i, scale){
   const o = i*3;
   _fp.set(fPos[o], fPos[o+1], fPos[o+2]);
   const yaw = Math.atan2(fDir[o], fDir[o+2]) + Math.PI/2;
   _fquat.setFromAxisAngle(F_UP, yaw);
+  /* ★ ロールは「体の前後の軸」まわり、ピッチは「体の左右の軸」まわり。
+     ワールドのXYZで回すと、ヨーが90度のときに上下と左右が入れ替わる。
+     ヨーのあとに掛ける＝ローカル軸で回るので、向きに依らず正しい。 */
+  _fq2.setFromAxisAngle(F_SIDE, fPitch[i]); _fquat.multiply(_fq2);
+  _fq2.setFromAxisAngle(F_FWD,  fRoll[i]);  _fquat.multiply(_fq2);
   _fscale.setScalar(scale);
   _fm.compose(_fp, _fquat, _fscale);
   fishMesh.setMatrixAt(i, _fm);
