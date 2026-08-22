@@ -356,18 +356,31 @@ if (await page.evaluate(() => !!(window.__diag && window.__diag.seam
     && document.documentElement.hasAttribute('data-index') && document.getElementById('rdot')))) {
   const b2 = await page.evaluate(() => ({ ct: window.__diag.seam.contentTopDoc,
                                           cspan: window.__diag.seam.contentSpan }));
-  const waitF = async (n, maxMs = 30000) => {
-    const f0 = await page.evaluate(() => window.__diag.frames);
+  /* ★ 針は目標へ向かって毎フレーム追従する。以前はここで「4フレーム待つ」と
+     決め打ちしていたが、この環境の実測は 0.2〜1fps まで振れるので、遅い回だけ
+     針が途中で止まったまま読まれ、1行手前を指して落ちた(実際に踏んだ)。
+     フレーム数ではなく「針が動かなくなるまで」待つ。 */
+  const waitDot = async (maxMs = 40000) => {
     const t0 = Date.now();
+    let lastY = -1e9, lastF = -1, still = 0;
     while (Date.now() - t0 < maxMs) {
+      const s = await page.evaluate(() => {
+        const r = document.getElementById('rdot').getBoundingClientRect();
+        return { y: r.top + r.height / 2, f: window.__diag.frames };
+      });
+      /* フレームが進んだ上で位置が動いていないことを条件にする
+         (同じフレームを2回読んで「止まった」と誤判定しないため) */
+      if (s.f !== lastF) {
+        if (Math.abs(s.y - lastY) < 0.25) { if (++still >= 3) return; } else still = 0;
+        lastY = s.y; lastF = s.f;
+      }
       await page.waitForTimeout(300);
-      if (await page.evaluate(() => window.__diag.frames) >= f0 + n) return;
     }
   };
   const out = [];
   for (const f of [0.12, 0.35, 0.58, 0.80, 0.97]) {
     await page.evaluate(y => scrollTo(0, y), Math.round(b2.ct + b2.cspan * f));
-    await waitF(4);
+    await waitDot();
     out.push(await page.evaluate(() => {
       const dot = document.getElementById('rdot').getBoundingClientRect();
       const dy = dot.top + dot.height / 2;

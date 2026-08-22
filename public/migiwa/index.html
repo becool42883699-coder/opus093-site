@@ -1869,9 +1869,15 @@ ${WAVES.map(w => `      off += gerstner(vec2(${glf(w[0])},${glf(w[1])}), ${glf(w
       #if DETAIL > 3
         g += rippleD(wp, vec2(-0.3,-1.0), 15.00, 3.4, 0.013, d);
         g += rippleD(wp, vec2( 1.0, 0.9), 24.00, 4.0, 0.008, d);
-        /* 手元数メートルにだけ効く高周波。リングの縞を割るのが役目 */
+        /* 手元数メートルにだけ効く細かさ。リングの縞を割るのが役目。
+           ★ ここを純粋な正弦2本にすると、周波数の近い2本が干渉して
+             天井に菱形のうなり(モアレ)が出る —— 実測でそうなった。
+             1本は正弦、もう1本はノイズの勾配にして、うなりの相手を作らない。 */
         g += rippleD(wp, vec2( 0.35,1.0), 38.00, 4.6, 0.0055, d);
-        g += rippleD(wp, vec2(-1.0, 0.2), 61.00, 5.4, 0.0034, d);
+        float e2 = 0.05, m0 = vnoise(wp*9.0 - uTime*0.22);
+        g += vec2((vnoise(wp*9.0 + vec2(e2,0.0) - uTime*0.22) - m0)/e2,
+                  (vnoise(wp*9.0 + vec2(0.0,e2) - uTime*0.22) - m0)/e2)
+             * 0.0075 * exp(-d * 9.0 * 0.0090);
       #endif
         g += gn * exp(-d * 2.0 * 0.0090);
       }
@@ -2193,11 +2199,28 @@ const shaftMat = new THREE.ShaderMaterial({
          なる(実測で画面 180px にわたり画素値が動かなかった)。実際の海は
          水面直下がいちばん光条が強い。立ち上がりを早める。 */
       float gate = smoothstep(0.012, 0.19, uDepth) * (1.0 - smoothstep(0.72, 1.0, uDepth)*0.72);
-      // カメラに近すぎる板は消す(顔に貼り付くのを防ぐ)
-      float near = smoothstep(0.8, 3.0, length(vW - cameraPosition));
+      /* カメラに近すぎる板は消す(顔に貼り付くのを防ぐ)。
+         傾けてからは板がカメラの脇を斜めに抜けるので、消し始めを早める。 */
+      float near = smoothstep(1.2, 5.0, length(vW - cameraPosition));
       gl_FragColor = vec4(vec3(0.30,0.62,0.72) * body * gate * near * uGain * uPulse * 0.55, 1.0);
     }`,
 });
+/* 水中を進む太陽光の向き。スネルの法則で1回だけ求める。
+   夕景の太陽は水平から約4.9度しかないので、入射角は鉛直から85.1度。
+   sin(85.1°)/1.333 = 0.747 → 屈折角は鉛直から 48.4度。
+   ＝水中の光条は「真下」ではなく、太陽の反対側へ大きく傾いて差す。
+   板を鉛直に立てていた頃は、舞台のスポットライトにしか見えなかった。 */
+const RAY_DIR = (() => {
+  const sh = new THREE.Vector2(SUN.x, SUN.z).normalize();   // 太陽の方位(水平)
+  const sinT = Math.min(0.99, Math.hypot(SUN.x, SUN.z) / 1.333);
+  const cosT = Math.sqrt(1 - sinT*sinT);
+  /* 光は太陽から来るので、水平には太陽の「逆」へ進む。鉛直は下向き。 */
+  return new THREE.Vector3(-sh.x * sinT, -cosT, -sh.y * sinT).normalize();
+})();
+const RAY_UP = RAY_DIR.clone().negate();
+/* 水面(-0.30)から海底までを、傾いた分だけ伸ばして張る */
+const SHAFT_LEN = (SEABED_Y + 0.30) / RAY_DIR.y;
+
 const shafts = [];
 {
   const g = new THREE.PlaneGeometry(1,1);
@@ -2210,21 +2233,29 @@ const shafts = [];
     m.material.uniforms.uGain = { value: 0.45 + Math.random()*0.75 };
     m.material.uniforms.uFloorY = { value: SEABED_Y };
     const w = 1.1 + Math.random()*2.4;
-    /* 水面より上へ出すと、水面ジオメトリに切られて板の断面が線として見える。
-       上端が水面のすぐ下に来るよう、丈と高さを合わせてある。 */
-    /* 下端が海底のすぐ上に来るまで伸ばす。着地は床側の光だまりで作る。 */
-    m.scale.set(w, 10.1, 1);
-    m.position.set(-8 + Math.random()*16, -5.35, -4.0 - Math.random()*10);
+    /* 板は RAY_UP を軸に張る。中点の高さ(-5.35)は変えていないので、
+       上端は水面のすぐ下(-0.30)、下端は海底(SEABED_Y)にそのまま来る
+       —— 傾けても縦の受け持ちは同じで、ずれるのは xz だけ。
+       水面より上へ出すと、水面ジオメトリに切られて板の断面が線に見える。 */
+    m.scale.set(w, SHAFT_LEN, 1);
+    /* ★ 傾けた分、下端は中点より 4.9m カメラ側(+z)へ来る。z を -4 のままに
+       すると手前の板が顔のすぐ横を通り、additive で白く飛ぶ(実測)。
+       クラスタごと奥へ下げて、傾きで手前へ出てくる分を相殺する。 */
+    m.position.set(-8 + Math.random()*16, -5.35, -8.5 - Math.random()*10);
     m.renderOrder = 5;
     scene.add(m); shafts.push(m);
   }
   /* 床の光だまりの位置は動かないので1回だけ詰める。
+     ★ 傾けた分、着地点は中点の真下ではない。下端の xz を渡す
+       (中点のままだと、光条と光だまりが 5m 以上ずれて別物に見える)。
      半径は板の幅より少し広く取る(光は床で散るため)。 */
   const slots = sandUniforms.uShaft.value;
   const n = Math.min(shafts.length, slots.length);
   for (let i = 0; i < n; i++){
     const m = shafts[i];
-    slots[i].set(m.position.x, m.position.z, m.scale.x * 0.95 + 0.5);
+    slots[i].set(m.position.x + RAY_DIR.x * SHAFT_LEN * 0.5,
+                 m.position.z + RAY_DIR.z * SHAFT_LEN * 0.5,
+                 m.scale.x * 0.95 + 0.5);
   }
   sandUniforms.uShaftN.value = n;
 }
@@ -3983,6 +4014,11 @@ const DPR_MIN = 1.0, DPR_MAX = Math.min(devicePixelRatio || 1, TIER.dpr);
 const camFwd = new THREE.Vector3();
 const sunPoint = new THREE.Vector3();
 const tmpV = new THREE.Vector3();
+/* 光芒の板を毎フレーム向け直すための作業用(確保はここで1回だけ) */
+const rayFrom   = new THREE.Vector3();
+const shaftSide = new THREE.Vector3();
+const shaftNrm  = new THREE.Vector3();
+const shaftBasis = new THREE.Matrix4();
 
 function applyDPR(next){
   const v = Math.max(DPR_MIN, Math.min(DPR_MAX, next));
@@ -4156,16 +4192,22 @@ function frame(mode){
   waterUniforms.uOrigin.value.set(water.position.x, water.position.z);
 
   /* --- 光芒 -------------------------------------------------
-     Y軸まわりだけカメラへ向けて"板"を消し、画面上では太陽の位置から
-     放射状に開くよう z 回転を与える(リファレンスの光条の要). */
-  sunPoint.copy(camera.position).addScaledVector(SUN, 400);
-  tmpV.copy(sunPoint).project(camera);
-  const sunSX = tmpV.x;
+     板の軸を RAY_UP(屈折した太陽光の向き)に取り、その軸まわりだけ
+     カメラへ向けて"板"であることを消す。
+     ★ 以前は軸をY(鉛直)に固定し、画面上で太陽から放射状に開いて見える
+       よう z 回転を後付けしていた。これは水上のゴッドレイの見え方で、
+       水中の光条は屈折して**平行に**差す —— 画面上で開いて見えるのは
+       透視のせいなので、板をきちんと傾ければ勝手にそうなる。
+       鉛直のままだと、夕日の海なのに舞台のスポットライトに見える。 */
   for (let i=0;i<shafts.length;i++){
     const sh = shafts[i];
-    tmpV.copy(sh.position).project(camera);
-    const lean = Math.max(-0.55, Math.min(0.55, (tmpV.x - sunSX) * 0.38));
-    sh.rotation.set(0, Math.atan2(camera.position.x - sh.position.x, camera.position.z - sh.position.z), lean);
+    shaftSide.subVectors(camera.position, sh.position).cross(RAY_UP);
+    /* カメラが軸の真上/真下に来ると外積が潰れる。前フレームの向きを
+       使い回すより、決め打ちの横向きへ倒す方が破綻が短い。 */
+    if (shaftSide.lengthSq() < 1e-6) shaftSide.set(1, 0, 0); else shaftSide.normalize();
+    shaftNrm.crossVectors(shaftSide, RAY_UP);
+    shaftBasis.makeBasis(shaftSide, RAY_UP, shaftNrm);
+    sh.quaternion.setFromRotationMatrix(shaftBasis);
     const u = sh.material.uniforms;
     u.uTime.value = T; u.uDepth.value = depth01;
   }
@@ -4254,11 +4296,16 @@ function frame(mode){
   }
 
   /* --- ポストの駆動 ------------------------------------------ */
-  // 太陽の画面座標。視野の外に出たら散乱を切る
-  sunPoint.copy(camera.position).addScaledVector(SUN, 400);
+  /* 散乱の中心の画面座標。視野の外に出たら散乱を切る。
+     ★ 水中では太陽そのものではなく、屈折して差し込む向き(RAY_UP)の
+       無限遠が中心になる。光芒の板を屈折の向きへ傾けたので、ここを
+       太陽のままにすると、画面の筋と板の向きが食い違う。
+       水面をまたぐ区間は uSub で連続に渡す(空の色の切替と同じ重み)。 */
+  rayFrom.copy(SUN).lerp(RAY_UP, skyUniforms.uSub.value).normalize();
+  sunPoint.copy(camera.position).addScaledVector(rayFrom, 400);
   tmpV.copy(sunPoint).project(camera);
   camera.getWorldDirection(camFwd);
-  const inFront = camFwd.dot(SUN) > 0.02;
+  const inFront = camFwd.dot(rayFrom) > 0.02;
   atmosPass.uniforms.uSunUV.value.set(tmpV.x*0.5+0.5, tmpV.y*0.5+0.5);
   // 水中でだけ強く出す(水上は空の描画そのものが眩しさを持っている)
   const rayAmt = (inFront ? (0.10 + 0.62*ss(0.03,0.34,depth01)) * (1 - ss(0.80,1.0,depth01)*0.55) : 0)
