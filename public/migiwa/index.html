@@ -288,7 +288,19 @@
     color:var(--line); opacity:0;
   }
   html.js body.ready #touchdown{opacity:var(--td, 0)}
-  @media (prefers-reduced-motion:reduce){ #rapid{display:none} }
+  /* ---- 中央: ソナーの接触 ----
+     ★ #sim(計器)の行にしたいところだが、#sim は820px以下で display:none。
+       そこへ入れるとスマホで一度も出ない(RAPID / TOUCHDOWN と同じ理由)。
+       計器の見た目(mono・小さい・字間広め)のまま中央に置く。 */
+  #sonar{
+    position:fixed; left:50%; top:calc(50% + 52px); transform:translateX(-50%);
+    z-index:6; pointer-events:none; white-space:nowrap;
+    font-size:9px; letter-spacing:.40em; text-indent:.40em;
+    color:var(--line); opacity:0;
+  }
+  #sonar b{color:var(--hud-hi); font-weight:500; font-variant-numeric:tabular-nums}
+  html.js body.ready #sonar{opacity:var(--sn, 0)}
+  @media (prefers-reduced-motion:reduce){ #rapid,#sonar{display:none} }
   /* RATE の警告色。計器そのものは動かさず、色だけ変える */
   #sim b.warn{color:var(--warn, #ffb27a); animation:rapidBlink .62s steps(1,end) infinite}
 
@@ -977,6 +989,8 @@
 <div id="rapid" class="mono" aria-hidden="true">RAPID DESCENT</div>
 <!-- 着底。★ RAPID DESCENT と同じ理由で中央に置く(#sim は 820px 以下で隠れる)。 -->
 <div id="touchdown" class="mono" aria-hidden="true">TOUCHDOWN — SEABED</div>
+<!-- ソナーの接触。クジラが横切っているあいだだけ。距離は通過に合わせて増減する。 -->
+<div id="sonar" class="mono" aria-hidden="true">CONTACT — UNKNOWN / <b id="sonarD">000</b>M</div>
 
 <div id="reticle" aria-hidden="true">
   <span class="rBrk rL"></span><span class="rBrk rR"></span>
@@ -2715,6 +2729,81 @@ let touchArmed = true;
 let touchForce = null;        // 検証用: 着底からの経過秒を外から固定する
 
 /* ================================================================
+   4.7) クジラの通過 — 280〜380m の帯で、1セッションに1度だけ
+   ----------------------------------------------------------------
+   ★ 「1度だけ」は着底の再武装(TD_REARM_M)とは違う。戻って再侵入しても
+     二度と出さない。珍しいから効くのであって、往復するたびに出たら
+     ただの装飾になる。
+   ★ 大きさは世界単位で固定しない。**発火時の画角から逆算**して
+     「画面幅の1.5倍」に合わせる。この世界は縦16:9と縦長で水平画角が
+     倍以上違うので、固定長にするとスマホで小魚、PCで画面外になる。
+   ★ 深度の尺(69.8m/単位)は「潜航の深さ」の尺で、物の大きさの尺ではない
+     (魚は 0.42単位＝その尺だと29m になってしまう)。だからソナーの距離は
+     専用の尺(WHALE_SONAR_M)で出す。世界距離をそのまま69.8倍すると、
+     画面いっぱいのクジラに「628M」と出て計器が嘘になる。
+   ================================================================ */
+const WH_BAND     = [280, 380];  // この帯に初めて入ったら発火(m)
+const WH_DUR      = 12.5;        // 通過にかける秒(仕様 10〜15 の中央)
+/* ★ 仕様は「画面幅の1.5倍程度」。1.5 で出したら**画面の6割を占める黒い塊**に
+   なり、形として読めなくなった(実測)。輪郭を霧に溶かす指定とも噛み合わない
+   —— 近すぎて溶ける距離(farFadeは16m以遠)に入らない。1.15 まで落として、
+   最接近を 12 単位に引いてある。「画面より大きい」手応えは保っている。 */
+const WH_LEN_SCR  = 1.15;        // 最接近時に画面幅の何倍に見せるか
+/* ★ 下限は 5.0。7.0 にしていたら縦画面が下限に貼り付いて、0.82 に落とした
+   倍率が効かなかった(実測: 5.68 が 7.0 に押し戻された)。 */
+const WH_LEN_CLAMP= [5.0, 21.0]; // 世界単位での上下限(水柱は約11単位しかない)
+const WH_Z_FAR    = 21.0;        // 出てくる側のカメラからの奥行き
+const WH_Z_NEAR   = 12.0;        // 最接近の奥行き
+const WH_FADE     = [0.06, 0.16];// 出入りのフェード(通過の進捗 0..1 で)
+const WH_SONAR_M  = 4.2;         // 世界単位 → ソナー表示のメートル
+let whaleDone = false;           // 1セッション1回。戻っても戻らない
+let whaleT = -1;                 // -1 = 出ていない。0以上で経過秒
+let whaleDir = 1;                // 左から右(+1) / 右から左(-1)
+let whaleForce = null;           // 検証用: 経過秒を外から固定する
+let whaleLen = 14;               // 発火時に画角から決める(下の whaleSize)
+
+/* 最接近(WH_Z_NEAR)で「画面幅の WH_LEN_SCR 倍」に見える体長を返す。
+   camera.fov は**垂直**画角なので、水平へは aspect を掛けてから解く。
+   ここを固定長にすると、横長(fov56/16:9 → 水平86°)と縦長(fov64/9:19.5 →
+   水平40°)で見かけが2倍以上ずれる。 */
+/* 通過の進捗 q(0..1) → 世界座標。カメラの基底で組む。
+   ★ 作品カードは画面の中央から右下に居る。少し上を、少し左肩から
+     横切らせて、板の手前で被らないようにする。 */
+const _wp = new THREE.Vector3(), _wp2 = new THREE.Vector3();
+const _wx = new THREE.Vector3(), _wy = new THREE.Vector3(), _wz = new THREE.Vector3();
+const _wup = new THREE.Vector3(0, 1, 0), _wm = new THREE.Matrix4();
+const _wf = new THREE.Vector3(), _wr = new THREE.Vector3(), _wu = new THREE.Vector3();
+function whaleAt(q, out){
+  const across = (q * 2 - 1) * whaleLen * 1.15 * whaleDir;
+  const away   = WH_Z_FAR - (WH_Z_FAR - WH_Z_NEAR) * Math.sin(q * Math.PI);
+  _wf.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  _wr.set(1, 0,  0).applyQuaternion(camera.quaternion);
+  _wu.set(0, 1,  0).applyQuaternion(camera.quaternion);
+  out.copy(camera.position)
+     .addScaledVector(_wf, away)
+     .addScaledVector(_wr, across)
+     .addScaledVector(_wu, whaleLen * 0.06);
+  /* ★ 水面(0)を突き抜けさせない・海底(-10.4)へ潜り込ませない。
+     体の半径は体長の 0.084、尾の振れが 0.095。合わせて 0.11 を余裕に取る。
+     (この世界の水柱は約11単位しかない。体長26単位のクジラでも縦には
+      収まるが、上下の余白はこれで使い切る。) */
+  const pad = whaleLen * 0.11;
+  out.y = Math.max(SEABED_Y + pad + 0.3, Math.min(-0.7 - pad, out.y));
+  return out;
+}
+
+function whaleSize(){
+  const halfV = Math.tan(camera.fov * Math.PI / 360);
+  const halfW = halfV * camera.aspect * WH_Z_NEAR;    // 最接近での画面半幅(世界単位)
+  /* ★ 縦画面は同じ「画面幅の1.15倍」でも、細長い体の胴だけが窓に残って
+     ただの黒い帯になる(実測)。縦では倍率を落として全身を入れる。
+     PCだけ良く見える、の逆をやっている —— 狭い画面ほど全身が見える。 */
+  const scr = camera.aspect < 1 ? 0.82 : WH_LEN_SCR;
+  const len = 2 * halfW * scr;
+  return Math.max(WH_LEN_CLAMP[0], Math.min(WH_LEN_CLAMP[1], len));
+}
+
+/* ================================================================
    4.6) 着底 — 砂煙とサーチライト
    ----------------------------------------------------------------
    ★ どちらも「着底の時だけ」存在する。rapid と同じで、強度が 0 の間は
@@ -2833,6 +2922,217 @@ let dustUni = null, dustMesh = null, lightUni = null, lightMesh = null;
   cone.frustumCulled = false; cone.renderOrder = 5; cone.visible = false;
   scene.add(cone);
   lightUni = lmat.uniforms; lightMesh = cone;
+}
+
+/* ================================================================
+   4.8) クジラの体 — ローポリのシルエット / 低ティアは板1枚
+   ----------------------------------------------------------------
+   ★ モデルファイルは足さない。ここで輪切りから組む(胴14断面×8角形＋
+     尾びれ＋胸びれ ＝ 約230三角形)。ディテールを持たせないのが仕様なので、
+     ポリゴンを増やす意味が無い。
+   ★ うねりは頂点シェーダ。クジラの尾は魚と違って**上下**に振る。
+     左右に振ると魚の拡大版に見える(そこが分かれ目)。
+   ================================================================ */
+let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
+{
+  const SEG = 14, RING = 8;              // 断面の数 / 断面の角数
+  const pos = [], uvs = [], idx = [];
+  /* 体の太さ。u=0 が鼻先、1 が尾の付け根。頭は丸く、中ほどが太く、
+     尾柄(0.8以降)へ絞る。0 まで落とさない —— 落とすと胴と尾が
+     切り離れて「2つの塊」に見える(魚で同じ罠を踏んでいる)。 */
+  /* 体の太さ。u=0 が鼻先、1 が尾柄。頭は丸く、中ほどが太く、尾柄へ絞る。
+     0 まで落とさない —— 落とすと胴と尾が切り離れて「2つの塊」に見える。
+     ★ もっと絞った式(頭0.13で太さに達し0.26から絞り続ける)も試したが、
+       胴が薄い板になって鰭だけが目立つ「艦船」になった(実測)。こちらが正。 */
+  const rad = u => {
+    const head = Math.pow(Math.sin(Math.PI * Math.min(1, u / 0.34) * 0.5), 0.72);
+    const taper = 1.0 - Math.pow(Math.max(0, (u - 0.30) / 0.70), 1.85);
+    return Math.max(0.012, 0.098 * head * taper + 0.013 * (1 - u));
+  };
+  for (let i = 0; i <= SEG; i++){
+    const u = i / SEG;
+    const r = rad(u);
+    for (let j = 0; j < RING; j++){
+      const a = j / RING * Math.PI * 2;
+      /* 断面は真円にしない。クジラは横に平たい。
+         ★ x は 0.57-u。**機首を +X に向ける**ため反転してある。進行方向へ
+           向けるときに基底をそのまま作れるのと、原点が体の真ん中に来る。 */
+      pos.push(0.57 - u, Math.sin(a) * r * 0.86, Math.cos(a) * r * 1.06);
+      uvs.push(u, j / RING);
+    }
+  }
+  for (let i = 0; i < SEG; i++){
+    for (let j = 0; j < RING; j++){
+      const a = i*RING + j, b = i*RING + (j+1)%RING;
+      const c = (i+1)*RING + j, d = (i+1)*RING + (j+1)%RING;
+      idx.push(a, c, b, b, c, d);
+    }
+  }
+  /* 尾びれ。★ 水平。クジラの尾は横に広がる(縦だと魚になる)。 */
+  const tailBase = pos.length / 3;
+  /* ★ 真横から見ると水平な尾びれは「線」になって消える。実際そうなり、
+     木の葉のような塊にしか見えなかった。先を少し上へ振って面を見せる。 */
+  pos.push(-0.415, 0.000, 0.0,   -0.585, 0.034,  0.210,  -0.505, 0.012,  0.062,
+           -0.585, 0.034, -0.210, -0.505, 0.012, -0.062);
+  uvs.push(1,0.5, 1,0, 1,0.25, 1,1, 1,0.75);
+  idx.push(tailBase, tailBase+2, tailBase+1, tailBase, tailBase+3, tailBase+4);
+  /* ★ 背びれは足さない。胴の半径は 0.09 前後しかないので、輪郭に効く
+     大きさ(0.2)にすると胴より高い板が背中に立ち、尾びれ・胸びれと合わせて
+     「艦船」に見えた(実測)。横顔の手応えは胴の曲線と尾びれで足りている。 */
+  /* 胸びれ。左右に1枚ずつ、後ろへ寝かせる。 */
+  for (const sgn of [1, -1]){
+    const b = pos.length / 3;
+    pos.push(0.27, -0.02, 0.055*sgn,  0.13, -0.045, 0.215*sgn,  0.17, -0.03, 0.060*sgn);
+    uvs.push(0.3,0.5, 0.44,0.5, 0.40,0.5);
+    idx.push(b, b+1, b+2);
+  }
+  const wg = new THREE.BufferGeometry();
+  wg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  wg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  wg.setIndex(idx);
+  wg.computeVertexNormals();
+
+  const wmat = new THREE.ShaderMaterial({
+    /* ★ 閉じた体なので FrontSide + depthWrite。DoubleSide のままだと
+       裏面が手前に出て、体の中が透けて見える。深度を書くと作品カードや
+       海底との前後も正しく決まる(魚も同じ理由で書いている)。 */
+    transparent:true, depthWrite:true, side:THREE.FrontSide,
+    uniforms:{ uTime:{value:0}, uAmt:{value:0}, uDepth:{value:0},
+               uSun:{value:SUN}, uFog:{value:fogCol} },
+    vertexShader:`
+      uniform float uTime;
+      varying vec3 vW; varying vec3 vN; varying float vU;
+      void main(){
+        vU = uv.x;
+        vec3 p = position;
+        /* ゆったりしたうねり。★ 振れは尾に寄るほど大きい。頭まで動かすと
+           「棒がしなっている」に見える。周期は約5.4秒 —— 魚(1秒前後)と
+           同じ速さにすると大きさが伝わらない。大きいものはゆっくり動く。 */
+        float ph = uv.x * 2.30 - uTime * 1.16;
+        float amp = pow(clamp(uv.x, 0.0, 1.0), 2.15) * 0.095;
+        p.y += sin(ph) * amp;
+        /* 胴のごく浅い横揺れ。上下だけだとレールの上を進んでいるように見える */
+        p.z += sin(ph * 0.5 + 0.9) * amp * 0.28;
+        vec4 wp = modelMatrix * vec4(p, 1.0);
+        vW = wp.xyz;
+        vN = normalize(mat3(modelMatrix) * normal);
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }`,
+    fragmentShader:`
+      /* ★ uFog は G_WATER 側が宣言している。ここで書くと二重宣言で
+         シェーダのコンパイルに落ちる(実際に落とした)。 */
+      uniform float uAmt, uDepth; uniform vec3 uSun;
+      varying vec3 vW; varying vec3 vN; varying float vU;
+      ${G_WATER}
+      void main(){
+        if (uAmt < 0.004) discard;
+        /* シルエット。模様も鰭の筋も描かない(仕様)。上から来る光で
+           背だけがわずかに明るい —— これが無いと切り紙になる。 */
+        float up = clamp(vN.y * 0.5 + 0.5, 0.0, 1.0);
+        vec3 col = mix(vec3(0.016, 0.025, 0.032), vec3(0.062, 0.088, 0.104), up);
+        float d = length(vW - cameraPosition);
+        vec3 V = normalize(vW - cameraPosition);
+        /* ★ 光の引数を 0.34 に落とす。周囲と同じ 1.0 で通すと内散乱で
+           体が白茶け、**背景より明るい木の葉**になった(実測)。降ってくる光を
+           遮っている巨体なので、暗いのが正しい。 */
+        col = waterFogV(col, d, uDepth, 0.34, vW.y, V, uSun);
+        /* ★ 輪郭は霧に溶かす。farFade を掛けないと、遠いのに縁だけ硬い
+           「貼り付けた影」になる。頭の先も少し薄くする。 */
+        col = mix(col, uFog, farFade(d));
+        float a = uAmt * (1.0 - farFade(d) * 0.55) * (0.72 + 0.28 * smoothstep(0.0, 0.14, vU));
+        gl_FragColor = vec4(col, a);
+      }`,
+  });
+  WHALE_TRIS = idx.length / 3;
+  const wm = new THREE.Mesh(wg, wmat);
+  wm.frustumCulled = false; wm.renderOrder = 3; wm.visible = false;
+  scene.add(wm);
+  whaleUni = wmat.uniforms; whaleMesh = wm;
+}
+
+/* ---- 低ティア用。板1枚＋その場で焼いたシルエット ----
+   ★ 画像ファイルは足さない。canvas に描いて CanvasTexture にする。
+     形は上のジオメトリと同じ輪郭式から取るので、ティアで別の生き物に
+     ならない。 */
+let whaleSprite = null, whaleSprUni = null;
+if (TIER.name !== 'high'){
+  /* ★ 512幅だと画面で 2.5倍に拡大されて、頭の輪郭が階段状に見えた(実測)。
+     1024にして拡大率を 1.3倍まで落とす。 */
+  const W = 1024, H = 320;
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+  g.clearRect(0,0,W,H);
+  g.fillStyle = '#fff';
+  g.beginPath();
+  const rad = u => {
+    const head = Math.pow(Math.sin(Math.PI * Math.min(1, u / 0.34) * 0.5), 0.72);
+    const taper = 1.0 - Math.pow(Math.max(0, (u - 0.30) / 0.70), 1.85);
+    return Math.max(0.012, 0.098 * head * taper + 0.013 * (1 - u));
+  };
+  /* ★ 機首を右(＝ローカル +X)に置く。メッシュ側と向きを揃えないと、
+     ティアで前後が逆のクジラになる。 */
+  const X = u => (W - 14) - u * (W - 100), Y = r => H*0.5 - r * H * 2.6;
+  g.moveTo(X(0), H*0.5);
+  for (let i = 0; i <= 60; i++){ const u = i/60; g.lineTo(X(u), Y(rad(u))); }
+  /* ★ 尾びれ。最初ここを縦に開く扇で描いたら、**魚の尾**になった(実測)。
+     クジラの尾は水平なので、真横からは「後ろへ伸びる細い刃」に見える。
+     先を少し上へ振るだけで、扇にはしない。メッシュ側と同じ思想。 */
+  g.lineTo(X(1.130), Y( 0.082));   // 上葉の先
+  g.lineTo(X(1.045), Y( 0.022));   // 後縁の切れ込み
+  g.lineTo(X(1.130), Y(-0.034));   // 下葉の先
+  for (let i = 60; i >= 0; i--){ const u = i/60; g.lineTo(X(u), Y(-rad(u))); }
+  g.closePath(); g.fill();
+  /* 胸びれ */
+  g.beginPath();
+  g.moveTo(X(0.30), Y(0.02)); g.lineTo(X(0.16), Y(-0.055)); g.lineTo(X(0.20), Y(-0.02));
+  g.closePath(); g.fill();
+  /* 縁を1〜2px溶かす。硬いまま拡大すると「切り抜きを貼った」に見える。 */
+  g.filter = 'blur(2px)';
+  g.drawImage(cv, 0, 0);
+  g.filter = 'none';
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.NoColorSpace;      // 形(マスク)なので色空間は掛けない
+  tex.generateMipmaps = true;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  const smat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, side:THREE.DoubleSide,
+    uniforms:{ uTime:{value:0}, uAmt:{value:0}, uDepth:{value:0},
+               uSun:{value:SUN}, uFog:{value:fogCol}, uMask:{value:tex} },
+    vertexShader:`
+      uniform float uTime;
+      varying vec2 vUv; varying vec3 vW;
+      void main(){
+        vUv = uv;
+        vec3 p = position;
+        /* 板でも尾は振る。板の面内で曲げるだけなので追加コストは無い。
+           ★ マスクは機首が右なので、尾は uv.x=0 側。反転して渡す。 */
+        float uTail = 1.0 - uv.x;
+        float ph = uTail * 2.30 - uTime * 1.16;
+        p.y += sin(ph) * pow(clamp(uTail, 0.0, 1.0), 2.15) * 0.095;
+        vec4 wp = modelMatrix * vec4(p, 1.0);
+        vW = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }`,
+    fragmentShader:`
+      uniform float uAmt, uDepth; uniform vec3 uSun; uniform sampler2D uMask;
+      varying vec2 vUv; varying vec3 vW;
+      ${G_WATER}
+      void main(){
+        float m = texture2D(uMask, vUv).r;
+        if (m < 0.03 || uAmt < 0.004) discard;
+        vec3 col = mix(vec3(0.010,0.017,0.023), vec3(0.040,0.060,0.072), vUv.y);
+        float d = length(vW - cameraPosition);
+        vec3 V = normalize(vW - cameraPosition);
+        col = waterFogV(col, d, uDepth, 0.34, vW.y, V, uSun);
+        col = mix(col, uFog, farFade(d));
+        gl_FragColor = vec4(col, m * uAmt * (1.0 - farFade(d) * 0.55));
+      }`,
+  });
+  /* 板の縦横は上の輪郭の描画枠と揃える(512x160 = 3.2:1)。 */
+  const sp = new THREE.Mesh(new THREE.PlaneGeometry(1, 1/3.2), smat);
+  sp.frustumCulled = false; sp.renderOrder = 3; sp.visible = false;
+  scene.add(sp);
+  whaleSprite = sp; whaleSprUni = smat.uniforms;
 }
 
 /* ================================================================
@@ -4278,7 +4578,9 @@ const reticleEl = document.getElementById('reticle');
 const rapidEl   = document.getElementById('rapid');
 const touchdownEl = document.getElementById('touchdown');
 const landingEl   = document.getElementById('landing');
-let rapidWarnWas = false, tdShown = '';
+const sonarEl   = document.getElementById('sonar');
+const sonarDEl  = document.getElementById('sonarD');
+let rapidWarnWas = false, tdShown = '', snShown = '', snDist = '';
 const simRate = document.getElementById('simRate');
 const simPit  = document.getElementById('simPit');
 const simSea  = document.getElementById('simSea');
@@ -4630,6 +4932,21 @@ window.__diag = {
   /* 急速潜航を外から観測する口 */
   set rapidForce(v){ rapidForce = v; },
   set touchForce(v){ touchForce = v; },
+  /* クジラを外から観測する口 */
+  set whaleForce(v){ whaleForce = v; if (v != null && !whaleLen) whaleLen = whaleSize(); },
+  set whaleSize(v){ whaleLen = v; },
+  get whale(){
+    const b = (TIER.name === 'high' || !whaleSprite) ? whaleMesh : whaleSprite;
+    return { t:+whaleT.toFixed(2), done:whaleDone, dir:whaleDir, len:+whaleLen.toFixed(2),
+             kind: b === whaleMesh ? 'mesh' : 'sprite',
+             vis: b ? b.visible : null,
+             amt: b ? +((b === whaleMesh ? whaleUni : whaleSprUni).uAmt.value).toFixed(3) : 0,
+             pos: b ? [+b.position.x.toFixed(2), +b.position.y.toFixed(2), +b.position.z.toFixed(2)] : null,
+             dist: b ? +b.position.distanceTo(camera.position).toFixed(2) : 0,
+             sonar: sonarEl ? getComputedStyle(sonarEl).opacity : null,
+             sonarM: sonarDEl ? sonarDEl.textContent : null,
+             tris: WHALE_TRIS };
+  },
   set dustCol(v){ dustUni.uCol.value.setRGB(v[0], v[1], v[2]); },
   set dustGain(v){ dustUni.uGain.value = v; },
   /* 着底を外から観測する口 */
@@ -5195,6 +5512,21 @@ function frame(mode){
     touchT += dt;
     if (touchT > TD_LIGHT_OUT[1] + 0.5) touchT = -1;   // 演出が終わったら止める
   }
+  /* ---- クジラの発火と時計 ---- */
+  /* ★ 着底と同じで、判定は表示している depthShown。計器が「310.4M」と
+     出ているのに接触表示だけ先に走る、を避ける。
+     ★ 品質梯子が3段以上落ちた端末(＝既に重い)と reduced-motion では
+       そもそも武装しない。「最低ティアでは無効」(仕様)。 */
+  if (!whaleDone && whaleT < 0 && !reduced && qStep < 3
+      && depthShown >= WH_BAND[0] && depthShown <= WH_BAND[1]){
+    whaleDone = true; whaleT = 0;
+    whaleDir = (depthShown * 1000 | 0) % 2 ? 1 : -1;   // 来る向きは入った深度で決める
+    whaleLen = whaleSize();
+  }
+  if (whaleT >= 0){
+    whaleT += dt;
+    if (whaleT > WH_DUR) whaleT = -1;                  // 通り過ぎたら止める
+  }
   /* 計器の針は即応、数字は0.55秒の一次遅れ。数字が瞬間値だと桁が暴れて読めない */
   depthShown = smoothDamp(depthShown, depthM, depthVel, lag1(0.55), dt);
   const nowMs = performance.now();
@@ -5387,6 +5719,55 @@ function frame(mode){
       const tag = T < 0 ? 0 : ss(0.0, 0.18, T) * (1 - ss(TD_TAG_OUT[0], TD_TAG_OUT[1], T));
       const v = tag.toFixed(3);
       if (v !== tdShown){ tdShown = v; touchdownEl.style.setProperty('--td', v); }
+    }
+  }
+
+  /* ---- クジラを配る ---- */
+  {
+    const T = whaleForce == null ? whaleT : whaleForce;
+    const on = T >= 0 && T <= WH_DUR;
+    /* 進捗 0..1。フェードは出入りの端だけ(仕様: 輪郭は霧に溶かす)。 */
+    const q = on ? T / WH_DUR : 0;
+    const amt = on ? ss(0, WH_FADE[0], q) * (1 - ss(1 - WH_FADE[1], 1, q)) : 0;
+    /* 高ティアはメッシュ、低ティアは板。両方同時には出さない。 */
+    const body = (TIER.name === 'high' || !whaleSprite) ? whaleMesh : whaleSprite;
+    const uni  = (TIER.name === 'high' || !whaleSprUni) ? whaleUni  : whaleSprUni;
+    const other = body === whaleMesh ? whaleSprite : whaleMesh;
+    if (other && other.visible) other.visible = false;
+    if (body.visible !== (amt > 0.004)) body.visible = amt > 0.004;
+    if (amt > 0.004){
+      /* ★ 世界のy基準で置いてはいけない。この帯(280〜380m)ではカメラが
+         +8.6° 上を向いていて、camera.y+1.15 に置くと画面の下の外に落ちる
+         (実測でそうなった)。**カメラの基底(ピッチ込み)で置く。** */
+      whaleAt(q, _wp);
+      body.position.copy(_wp);
+      /* 進む向きへ機首を向ける。奥行きも変わるので、少し先の位置との差を
+         そのまま向きにする(斜めの分だけ自然に首が振れる)。 */
+      whaleAt(Math.min(1, q + 0.012), _wp2);
+      _wx.subVectors(_wp2, _wp);
+      if (_wx.lengthSq() < 1e-8) _wx.set(1, 0, 0);
+      _wx.normalize();
+      _wz.crossVectors(_wx, _wup).normalize();
+      _wy.crossVectors(_wz, _wx).normalize();
+      _wm.makeBasis(_wx, _wy, _wz);
+      body.quaternion.setFromRotationMatrix(_wm);
+      body.scale.setScalar(whaleLen);
+      uni.uTime.value = t;
+      uni.uAmt.value = amt;
+      uni.uDepth.value = depth01;
+    }
+    /* ソナー。距離は世界単位を専用の尺で読む(深度の 69.8m/単位 で出すと
+       画面いっぱいのクジラに 600M 超と出て計器が嘘になる)。 */
+    if (sonarEl){
+      const sn = amt > 0.004 ? Math.min(1, amt * 1.8).toFixed(3) : '0';
+      if (sn !== snShown){ snShown = sn; sonarEl.style.setProperty('--sn', sn); }
+      if (amt > 0.004){
+        const dm = String(Math.round(
+          Math.hypot(body.position.x - camera.position.x,
+                     body.position.y - camera.position.y,
+                     body.position.z - camera.position.z) * WH_SONAR_M)).padStart(3, '0');
+        if (dm !== snDist){ snDist = dm; sonarDEl.textContent = dm; }
+      }
     }
   }
 
