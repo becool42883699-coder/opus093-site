@@ -13,3 +13,6 @@ public/migiwa/.works.html
 
 # 実装中の使い捨ての検証スクリプト置き場
 scratch/
+
+# Graft のビルド生成物（graft build で再生成できる）
+graft/.cache/
