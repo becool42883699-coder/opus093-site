@@ -2892,7 +2892,13 @@ let CARD_BASE_SCALE = 1;
           col += vec3(1.0,0.94,0.82) * pow(max(dot(N,H),0.0), 260.0) * 0.85;
 
           float d = length(vW - cameraPosition);
-          col = waterFogV(col, d, uDepth, mix(1.0, 0.70, uDepth), vW.y, -V, uSun);
+          /* ★ 水中の霧を、空気中の板にも掛けていた。カメラもカードも
+             水面の上にある間は、あいだに水は無い。ABSORB は赤を最も吸うので
+             6.7m ぶん掛かるだけで赤が半分になり、無色にしたはずのガラスが
+             青緑に転ぶ(実測: 板の外 彩度10% → 内 25%、赤だけ落ちていた)。
+             どちらかが水面より下なら、そこからは水として掛ける。 */
+          float wet = 1.0 - smoothstep(-0.25, 0.45, min(cameraPosition.y, vW.y));
+          col = waterFogV(col, d * wet, uDepth, mix(1.0, 0.70, uDepth), vW.y, -V, uSun);
           col = mix(col, fogAt(uFog, -V, uSun, uDepth), farFade(d) * uDepth);
 
           /* 背景は自分で読んで合成済みなので、板の内側は不透明でよい。
