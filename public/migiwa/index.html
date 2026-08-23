@@ -280,6 +280,14 @@
      ように見える。仕様の「点滅」は、読める範囲での明滅。 */
   @keyframes rapidBlink{ 0%,100%{filter:none} 50%{filter:brightness(.45)} }
   html.js body.ready #rapid{animation:rapidBlink .62s steps(1,end) infinite}
+  /* ---- 中央: 着底 ---- */
+  #touchdown{
+    position:fixed; left:50%; top:calc(50% - 34px); transform:translateX(-50%);
+    z-index:6; pointer-events:none; white-space:nowrap;
+    font-size:9.5px; letter-spacing:.44em; text-indent:.44em;
+    color:var(--line); opacity:0;
+  }
+  html.js body.ready #touchdown{opacity:var(--td, 0)}
   @media (prefers-reduced-motion:reduce){ #rapid{display:none} }
   /* RATE の警告色。計器そのものは動かさず、色だけ変える */
   #sim b.warn{color:var(--warn, #ffb27a); animation:rapidBlink .62s steps(1,end) infinite}
@@ -967,6 +975,8 @@
      どの画面幅でも文字の領域と取り合わないため。#sim(計器)は 820px 以下で
      隠れるので、そこへ入れるとスマホで一度も出ない。 -->
 <div id="rapid" class="mono" aria-hidden="true">RAPID DESCENT</div>
+<!-- 着底。★ RAPID DESCENT と同じ理由で中央に置く(#sim は 820px 以下で隠れる)。 -->
+<div id="touchdown" class="mono" aria-hidden="true">TOUCHDOWN — SEABED</div>
 
 <div id="reticle" aria-hidden="true">
   <span class="rBrk rL"></span><span class="rBrk rR"></span>
@@ -1380,7 +1390,7 @@ const TIER = (() => {
   if (TPIN !== 'high' && (TPIN === 'low' || isMobile || lowEnd)) return {
     name:'low',
     seg: 110, dpr: 1.5,
-    motes: 96, bubbles: 78, fore: 14, fish: 14, shafts: 7, kelp: 34, rocks: 9, streak: 160,
+    motes: 96, bubbles: 78, fore: 14, fish: 14, shafts: 7, kelp: 34, rocks: 9, streak: 160, dust: 8,
     waveDetail: 5, skyOctaves: 2, causticOctaves: 2, causticRGB: false,
     bloom: true, godray: true, dof: false, smaa: false,
     reflect: false,     // モバイルは平面反射を持たず skyFn だけに戻す
@@ -1388,7 +1398,7 @@ const TIER = (() => {
   return {
     name:'high',
     seg: 240, dpr: 2,
-    motes: 210, bubbles: 168, fore: 26, fish: 24, shafts: 13, kelp: 88, rocks: 18, streak: 320,
+    motes: 210, bubbles: 168, fore: 26, fish: 24, shafts: 13, kelp: 88, rocks: 18, streak: 320, dust: 16,
     waveDetail: 5, skyOctaves: 3, causticOctaves: 3, causticRGB: true,
     bloom: true, godray: true, dof: true, smaa: true,
     reflect: true,
@@ -2676,6 +2686,153 @@ let streakUni = null, streakMesh = null;
   streakUni = mat.uniforms;
   streakMesh = streaks;
   window.__streaks = streaks;
+}
+
+/* ================================================================
+   着底
+   ----------------------------------------------------------------
+   ★ 実測: 600m に着くのは sp≈0.985 / hpR=0 の時点で、そのとき
+     見出し(#landing)はまだ画面の 1061px 下にある。「600m到達で見出しが
+     出る」は同時ではない。so 砂煙と TOUCHDOWN は着底の瞬間に出し、
+     ライトは見出しが上がってくるまで持続させて同期させる。
+   時間割(着底を t=0 とした秒):
+     0.00        砂煙が立つ / TOUCHDOWN — SEABED 表示
+     0.20-0.70   サーチライトが立ち上がる(揺れ付き)
+     0.55-1.30   見出しがフェードイン(ライトに同期。CSS側 .75s)
+     1.70-2.20   TOUCHDOWN が消える(一拍)
+     0.00-6.50   砂煙が広がって薄れる(仕様 5〜8秒)
+     5.50-7.50   ライトが落ちる
+   ================================================================ */
+const TD_DUST_END   = 6.50;   // 砂煙が消えきる
+const TD_LIGHT_IN   = [0.20, 0.70];
+const TD_LIGHT_OUT  = [5.50, 7.50];
+const TD_HEAD_AT    = 0.55;   // 見出しのフェード開始(ライトに同期)
+const TD_TAG_OUT    = [1.70, 2.20];
+const TD_REARM_M    = 25;     // これだけ浅くなったら再武装(2回目以降)
+let touchT = -1;              // -1 = 未発火。0以上で経過秒
+let touchN = 0;               // 到達回数。2回目以降は砂煙を弱める
+let touchArmed = true;
+let touchForce = null;        // 検証用: 着底からの経過秒を外から固定する
+
+/* ================================================================
+   4.6) 着底 — 砂煙とサーチライト
+   ----------------------------------------------------------------
+   ★ どちらも「着底の時だけ」存在する。rapid と同じで、強度が 0 の間は
+     visible=false にして描画に一切参加させない。
+   ================================================================ */
+let dustUni = null, dustMesh = null, lightUni = null, lightMesh = null;
+{
+  /* ---- 砂煙。ビルボードの柔らかい板を十数枚 ---- */
+  const N = TIER.dust;
+  const g = new THREE.PlaneGeometry(1, 1);
+  const seed = new Float32Array(N * 4);
+  const rnd = mulberry32(4242);
+  for (let i = 0; i < N; i++){
+    /* ★ 半径 1.1〜5.3 で撒いたら、板がレンズを覆って「画面全体が濁った」
+       だけになった(実測: 砂煙あり/なしで全画素が平均42段暗い)。砂煙は
+       「向こうで立っているもの」なので、カメラから離して撒く。 */
+    const a = rnd() * 6.2831853, r = 1.8 + Math.sqrt(rnd()) * 4.6;
+    seed[i*4]   = Math.cos(a) * r;
+    seed[i*4+2] = Math.sin(a) * r;
+    seed[i*4+1] = rnd();                    // 立ち上がりのばらつき(0..1)
+    seed[i*4+3] = 0.7 + rnd() * 1.5;        // 大きさと速さ
+  }
+  g.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seed, 4));
+  const dmat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, side:THREE.DoubleSide,
+    uniforms:{ uT:{value:0}, uAmt:{value:0}, uFloorY:{value:SEABED_Y},
+               uOrigin:{value:new THREE.Vector3()}, uDepth:{value:0},
+               uSun:{value:SUN}, uFog:{value:fogCol},
+               uCol:{value:new THREE.Color(0.440, 0.430, 0.385)}, uGain:{value:0.52} },
+    vertexShader:`
+      attribute vec4 aSeed;
+      uniform float uT, uAmt, uFloorY;
+      uniform vec3 uOrigin;
+      varying vec2 vUv; varying float vA; varying vec3 vW;
+      void main(){
+        vUv = uv;
+        /* 個体ごとに少し遅れて立ち上がる。全部同時だと「爆発」に見える。 */
+        float lt = clamp((uT - aSeed.y * 0.55) / ${TD_DUST_END.toFixed(2)}, 0.0, 1.0);
+        /* 上がって、広がって、薄れる。上昇は最初が速く、すぐ止まる。 */
+        /* ★ 最初 rise を最大3.3mにしたら、砂煙が目線より上へ浮いて
+           「丸い玉が並んでいる」に見えた(実測)。砂は底を這って広がる。 */
+        float rise = (1.0 - pow(1.0 - lt, 2.2)) * (0.35 + aSeed.w * 0.55);
+        float grow = 1.0 + lt * 3.0 * aSeed.w;
+        vec3 c = uOrigin + vec3(aSeed.x * (1.0 + lt * 0.75), uFloorY + 0.12 + rise, aSeed.z * (1.0 + lt * 0.75));
+        vec4 mv = viewMatrix * vec4(c, 1.0);
+        /* 真円が十数枚だと「玉が並んでいる」に見える。個体ごとに横長/縦長を振る。 */
+        vec2 asp = vec2(0.95 + fract(aSeed.w * 3.7) * 0.55, 0.70 + fract(aSeed.w * 7.1) * 0.42);
+        mv.xy += position.xy * grow * asp;
+        vW = c;
+        /* 出て、消える。消え際を長く取る(砂は「散る」のではなく「薄まる」)。 */
+        vA = uAmt * smoothstep(0.0, 0.10, lt) * (1.0 - smoothstep(0.35, 1.0, lt));
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader:`
+      uniform float uDepth; uniform vec3 uSun; uniform vec3 uCol; uniform float uGain;
+      varying vec2 vUv; varying float vA; varying vec3 vW;
+      ${G_WATER}
+      void main(){
+        if (vA < 0.004) discard;
+        float r = length(vUv - 0.5) * 2.0;
+        float a = smoothstep(1.0, 0.05, r);
+        a *= a;                                   // 縁を柔らかく
+        a *= mix(1.0, 0.30, vUv.y);               // 下が濃く、上はほどける
+        vec3 col = uCol;                          // 砂の色。発光させない
+        float d = length(vW - cameraPosition);
+        vec3 V = normalize(vW - cameraPosition);
+        col = waterFogV(col, d, uDepth, mix(1.0, 0.72, uDepth), vW.y, V, uSun);
+        gl_FragColor = vec4(col, a * vA * uGain);
+      }`,
+  });
+  const dust = new THREE.InstancedMesh(g, dmat, N);
+  dust.frustumCulled = false; dust.renderOrder = 5; dust.visible = false;
+  scene.add(dust);
+  dustUni = dmat.uniforms; dustMesh = dust;
+
+  /* ---- サーチライト。コーン + 加算 + 縁をフレネルで柔らかく ---- */
+  /* ★ 最初 半径2.6・丈9.0 で作ったら、画面中央を埋める「乳白色の壁」に
+     なった。光の筋は細くて長い。半径を落として丈を伸ばす。 */
+  const cg = new THREE.ConeGeometry(1.25, 11.0, 28, 1, true);
+  cg.translate(0, -5.5, 0);            // 頂点を原点に置く(そこから下へ伸びる)
+  const lmat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, side:THREE.DoubleSide,
+    blending:THREE.AdditiveBlending,
+    uniforms:{ uAmt:{value:0}, uT:{value:0} },
+    vertexShader:`
+      varying vec3 vN; varying vec3 vW; varying vec2 vUv;
+      void main(){
+        vUv = uv;
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vW = wp.xyz;
+        vN = normalize(mat3(modelMatrix) * normal);
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }`,
+    fragmentShader:`
+      uniform float uAmt, uT;
+      varying vec3 vN; varying vec3 vW; varying vec2 vUv;
+      void main(){
+        if (uAmt < 0.004) discard;
+        /* ★ フレネル。視線に対して法線が寝ているほど濃く＝縁が柔らかい。
+           これが無いと「円錐のポリゴン」がそのまま見える。 */
+        vec3 V = normalize(cameraPosition - vW);
+        float f = 1.0 - abs(dot(normalize(vN), V));
+        /* ★ 指数を上げるほど「縁だけ」になる。2.2 では面が塗り潰されて
+           円錐のポリゴンがそのまま見えた。 */
+        f = pow(clamp(f, 0.0, 1.0), 3.6);
+        /* 根元が濃く、先へ行くほど薄い。錐面の上端が uv.y=1。
+           ★ 下端も落とす。開いた円錐の底は縁が輪として残り、
+             「硬い楕円で切れた筒」に見える(実測でそうなった)。 */
+        float along = pow(clamp(vUv.y, 0.0, 1.0), 1.6) * smoothstep(0.0, 0.22, vUv.y);
+        /* ごく弱い縦の流れ。光の中の塵。 */
+        float dustline = 0.86 + 0.14 * sin(vUv.x * 42.0 + uT * 0.9);
+        gl_FragColor = vec4(vec3(0.42, 0.62, 0.70) * f * along * dustline * uAmt * 0.34, 1.0);
+      }`,
+  });
+  const cone = new THREE.Mesh(cg, lmat);
+  cone.frustumCulled = false; cone.renderOrder = 5; cone.visible = false;
+  scene.add(cone);
+  lightUni = lmat.uniforms; lightMesh = cone;
 }
 
 /* ================================================================
@@ -4119,7 +4276,9 @@ const legibilityEl = document.getElementById('legibility');
 /* ---- 航海計器とレティクル ---------------------------------------- */
 const reticleEl = document.getElementById('reticle');
 const rapidEl   = document.getElementById('rapid');
-let rapidWarnWas = false;
+const touchdownEl = document.getElementById('touchdown');
+const landingEl   = document.getElementById('landing');
+let rapidWarnWas = false, tdShown = '';
 const simRate = document.getElementById('simRate');
 const simPit  = document.getElementById('simPit');
 const simSea  = document.getElementById('simSea');
@@ -4301,6 +4460,8 @@ let splashT = 0, splashCool = 0, splashPow = 1, prevCamY = 0.95;
 /* 深度の定義は1箇所に集約する。ルーラーの目盛り・針・現在地の帯名が
    別々の式を持つと、表示どうしが食い違う(実際に食い違っていた)。 */
 const DEPTH_MAX = 600;                 // ルーラー最下段の目盛りと一致させること
+
+
 const DEPTH_PER_UNIT = 69.8;           // ワールド1単位あたりの表示メートル
 const LOC_BLUE = 4, LOC_ABYSS = 230;   // 現在地の帯の境目
 
@@ -4468,6 +4629,16 @@ window.__diag = {
      画面が低いほど壊れるので、844px の絵だけ見ていると気付けない。 */
   /* 急速潜航を外から観測する口 */
   set rapidForce(v){ rapidForce = v; },
+  set touchForce(v){ touchForce = v; },
+  set dustCol(v){ dustUni.uCol.value.setRGB(v[0], v[1], v[2]); },
+  set dustGain(v){ dustUni.uGain.value = v; },
+  /* 着底を外から観測する口 */
+  get touchdown(){ return { t:+touchT.toFixed(2), n:touchN, armed:touchArmed,
+    dust: dustMesh ? dustMesh.visible : null, dustAmt:+dustUni.uAmt.value.toFixed(3),
+    light: lightMesh ? lightMesh.visible : null, lightAmt:+lightUni.uAmt.value.toFixed(3),
+    tag: touchdownEl ? getComputedStyle(touchdownEl).opacity : null,
+    head: landingEl ? landingEl.classList.contains('isIn') : null,
+    nDust: TIER.dust }; },
   get rapid(){ return { on:rapidOn, v:+rapid.toFixed(3), dir:rapidDir,
     vel:+scrollVel.toFixed(3), fov:+camera.fov.toFixed(2), fovBase,
     ca:+gradePass.uniforms.uRapid.value.toFixed(3),
@@ -4537,6 +4708,8 @@ window.__diag = {
                return { n, worst:+worst.toFixed(2) }; })(),
              list: out };
   },
+  get depth(){ return { m:+lastDepthM.toFixed(1), shown:+depthShown.toFixed(1), hpR:+hpR.toFixed(3),
+                        contentTopDoc, sp:+sp.toFixed(3) }; },
   get seam(){ return {
     hpR, hp, cEff: cEff(hpR), seamDelta,
     seamPx: innerHeight * (1 - cEff(hpR)),
@@ -5001,6 +5174,27 @@ function frame(mode){
      最後に食い違わないようにする。 */
   const depthM = Math.min(DEPTH_MAX, Math.max(0, -camYBase) * DEPTH_PER_UNIT);
   lastDepthM = depthM;
+  /* ---- 着底の発火と時計 ---- */
+  /* ★ 判定は depthM(瞬間値)ではなく depthShown(表示されている値)。
+     計器は0.55秒の一次遅れで追うので、瞬間値で撃つと「DEPTH 594.0M」の
+     まま TOUCHDOWN が出る(実測でそうなった)。仕様は
+     「HUDのDEPTHが600.0Mに確定する瞬間」なので、表示側に合わせる。
+     599.95 以上＝小数1桁で "600.0" と出る境目。 */
+  /* ★ reduced-motion では時計そのものを回さない。砂煙と揺れを省いても、
+     帯のフェードとライトの立ち上がりが残るかぎり画面は動き続ける。
+     degrade.mjs は「reduced では24フレーム空けた2枚が1画素も違わない」を
+     合否にしていて、実測でここが 416画素(帯の1行ぶん)割れた。
+     見出しは data-anim が付かない経路で最初から出ているので、
+     何も足さないのが正しい落とし方。 */
+  if (touchArmed && !reduced && depthShown >= DEPTH_MAX - 0.05){
+    touchArmed = false; touchT = 0; touchN++;
+  } else if (!touchArmed && depthM < DEPTH_MAX - TD_REARM_M){
+    touchArmed = true;                       // 浮上したら次の到達に備える
+  }
+  if (touchT >= 0){
+    touchT += dt;
+    if (touchT > TD_LIGHT_OUT[1] + 0.5) touchT = -1;   // 演出が終わったら止める
+  }
   /* 計器の針は即応、数字は0.55秒の一次遅れ。数字が瞬間値だと桁が暴れて読めない */
   depthShown = smoothDamp(depthShown, depthM, depthVel, lag1(0.55), dt);
   const nowMs = performance.now();
@@ -5143,6 +5337,59 @@ function frame(mode){
       streakUni.uCam.value.copy(camera.position);
     }
   }
+  /* ---- 着底の効果を配る ---- */
+  if (dustMesh){
+    const T = touchForce == null ? touchT : touchForce;
+    /* 砂煙。★ 梯子が下がっている端末(＝既に重い)では出さない。
+       reduced-motion でも出さない(仕様: 砂煙と揺れを省きフェードのみ)。 */
+    /* ★ 砂煙が薄れきったらメッシュごと降ろす。シェーダ側で alpha が 0 に
+       なっても、visible のままだと透明な板を十数枚塗り続ける。 */
+    const dustOK = T >= 0 && T <= TD_DUST_END + 0.4 && !reduced && qStep <= 2 && TIER.dust > 0;
+    /* 2回目以降は弱める(仕様: 簡易版) */
+    const dAmt = dustOK ? (touchN <= 1 ? 1.0 : 0.42) : 0;
+    if (dustMesh.visible !== (dAmt > 0.004)) dustMesh.visible = dAmt > 0.004;
+    if (dAmt > 0.004){
+      dustUni.uT.value = T;
+      dustUni.uAmt.value = dAmt;
+      dustUni.uDepth.value = depth01;
+      /* 舞い上がるのは「着底した場所」。ただし真下だとレンズに貼り付くので、
+         視線方向へ 3.2m 送って、画面の下半分(＝砂が見えている所)で立たせる。 */
+      const fy = camera.rotation.y;
+      dustUni.uOrigin.value.set(camera.position.x - Math.sin(fy) * 3.2, 0,
+                                camera.position.z - Math.cos(fy) * 3.2);
+    }
+    /* サーチライト。立ち上がり→保持→落ちる。 */
+    let lAmt = 0;
+    if (T >= 0){
+      lAmt = ss(TD_LIGHT_IN[0], TD_LIGHT_IN[1], T) * (1 - ss(TD_LIGHT_OUT[0], TD_LIGHT_OUT[1], T));
+    }
+    if (lightMesh.visible !== (lAmt > 0.004)) lightMesh.visible = lAmt > 0.004;
+    if (lAmt > 0.004){
+      lightUni.uAmt.value = lAmt;
+      lightUni.uT.value = t;
+      /* 少し揺れる。★ reduced-motion では揺らさない(仕様)。 */
+      const sw = reduced ? 0 : 1;
+      /* ★ カメラの真上に置くと筒の中に入ってしまう。前方へ出して、
+         画面を横切る1本の筋として見せる。 */
+      lightMesh.position.set(camera.position.x + 2.30 + Math.sin(t*0.55)*0.26*sw,
+                             camera.position.y + 4.2,
+                             camera.position.z - 6.2);
+      lightMesh.rotation.set(Math.sin(t*0.43)*0.05*sw, 0, -0.26 + Math.sin(t*0.37)*0.035*sw);
+    }
+    /* 見出しはライトに同期してフェードイン。
+       ★ 既存の IntersectionObserver は残す —— JS無効・reduced-motion・
+         演出が発火しない経路でも見出しが必ず出るのはそちら側の役目。
+         ここは「先に出す」だけで、出さない方向には一切働かない。 */
+    if (T >= TD_HEAD_AT && landingEl && !landingEl.classList.contains('isIn')){
+      landingEl.classList.add('isIn');
+    }
+    if (touchdownEl){
+      const tag = T < 0 ? 0 : ss(0.0, 0.18, T) * (1 - ss(TD_TAG_OUT[0], TD_TAG_OUT[1], T));
+      const v = tag.toFixed(3);
+      if (v !== tdShown){ tdShown = v; touchdownEl.style.setProperty('--td', v); }
+    }
+  }
+
   /* 色収差は低ティアでは出さない(仕様) */
   gradePass.uniforms.uRapid.value = TIER.name === 'high' ? rapid : 0;
   if (rapidEl){
