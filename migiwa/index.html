@@ -1246,6 +1246,12 @@ import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
              canvas を読み出せるようにするため。通常表示には影響しない)。 */
 const QS   = new URLSearchParams(location.search);
 const DIAG = QS.get('diag') === '1';
+/* ?bench=1 … 実機に自分で測らせるモード。
+   この開発環境では iOS Safari を再現できない(WebKit はプロキシで入手できず、
+   仮に入っても Linux 版は描画スタックが別物で、知りたいことは分からない)。
+   なので端末側に走らせて、結果をコピー/共有できるテキストで出す。
+   通常表示には一切影響しない —— このフラグが無ければ何も起きない。 */
+const BENCH = QS.get('bench') === '1';
 /* 降格経路を実機で確かめるための強制フラグ。
    ?force=ldr(8bitへ降格) / nodepth(深度テクスチャ無し) / both
    能力があっても無いものとして扱う。通常表示には影響しない。 */
@@ -1421,6 +1427,15 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = RENDER.exposure;
 let _expInit = RENDER.exposure;   // ループ側の初期値に使う
 stageEl.appendChild(renderer.domElement);
+/* ★ verify.mjs は window.__ctxLost を読んで「context lost 0回」を判定するが、
+   これを立てる側がどこにも無く、常に 0 のまま素通りしていた。実際に数える。
+   iOS Safari はメモリが逼迫すると WebGL コンテキストを取り上げるので、
+   実機計測(?bench=1)ではここが本命の指標になる。 */
+window.__ctxLost = 0;
+renderer.domElement.addEventListener('webglcontextlost', (e) => {
+  window.__ctxLost = (window.__ctxLost || 0) + 1;
+  e.preventDefault();            // restore を受け取れるようにする
+}, false);
 document.getElementById('dprv').textContent = DPR.toFixed(1);
 
 const scene  = new THREE.Scene();
@@ -3823,6 +3838,7 @@ const FPS_WIN = [];
 let framesTotal = 0;
 function pushFrame(now, dt){
   framesTotal++;
+  if (BENCH) benchSample(now, dt);
   FPS_WIN.push([now, dt]);
   const cut = now - 5000;
   while (FPS_WIN.length && FPS_WIN[0][0] < cut) FPS_WIN.shift();
@@ -3839,7 +3855,7 @@ function fpsStats(){
    実測して差分を取る。?diag=1 のときだけ、起動直後に一度走る。
    1:全部 → 2:ATMOS無し → 3:ATMOS+Bloom無し → 4:直描画(ポスト無し) */
 const CAL_WARM = 6, CAL_MIN_FRAMES = 8, CAL_MIN_MS = 400, CAL_MAX_FRAMES = 60;
-const CAL = DIAG ? { step:0, frames:0, acc:0, result:null } : null;
+const CAL = (DIAG || BENCH) ? { step:0, frames:0, acc:0, result:null } : null;
 function calibrate(dt){
   const c = CAL;
   if (c.step === 0){
@@ -5262,6 +5278,194 @@ const bootTick = setInterval(()=>{
   bootFill.style.width = (bootP*100) + '%';
   if (bootP >= 1) clearInterval(bootTick);
 }, 90);
+
+/* ================================================================
+   実機計測 ?bench=1
+   ----------------------------------------------------------------
+   ここは開発者がこの環境で iOS Safari を再現できないことへの回答。
+   端末に自分で走らせて、貼れる形の数字を出す。
+
+   ・ページ全体を実時間で一定に自動スクロールする(遅い端末でも
+     最後まで通るよう、フレーム数ではなく壁時計で位置を決める)
+   ・区間ごと(水面 / 潜航浅 / 潜航深 / 本文の凪)にフレーム時間を貯める
+   ・平均ではなく中央値と下位5%も出す。平均だけだと「時々刺さるカクつき」
+     が見えない —— 実機で効くのはそっち
+   ・開始は必ずボタン。iOS はユーザー操作の無いクリップボード/共有を拒む
+   ================================================================ */
+/* 潜航(ピン区間)と本文で時間を分ける。文書の高さで按分すると、本文が
+   全体の大半を占めるせいで**潜航がほんの数秒で通り過ぎる**。実測では
+   「潜航(深)」の標本が0枚になった。重いのは潜航なので、そこへ厚く配る。 */
+const BENCH_SECONDS = 34;
+const BENCH_DIVE_SHARE = 0.62;
+/* 起動直後はシェーダのコンパイルとテクスチャのアップロードが混ざる。
+   ★ ここを「1秒捨てる」で書いていたら、遅い端末では1秒＝1枚しか進まず、
+     コンパイルの19秒のフレームがそのまま「最悪1枚」に出た。
+     捨てる単位は時間ではなく**枚数**。ただし遅すぎる端末で暖機だけで
+     終わらないよう、実時間の上限も持たせる。 */
+const BENCH_WARM_FRAMES = 20, BENCH_WARM_MAX_MS = 4000;
+const bench = { on:false, warm:true, tw:0, t0:0, n:0,
+                phases:new Map(), done:false, endY:0, splitY:0 };
+
+/* ★ 区間の判定に潜航の進捗 sp を使ってはいけない。sp はスクロールへ
+   一次遅れで追うので、フレームレートが低い端末では追いつく前に本文へ
+   入ってしまい、「潜航(深)」の標本が0枚になる(実測でそうなった)。
+   スクロール位置は遅れが無く、そのフレームで実際に描いた場所そのもの。 */
+function benchPhase(){
+  const y = scrollY, sp2 = bench.splitY || 1;
+  if (y > sp2) return '本文(凪)';
+  if (y < sp2 * 0.02) return '水面';
+  return y < sp2 * 0.50 ? '潜航(浅)' : '潜航(深)';
+}
+
+function benchSample(now, dt){
+  if (!bench.on) return;
+  /* --- 暖機。位置は動かさず、記録もしない --- */
+  if (bench.warm){
+    if (++bench.n >= BENCH_WARM_FRAMES || now - bench.tw >= BENCH_WARM_MAX_MS){
+      bench.warm = false; bench.t0 = now;
+    }
+    return;
+  }
+  const el = (now - bench.t0) / 1000;
+  const k = benchPhase();
+  let a = bench.phases.get(k);
+  if (!a){ a = []; bench.phases.set(k, a); }
+  a.push(dt);
+
+  /* 潜航と本文で時間を分けて送る */
+  const u = Math.min(1, el / BENCH_SECONDS);
+  let y;
+  if (u <= BENCH_DIVE_SHARE){
+    y = bench.splitY * (u / BENCH_DIVE_SHARE);
+  } else {
+    const v = (u - BENCH_DIVE_SHARE) / (1 - BENCH_DIVE_SHARE);
+    y = bench.splitY + (bench.endY - bench.splitY) * v;
+  }
+  scrollTo(0, Math.round(y));
+  if (el >= BENCH_SECONDS){
+    scrollTo(0, bench.endY);
+    bench.on = false; bench.done = true; benchReport();
+  }
+}
+
+function benchQ(arr, q){
+  if (!arr.length) return 0;
+  const a = arr.slice().sort((x,y) => x-y);
+  return a[Math.min(a.length-1, Math.max(0, Math.floor(a.length*q)))];
+}
+
+function benchReport(){
+  const L = [];
+  const nav = navigator;
+  L.push('汀ノ庭 実機計測');
+  L.push('UA: ' + nav.userAgent);
+  L.push(`画面 ${innerWidth}×${innerHeight} @${devicePixelRatio} / コア ${nav.hardwareConcurrency || '?'}` +
+         ` / メモリ ${nav.deviceMemory || '?'}GB / saveData ${!!(nav.connection && nav.connection.saveData)}`);
+  L.push(`ティア ${TIER.name} / 実DPR ${DPR.toFixed(2)} / 粒子 ${TIER.motes}+${TIER.bubbles}+${TIER.fore}` +
+         ` / 魚 ${TIER.fish} / 光芒 ${TIER.shafts}`);
+  const dropped = LADDER.slice(0, qStep).map(l => l.name);
+  L.push(`品質の梯子 ${qStep}段` + (dropped.length ? '（' + dropped.join(' / ') + '）' : '（落とさず）'));
+  L.push(`コンテキスト喪失 ${window.__ctxLost || 0} 回 / 総フレーム ${framesTotal}`);
+  L.push('');
+  L.push('区間        枚数   平均fps  中央fps  下位5%  最悪1枚');
+  for (const k of ['水面','潜航(浅)','潜航(深)','本文(凪)']){
+    const a = bench.phases.get(k);
+    if (!a || !a.length){ L.push(k.padEnd(10) + '  —'); continue; }
+    let sum = 0; for (const d of a) sum += d;
+    const avg = a.length / sum;
+    const med = 1 / benchQ(a, 0.50);
+    const p95 = 1 / benchQ(a, 0.95);        // 遅い側の5%
+    const worst = benchQ(a, 1.0) * 1000;
+    L.push(k.padEnd(10) + String(a.length).padStart(5) +
+           avg.toFixed(1).padStart(9) + med.toFixed(1).padStart(9) +
+           p95.toFixed(1).padStart(8) + (worst.toFixed(0) + 'ms').padStart(9));
+  }
+  /* パス別コストは「構成を切り替えながら実測して差分を取る」方式なので、
+     フレームが不安定な端末では差が符号ごと壊れる(実測で Bloom が合計の
+     13倍という値が出た)。整合しない時は数字を出さない —— 嘘の数字を
+     渡す方が、無いより悪い。 */
+  const c = CAL && CAL.result;
+  const sane = c && c.total > 0 && c.scene >= 0 && c.bloom >= 0 && c.atmos >= 0 &&
+               c.post >= 0 && (c.scene + c.bloom + c.atmos + c.post) <= c.total * 1.35;
+  if (sane) L.push('', `パス別 合計 ${c.total}ms（シーン ${c.scene} / ATMOS ${c.atmos}` +
+                       ` / Bloom ${c.bloom} / その他post ${c.post}）`);
+  else if (c) L.push('', 'パス別 測定不能（フレームが不安定でした）');
+  const txt = L.join('\n');
+  const box = document.getElementById('benchOut');
+  box.value = txt;
+  document.getElementById('benchPanel').dataset.state = 'done';
+}
+
+if (BENCH){
+  const p = document.createElement('div');
+  p.id = 'benchPanel';
+  p.dataset.state = 'idle';
+  p.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#061016;color:#dfe9ec;' +
+    'font:13px/1.7 ui-monospace,Menlo,monospace;padding:18px;overflow:auto;' +
+    '-webkit-text-size-adjust:100%';
+  p.innerHTML =
+    '<h1 style="font:600 15px/1.6 system-ui;margin:0 0 10px">実機計測</h1>' +
+    '<p id="benchMsg" style="margin:0 0 14px;opacity:.8">' +
+      '「はじめる」を押すと、約' + BENCH_SECONDS + '秒かけてページを自動でスクロールしながら計測します。' +
+      '<br>そのあいだ<b>画面に触らないでください</b>（触ると数字が変わります）。' +
+      '<br>終わったら結果をコピーして貼り付けてください。</p>' +
+    '<button id="benchGo" style="font:600 15px/1 system-ui;padding:14px 22px;border:0;' +
+      'border-radius:8px;background:#2ea9c4;color:#04121a">はじめる</button>' +
+    '<div id="benchDone" style="display:none">' +
+      '<textarea id="benchOut" readonly style="width:100%;height:46vh;background:#02090d;' +
+        'color:#cfe3e8;border:1px solid #16313c;border-radius:8px;padding:10px;' +
+        'font:12px/1.6 ui-monospace,Menlo,monospace"></textarea>' +
+      '<div style="display:flex;gap:10px;margin-top:10px">' +
+        '<button id="benchCopy" style="font:600 15px/1 system-ui;padding:13px 18px;border:0;' +
+          'border-radius:8px;background:#2ea9c4;color:#04121a">コピー</button>' +
+        '<button id="benchShare" style="font:600 15px/1 system-ui;padding:13px 18px;border:0;' +
+          'border-radius:8px;background:#20404c;color:#dfe9ec">共有</button>' +
+      '</div></div>';
+  document.body.appendChild(p);
+
+  const go = p.querySelector('#benchGo');
+  go.addEventListener('click', () => {
+    go.style.display = 'none';
+    p.querySelector('#benchMsg').textContent = '計測中… 画面に触らないでください。';
+    /* 計測のあいだはパネルを完全に消す。被せたままだと、その合成ぶんが
+       そのまま数字に乗る(測りたいのはページ本体の絵)。
+       進捗は小さな札1枚だけ —— これも pointer-events は切っておく。 */
+    p.style.display = 'none';
+    const tag = document.createElement('div');
+    tag.id = 'benchTag';
+    tag.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);' +
+      'z-index:99999;pointer-events:none;background:rgba(4,18,26,.72);color:#cfe3e8;' +
+      'font:600 12px/1 system-ui;padding:8px 12px;border-radius:99px';
+    tag.textContent = '計測中 …';
+    document.body.appendChild(tag);
+    bench.endY = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    /* 潜航と本文の境目。__diag は常に生えているのでそこから取る。 */
+    const ct = (window.__diag && window.__diag.seam && window.__diag.seam.contentTopDoc) || 0;
+    bench.splitY = Math.min(bench.endY, Math.max(1, Math.round(ct)));
+    bench.tw = performance.now();
+    bench.warm = true; bench.n = 0;
+    bench.on = true;
+  });
+  p.querySelector('#benchCopy').addEventListener('click', async () => {
+    const t = p.querySelector('#benchOut');
+    try { await navigator.clipboard.writeText(t.value); }
+    catch { t.select(); document.execCommand('copy'); }
+    p.querySelector('#benchCopy').textContent = 'コピーした';
+  });
+  p.querySelector('#benchShare').addEventListener('click', () => {
+    const t = p.querySelector('#benchOut').value;
+    if (navigator.share) navigator.share({ text: t }).catch(()=>{});
+  });
+  /* 結果が出たらパネルを戻す */
+  new MutationObserver(() => {
+    if (p.dataset.state !== 'done') return;
+    const tag = document.getElementById('benchTag');
+    if (tag) tag.remove();
+    p.style.display = '';
+    p.querySelector('#benchMsg').textContent = '計測が終わりました。下のテキストをコピーして貼り付けてください。';
+    p.querySelector('#benchDone').style.display = 'block';
+  }).observe(p, { attributes:true, attributeFilter:['data-state'] });
+}
 
 requestAnimationFrame(()=>{
   // 最初の1フレームをシェーダのコンパイルに使い、そのあとで見せる
