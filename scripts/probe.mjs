@@ -29,10 +29,27 @@ const VIEWS = {
   w821:    { w: 821,  h: 900, dsf: 1, mobile: false },
   w820:    { w: 820,  h: 900, dsf: 1, mobile: false },
   mobile:  { w: 390,  h: 844, dsf: 2, mobile: true  },
-  iphone:  { w: 390,  h: 664, dsf: 3, mobile: true  },
+  /* ★ 実機の iOS Safari は URL バーのぶん、見える高さが画面サイズより
+     ずっと短い。390×844 で撮ると縦に余裕がある条件で見てしまうので、
+     構図の判断は必ずこちらでやること。 */
+  iphone:  { w: 390,  h: 664, dsf: 3, mobile: true  },   // ★利用者の実機(iPhone 14) URLバーあり
   iphone2: { w: 459,  h: 869, dsf: 3, mobile: true  },
+  /* 上のURLバーが出ている時の低い方 */
+  iphone2s:{ w: 459,  h: 822, dsf: 3, mobile: true  },
+  se:      { w: 375,  h: 553, dsf: 2, mobile: true  },   // SE     いちばん狭い
+  mini:    { w: 375,  h: 629, dsf: 3, mobile: true  },   // 13 mini
+  pmax:    { w: 430,  h: 745, dsf: 3, mobile: true  },   // 15 Pro Max
+  iphoneT: { w: 390,  h: 750, dsf: 3, mobile: true  },   // ★同上   URLバーが縮んだ後
 };
-const V = VIEWS[VIEW] || VIEWS.desktop;
+/* ★ 知らないビューポート名を desktop に落とさない。
+   実際に2回やられた: probe には無く verify にだけある名前を渡したせいで、
+   1600×900 の結果を「iPhone の結果」として読み、無い崩れを追いかけた。
+   黙って別のものを測るくらいなら止まる方がいい。 */
+if (!VIEWS[VIEW]){
+  console.error(`不明な --view=${VIEW}。使えるのは: ${Object.keys(VIEWS).join(' / ')}`);
+  process.exit(2);
+}
+const V = VIEWS[VIEW];
 
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.mjs':'text/javascript',
   '.css':'text/css', '.json':'application/json', '.webp':'image/webp', '.png':'image/png',

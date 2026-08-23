@@ -55,13 +55,29 @@ const VIEWS = {
   /* 実機Safariは上下のUIぶん表示領域が低い。844だけで見ると
      HUDと3Dの重なりを見落とす(実際に見落とした)。 */
   iphone:  { w: 390,  h: 664, dsf: 3, mobile: true  },
-  /* 利用者の実機の実測値(iOS 18.7 / Safari 26.6 / dPR 3.00)。
-     390 より横に70px広く、縦も高い。想定だけで測らずここも通す。 */
+  /* ★ 利用者の実機は iPhone 14（本人に確認済み）。つまり上の 390×664 が
+     実機のURLバー表示時で、390×750 がバーの縮んだ後。構図の判断はそこで行う。
+     ここ(459×869)は以前「利用者の実機の実測値」と書かれていたが**誤り**で、
+     その思い込みのせいで一度、実機に無い前提でレイアウトを見ていた。
+     別系統の広い端末として残すが、実機の基準にはしない。 */
   iphone2: { w: 459,  h: 869, dsf: 3, mobile: true  },
   /* 上のURLバーが出ている時の低い方 */
   iphone2s:{ w: 459,  h: 822, dsf: 3, mobile: true  },
+  /* ★ 背の低い方の iPhone。ここでだけ出る崩れがある(px と vh を混ぜた所は
+     画面が低いほど壊れる)。probe.mjs と同じ値にしておくこと。 */
+  se:      { w: 375,  h: 553, dsf: 2, mobile: true  },   // SE  いちばん狭い
+  mini:    { w: 375,  h: 629, dsf: 3, mobile: true  },   // 13 mini
+  pmax:    { w: 430,  h: 745, dsf: 3, mobile: true  },   // 15 Pro Max
 };
-const V = VIEWS[VIEW] || VIEWS.desktop;
+/* ★ 知らないビューポート名を desktop に落とさない。
+   実際に2回やられた: probe には無く verify にだけある名前を渡したせいで、
+   1600×900 の結果を「iPhone の結果」として読み、無い崩れを追いかけた。
+   黙って別のものを測るくらいなら止まる方がいい。 */
+if (!VIEWS[VIEW]){
+  console.error(`不明な --view=${VIEW}。使えるのは: ${Object.keys(VIEWS).join(' / ')}`);
+  process.exit(2);
+}
+const V = VIEWS[VIEW];
 
 /* 撮影する3点。スクロール位置は進捗バーが目標値へ収まるまで待ってから撮る
    (減衰が効いているので、位置を代入した直後はまだカメラが動いている)。 */
@@ -173,6 +189,14 @@ await page.waitForFunction(() => document.body.classList.contains('ready'), { ti
 
 /* パス別コストの計測が終わるまで待つ(画面がちらつく区間なので撮影前に済ませる) */
 await page.waitForFunction(() => window.__diag && window.__diag.cost, { timeout: 120000 }).catch(() => {});
+
+/* ★ ヒーローの当たり判定は「まだ一度もスクロールしていない」ここで採る。
+   後ろで採ると、目次の検査などで本文まで行ったあとの状態を見てしまい、
+   カメラが水面へ戻りきる前の位置でカードを測ることになる。 */
+const heroFit = await page.evaluate(() => {
+  try { return window.__diag && window.__diag.heroFit; }
+  catch (e) { return { __err: String(e) }; }
+}).catch(e => ({ __err: 'evaluate: ' + e }));
 /* FPSの計測窓(5秒)を満たす */
 await page.waitForTimeout(5200);
 
@@ -485,6 +509,18 @@ const verdict = {
                                                : '目次モードでない幅(n/a)' },
   '汀線: 計器が600Mを超えない':  { pass: seam ? seam.depthMax <= 600.01 : null,
                                value: seam ? seam.depthMax + 'M' : 'n/a' },
+  /* ★ 縦画面のヒーローで、要素どうしが被っていないこと。
+     #meter は top:88px の固定px、#hero は vh だったので、画面が低いほど
+     見出しが DEPTH に潜り込んでいた(SE で 24px)。844px の絵ばかり見て
+     いて気付けなかったので、機械が見る。 */
+  'ヒーローが縦画面で被っていない': (() => {
+    if (!heroFit || !heroFit.portrait) return { pass: null, value: '横長(n/a)' };
+    const bad = Object.entries(heroFit)
+      .filter(([k, v]) => k.includes('被る') && v > 0)
+      .map(([k, v]) => `${k} ${v}px`);
+    return { pass: bad.length === 0,
+             value: bad.length ? bad.join(' / ') : `衝突0 / カード幅 ${heroFit.cardW}%` };
+  })(),
   '横スクロールが出ていない':    { pass: seam ? !seam.overflowX : null,
                                value: seam ? String(!seam.overflowX) : 'n/a' },
   '魚が画面に出ている':         { pass: fish ? fish.visMax >= 1 : null,
