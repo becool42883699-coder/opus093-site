@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /**
- * verify.mjs — public/lab/trexworks_umiatari_v6.html の自動検証
+ * verify.mjs — 指定したページの自動検証(--src= 必須)
  *
  * 改良ループ(実装 → 検証 → 判定)の「検証」を担う。主観を挟まず、
  * 数値とスクリーンショットだけを artifacts/loop-NN/ に積む。
  *
- *   node scripts/verify.mjs                  # 1600x900
- *   node scripts/verify.mjs --view=mobile    # 390x844 で撮る
- *   node scripts/verify.mjs --view=iphone    # 390x664 dsf3(実機のSafariに近い)
- *   node scripts/verify.mjs --tier=high      # 端末判定を上書きして高品質の経路を通す
- *   node scripts/verify.mjs --force=ldr      # 降格経路(8bit / 深度テクスチャ無し)
+ *   node scripts/verify.mjs --src=public/migiwa/index.html          # 1600x900
+ *   node scripts/verify.mjs --src=… --view=mobile   # 390x844 で撮る
+ *   node scripts/verify.mjs --src=… --view=iphone   # 390x664 dsf3(実機のSafariに近い)
+ *   node scripts/verify.mjs --src=… --tier=high     # 端末判定を上書きして高品質の経路を通す
+ *   node scripts/verify.mjs --src=… --force=ldr     # 降格経路(8bit / 深度テクスチャ無し)
  *
  * three はページの隣の vendor/ から読む。検証するファイルと公開する
  * ファイルは完全に同一(以前は import map の URL だけが違っていた)。
@@ -34,9 +34,19 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 /* 既定は lab の検証用ページ。--src= で別のページを指せる
    (汀ノ庭のように、同じ演出を土台にした別サイトを同じ基準で測るため)。
    隣の vendor/ をそのまま並べて配るので、検証と公開で同じファイルになる。 */
-const SRC  = path.resolve(ROOT,
-  (process.argv.slice(2).find(a => a.startsWith('--src=')) || '').split('=')[1]
-  || 'public/lab/trexworks_umiatari_v6.html');
+/* ★ 既定値を持たせない。以前は既定が lab のページで、--src= を忘れると
+   **汀ノ庭を1度も開かないまま「全項目PASS」と出た**(実際に踏んだ)。
+   lab のページには __diag.seam / fish / heroFit が無いので、汀ノ庭向けの
+   7項目が静かに n/a になり、それが合格に見えていた。 */
+const SRC_ARG = (process.argv.slice(2).find(a => a.startsWith('--src=')) || '').split('=')[1];
+if (!SRC_ARG) {
+  console.error('--src= が要る。検証するページを明示すること。');
+  console.error('  node scripts/verify.mjs --src=public/migiwa/index.html');
+  console.error('  node scripts/verify.mjs --src=public/lab/trexworks_umiatari_v6.html');
+  process.exit(2);
+}
+const SRC  = path.resolve(ROOT, SRC_ARG);
+if (!fs.existsSync(SRC)) { console.error(`--src= が無い: ${SRC_ARG}`); process.exit(2); }
 const ART  = path.join(ROOT, 'artifacts');
 
 const argv     = process.argv.slice(2);
@@ -533,9 +543,17 @@ const report = { loop: loopNo, view: VIEW, url: BASE, diag, overlay, hudOverlap,
 fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify(report, null, 2));
 
 console.log(`\n=== loop-${String(loopNo).padStart(2, '0')} (${VIEW} ${V.w}x${V.h}) ===`);
+console.log(`  対象 ${SRC_ARG}`);
 for (const [k, v] of Object.entries(verdict)) {
   const mark = v.pass === null ? '—' : (v.pass ? 'PASS' : 'FAIL');
   console.log(`  [${mark}] ${k}: ${v.value}`);
+}
+/* ★ 「測れなかった」を静かに通さない。n/a は合格ではない。 */
+const naKeys = Object.entries(verdict).filter(([, v]) => v.pass === null).map(([k]) => k);
+if (naKeys.length) {
+  console.log(`  ※ 判定なし ${naKeys.length}件 —— 合格ではない。`
+            + `この構成で該当しないのか、読み出し口が無いのかを確かめること: ${naKeys.join(' / ')}`);
+  if (!seam) console.log('  ※ このページに __diag.seam が無い。--src= の指す先が違わないか確かめること。');
 }
 console.log(`  バッファ ${diag.render.hdr ? 'HalfFloat' : 'UnsignedByte(降格)'} / 深度 ${diag.render.depth ? '有効' : '無効(降格)'} / DPR ${diag.dpr}`);
 if (diag.cost) console.log(`  コスト: シーン ${diag.cost.scene}ms / Bloom ${diag.cost.bloom}ms / ATMOS ${diag.cost.atmos}ms / その他 ${diag.cost.post}ms / 合計 ${diag.cost.total}ms`);
