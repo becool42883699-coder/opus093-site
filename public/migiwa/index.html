@@ -266,6 +266,24 @@
 
   #sim{position:absolute; top:112px; right:var(--gut); text-align:right; font-size:8.5px; line-height:2.1; letter-spacing:.18em; opacity:.42}
   #sim b{color:var(--line); font-weight:500}
+  /* ---- 中央: 急速潜航の警告 ---- */
+  :root{--warn:#ffb27a}
+  #rapid{
+    position:fixed; left:50%; top:calc(50% + 26px); transform:translateX(-50%);
+    z-index:6; pointer-events:none; white-space:nowrap;
+    font-size:9px; letter-spacing:.42em; text-indent:.42em;
+    color:var(--warn, #ffb27a);
+    opacity:0;
+  }
+  html.js body.ready #rapid{opacity:var(--rap, 0)}
+  /* 点滅。★ 明滅の下限を 0 にしない —— 完全に消えると「壊れて出ている」
+     ように見える。仕様の「点滅」は、読める範囲での明滅。 */
+  @keyframes rapidBlink{ 0%,100%{filter:none} 50%{filter:brightness(.45)} }
+  html.js body.ready #rapid{animation:rapidBlink .62s steps(1,end) infinite}
+  @media (prefers-reduced-motion:reduce){ #rapid{display:none} }
+  /* RATE の警告色。計器そのものは動かさず、色だけ変える */
+  #sim b.warn{color:var(--warn, #ffb27a); animation:rapidBlink .62s steps(1,end) infinite}
+
   /* ---- 中央: レティクル(人工水平儀) ----
      ★ 常時うっすら。潜っている間だけ出す(水面と本文では邪魔になる)。 */
   #reticle{
@@ -945,6 +963,11 @@
 <!-- レティクル。★ 画面中央に置くので、どの画面幅でも文字の領域と
      取り合わない(モバイルで計器を増やせない理由がここだけ無い)。
      水平線はカメラの実ロールで傾く＝人工水平儀。 -->
+<!-- 急速潜航の警告。★ 画面中央に置くのはレティクルと同じ理由で、
+     どの画面幅でも文字の領域と取り合わないため。#sim(計器)は 820px 以下で
+     隠れるので、そこへ入れるとスマホで一度も出ない。 -->
+<div id="rapid" class="mono" aria-hidden="true">RAPID DESCENT</div>
+
 <div id="reticle" aria-hidden="true">
   <span class="rBrk rL"></span><span class="rBrk rR"></span>
   <span class="rHz"><i></i><i></i></span>
@@ -1357,7 +1380,7 @@ const TIER = (() => {
   if (TPIN !== 'high' && (TPIN === 'low' || isMobile || lowEnd)) return {
     name:'low',
     seg: 110, dpr: 1.5,
-    motes: 96, bubbles: 78, fore: 14, fish: 14, shafts: 7, kelp: 34, rocks: 9,
+    motes: 96, bubbles: 78, fore: 14, fish: 14, shafts: 7, kelp: 34, rocks: 9, streak: 160,
     waveDetail: 5, skyOctaves: 2, causticOctaves: 2, causticRGB: false,
     bloom: true, godray: true, dof: false, smaa: false,
     reflect: false,     // モバイルは平面反射を持たず skyFn だけに戻す
@@ -1365,7 +1388,7 @@ const TIER = (() => {
   return {
     name:'high',
     seg: 240, dpr: 2,
-    motes: 210, bubbles: 168, fore: 26, fish: 24, shafts: 13, kelp: 88, rocks: 18,
+    motes: 210, bubbles: 168, fore: 26, fish: 24, shafts: 13, kelp: 88, rocks: 18, streak: 320,
     waveDetail: 5, skyOctaves: 3, causticOctaves: 3, causticRGB: true,
     bloom: true, godray: true, dof: true, smaa: true,
     reflect: true,
@@ -2584,6 +2607,78 @@ const shafts = [];
 }
 
 /* ================================================================
+   4.5) 急速潜航の泡 — カメラの周りを線状に流れる
+   ----------------------------------------------------------------
+   ★ 動きは全部 頂点シェーダ。数百個を毎フレーム CPU で動かすと、
+     この演出のためだけに JS の予算を食う。位置は「種 + 時刻」から
+     その場で解くので、CPU 側の毎フレーム処理は uniform 3本だけ。
+   ★ カメラ相対の円筒に配置する。ワールドに置くとカメラが降りるほど
+     置き去りになり、いちばん速い瞬間に泡が消える。
+   ★ 板はビュー空間で組む(スクリーンに正対)。流れる向きは画面の縦。
+   ================================================================ */
+let streakUni = null, streakMesh = null;
+{
+  const N = TIER.streak;
+  const g = new THREE.PlaneGeometry(1, 1);
+  const seed = new Float32Array(N * 4);
+  const rnd = mulberry32(90210);
+  for (let i = 0; i < N; i++){
+    /* 円筒。半径 0.6〜7.5m。近すぎると顔に貼り付き、遠いと線に見えない */
+    const a = rnd() * 6.2831853, r = 0.6 + Math.sqrt(rnd()) * 6.9;
+    seed[i*4]   = Math.cos(a) * r;          // x
+    seed[i*4+1] = rnd();                    // 0..1 円筒内の高さの位相
+    seed[i*4+2] = Math.sin(a) * r;          // z
+    seed[i*4+3] = 0.6 + rnd() * 1.6;        // 大きさと速さのばらつき
+  }
+  g.setAttribute('aSeed', new THREE.InstancedBufferAttribute(seed, 4));
+  const mat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:false, depthTest:true, side:THREE.DoubleSide,
+    blending:THREE.NormalBlending,
+    uniforms:{ uTime:{value:0}, uRapid:{value:0}, uDir:{value:1}, uCam:{value:new THREE.Vector3()} },
+    vertexShader:`
+      attribute vec4 aSeed;
+      uniform float uTime, uRapid, uDir;
+      uniform vec3 uCam;
+      varying vec2 vUv; varying float vA;
+      void main(){
+        vUv = uv;
+        float H = 16.0;                                  // 円筒の高さ
+        /* 下降中(uDir=+1)は泡が上へ抜ける。速いほど速く流れる。 */
+        float sp = (1.4 + aSeed.w * 2.2) * (0.35 + uRapid * 2.6);
+        float y  = fract(aSeed.y + uTime * sp / H * uDir) * H - H * 0.5;
+        vec3 wp  = uCam + vec3(aSeed.x, y, aSeed.z);
+        vec4 mv  = viewMatrix * vec4(wp, 1.0);
+        /* 板はビュー空間で組む＝常にスクリーンに正対。
+           縦だけ伸ばして「線」にする。伸びは強度に比例。 */
+        float w = 0.016 * aSeed.w;
+        float h = w * (1.0 + uRapid * 26.0);
+        mv.xy += position.xy * vec2(w, h);
+        /* 発動していない時は完全に消す(描いても見えないものを塗らない) */
+        vA = uRapid;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader:`
+      varying vec2 vUv; varying float vA;
+      void main(){
+        if (vA < 0.01) discard;
+        /* 縦に伸ばしたカプセル。両端を尖らせる。 */
+        vec2 q = vUv - 0.5;
+        float a = smoothstep(0.5, 0.0, length(vec2(q.x, q.y * 0.12)) * 2.0);
+        a *= smoothstep(0.5, 0.24, abs(q.y));
+        gl_FragColor = vec4(vec3(0.72, 0.88, 0.94), a * vA * 0.55);
+      }`,
+  });
+  const streaks = new THREE.InstancedMesh(g, mat, N);
+  streaks.frustumCulled = false;      // 位置は属性で持つので境界球は無意味
+  streaks.renderOrder = 6;
+  streaks.visible = false;            // rapid が立つまで描かない
+  scene.add(streaks);
+  streakUni = mat.uniforms;
+  streakMesh = streaks;
+  window.__streaks = streaks;
+}
+
+/* ================================================================
    5) 作品カード — 水中に浮くガラス板
    ----------------------------------------------------------------
    "opacity を下げただけ"にしないための要素:
@@ -3667,15 +3762,21 @@ const GRADE = {
     uRes:{value:new THREE.Vector2(1,1)},
     /* 汀線。uSeam は「描画上の汀」= cEff(hpR) を入れる(hpR ではない)。 */
     uSeam:{value:0.5}, uLand:{value:0}, uRim:{value:0},
+    /* 急速潜航。★ 新しいパスは足さない —— 下の色収差は既にここで
+       3タップ取っているので、係数を上げるだけで済む(追加コスト0)。
+       低ティアでは 0 に固定する。 */
+    uRapid:{value:0},
   },
   vertexShader:`varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader:`
     uniform sampler2D tDiffuse; uniform float uDepth01, uTime; uniform vec2 uRes;
     uniform float uSeam, uLand, uRim;
+    uniform float uRapid;
     varying vec2 vUv;
     void main(){
-      // 端だけの極めて弱い色収差。中心では完全に0
-      float e = pow(length(vUv - 0.5) * 1.42, 3.0) * 0.0022;
+      /* 端だけの極めて弱い色収差。中心では完全に0。
+         急速潜航中はここを持ち上げる(タップ数は変わらない)。 */
+      float e = pow(length(vUv - 0.5) * 1.42, 3.0) * (0.0022 + uRapid * 0.020);
       vec2 d = normalize(vUv - 0.5 + 1e-6) * e;
       vec3 col = vec3(
         texture2D(tDiffuse, vUv - d).r,
@@ -3745,6 +3846,54 @@ let pxT = 0, pyT = 0, px = 0, py = 0;  const pxV = {v:0}, pyV = {v:0};
    低フレーム時に速度が実際の数倍に化けていた。 */
 let scrollVel = 0, velX = 0, velV = 0;
 let prevSp = 0;
+
+/* ================================================================
+   急速潜航
+   ----------------------------------------------------------------
+   入力は scrollVel(平滑化済み・[-1,1]に正規化された巻き速度)。
+   ★ 発動と解除でしきい値を分ける(ヒステリシス)。1本のしきい値だと、
+     その付近でスクロールが揺れるたびに ON/OFF が往復して、画角と
+     色収差がバタつく。ここは調整の第一候補。
+   ★ 立ち上がりは速く(0.18s)、戻りは仕様どおり 0.75s。
+   ★ 強度は必ず 0 へ落としきる。一次遅れは 0 に漸近するだけなので、
+     デッドバンドを入れないと画角が永久に fovBase へ戻らず、
+     汀線の幾何(horizonPx は fov に依存する)が僅かにずれ続ける。
+     RATE 表示で同じ罠を踏んでいる(README「一次遅れは 0 にならない」)。
+   ================================================================ */
+const RAPID_ON   = 0.55;   // |scrollVel| がこれを超えたら発動
+const RAPID_OFF  = 0.32;   // これを下回ったら解除
+const RAPID_RISE = 0.18;   // 立ち上がりの時定数(秒)
+const RAPID_FALL = 0.75;   // 戻りの時定数(秒)。仕様の 0.5〜1.0 の中央
+const RAPID_FOV  = 12.0;   // 最大で足す画角(度)。仕様の +10〜15
+let rapidOn = false;       // ヒステリシスの状態
+let rapid   = 0;           // 0..1 実効強度。すべての効果はこれに比例
+let rapidDir = 1;          // +1=下降(泡は上へ流れる) / -1=上昇
+
+/* ★ 検証用の注入口。この環境は約0.6fps で、上流に
+   「rawDt > 0.08 のフレームは速度入力を捨てる」という保護があるため、
+   scrollVel が恒久的に 0 になり、急速潜航を実測できない。
+   実機(60fps)では不要。null の間は本番の経路に一切触らない。 */
+let rapidForce = null;
+
+function updateRapid(dt){
+  /* reduced-motion では一切発動させない(degrade の「差分0画素」を守る) */
+  if (reduced){ rapidOn = false; rapid = 0; return; }
+  const av = rapidForce == null ? Math.abs(scrollVel) : rapidForce;
+  if (!rapidOn && av >= RAPID_ON) rapidOn = true;
+  else if (rapidOn && av <= RAPID_OFF) rapidOn = false;
+  if (av > 0.02) rapidDir = scrollVel >= 0 ? 1 : -1;
+  /* 発動中の目標は「解除線から最大速度までの伸び」。発動した瞬間に
+     いきなり全開にせず、速度に比例させる。 */
+  const target = rapidOn ? ss(RAPID_OFF, 0.95, av) : 0;
+  /* ★ 一次遅れではなく「一定速度で詰める」。一次遅れは目標へ漸近するだけで
+     到達しないので、仕様の「0.5〜1秒かけて戻す」を満たせない
+     (実測: 0.715 から30フレーム経っても 0.09 が残り、画角も基準へ戻らなかった)。
+     このリポジトリで同じ罠は RATE でも踏んでいる。
+     一定速度なら、1→0 がちょうど RAPID_FALL 秒で、確実に 0 に触れる。 */
+  if (target > rapid) rapid = Math.min(target, rapid + dt / RAPID_RISE);
+  else                rapid = Math.max(target, rapid - dt / RAPID_FALL);
+  if (rapid < 0.004) rapid = 0;          // ★ 0 へ落としきる
+}
 
 /* 潜航の進行度は「spacerの高さ」で正規化する。document 全体の高さで
    割ると、下に本文を1行足しただけで潜航の振り付けが全部ずれる。 */
@@ -3969,6 +4118,8 @@ const workLink =document.getElementById('workLink');
 const legibilityEl = document.getElementById('legibility');
 /* ---- 航海計器とレティクル ---------------------------------------- */
 const reticleEl = document.getElementById('reticle');
+const rapidEl   = document.getElementById('rapid');
+let rapidWarnWas = false;
 const simRate = document.getElementById('simRate');
 const simPit  = document.getElementById('simPit');
 const simSea  = document.getElementById('simSea');
@@ -4315,6 +4466,14 @@ window.__diag = {
   /* ヒーローの衝突。縦画面で「見出しがDEPTHに被る」「カードが上下のHUDに
      食い込む」を外から機械的に見るための読み出し口。px と vh を混ぜた所は
      画面が低いほど壊れるので、844px の絵だけ見ていると気付けない。 */
+  /* 急速潜航を外から観測する口 */
+  set rapidForce(v){ rapidForce = v; },
+  get rapid(){ return { on:rapidOn, v:+rapid.toFixed(3), dir:rapidDir,
+    vel:+scrollVel.toFixed(3), fov:+camera.fov.toFixed(2), fovBase,
+    ca:+gradePass.uniforms.uRapid.value.toFixed(3),
+    streaks: streakMesh ? streakMesh.visible : null, n: TIER.streak,
+    warn: simRate ? simRate.classList.contains('warn') : null,
+    banner: rapidEl ? getComputedStyle(rapidEl).opacity : null }; },
   get heroFit(){
     const box = s => { const e = document.querySelector(s); if (!e) return null;
       if (getComputedStyle(e).display === 'none') return null;
@@ -4584,6 +4743,7 @@ function frame(mode){
     }
   }
   scrollVel = Math.max(-1, Math.min(1, velX));
+  updateRapid(dt);
 
   /* --- カメラの旅程 ------------------------------------------
      単なる縦移動ではなく、俯角と画角も一緒に動かす。
@@ -4605,7 +4765,13 @@ function frame(mode){
   const bob   = reduced ? 0 : Math.sin(t*0.85)*0.045*(1-ease)*calm; // 水面の揺れ
   const depth01 = Math.min(1, Math.max(0, -camYBase/8.6));
 
-  camera.position.set(px*0.30*(1-ease*0.55)*calm, camY + bob, py*0.10*calm);
+  /* ごく弱い画面の揺れ。★ 振幅は数cm。これ以上やると「壊れている」に
+     読まれるし、汀線の幾何(水平線の位置)まで揺れてしまう。
+     rapid が 0 に落ちきるので、止まれば揺れも完全に止まる。 */
+  const shk = rapid * 0.022;
+  const shx = shk * Math.sin(t * 37.0);
+  const shy = shk * Math.sin(t * 43.7 + 1.7);
+  camera.position.set(px*0.30*(1-ease*0.55)*calm + shx, camY + bob + shy, py*0.10*calm);
   camera.rotation.order = 'YXZ';
   /* 縦画面は水面を見下ろす面積が大きく、近景の波ばかりになる。
      水面に入るまでの間だけカメラを上へ振り、水平線を画面の下寄りへ送る
@@ -4625,7 +4791,9 @@ function frame(mode){
   /* ★ 基準画角は resize() が決める(縦画面 64 / 横画面 56)。
      ここで 56 を直書きすると縦画面の画角指定が毎フレーム消され、
      solvePortraitLift() は誰も使わない 64 に対して解くことになる。 */
-  const fov = fovBase + calm * Math.max(-1.6, Math.min(2.6, scrollVel*7.0));
+  /* 急速潜航で画角を開く。仕様の +10〜15°(RAPID_FOV=12)。 */
+  const fov = fovBase + calm * Math.max(-1.6, Math.min(2.6, scrollVel*7.0))
+            + rapid * RAPID_FOV;
   if (Math.abs(camera.fov - fov) > 0.01){ camera.fov = fov; camera.updateProjectionMatrix(); }
 
   /* --- 汀線の駆動 -------------------------------------------------
@@ -4963,6 +5131,28 @@ function frame(mode){
      水温が112M地点の値のまま止まった。フレーム数ではなく実時間で刻む。 */
   hudAcc += dt;
   if (hudAcc >= 0.20){ hudAcc = 0; updateInstruments(); }
+
+  /* ---- 急速潜航の効果を配る ---- */
+  if (streakUni){
+    const on = rapid > 0.004;
+    if (streakMesh.visible !== on) streakMesh.visible = on;
+    if (on){
+      streakUni.uTime.value  = t;
+      streakUni.uRapid.value = rapid;
+      streakUni.uDir.value   = rapidDir;
+      streakUni.uCam.value.copy(camera.position);
+    }
+  }
+  /* 色収差は低ティアでは出さない(仕様) */
+  gradePass.uniforms.uRapid.value = TIER.name === 'high' ? rapid : 0;
+  if (rapidEl){
+    rapidEl.style.setProperty('--rap', (rapid > 0.05 ? Math.min(1, rapid*1.6) : 0).toFixed(3));
+    const warn = rapid > 0.25;
+    if (warn !== rapidWarnWas){
+      rapidWarnWas = warn;
+      if (simRate) simRate.classList.toggle('warn', warn);
+    }
+  }
 
   /* レティクル。ロールは実際のカメラの傾きをそのまま渡す(人工水平儀)。
      ★ 濃さは「潜っている間だけ」。水面と本文では邪魔になるだけ。 */
@@ -5726,6 +5916,10 @@ const bench = { on:false, warm:true, tw:0, t0:0, n:0,
    入ってしまい、「潜航(深)」の標本が0枚になる(実測でそうなった)。
    スクロール位置は遅れが無く、そのフレームで実際に描いた場所そのもの。 */
 function benchPhase(){
+  /* ★ 急速潜航は「その時いくつだったか」で分ける。仕様の
+     「60fps維持を確認」は開発環境では測れない(SwiftShader で約0.6fps)
+     ので、端末に測らせる口をここに用意する。 */
+  if (rapid > 0.05) return '急速潜航';
   const y = scrollY, sp2 = bench.splitY || 1;
   if (y > sp2) return '本文(凪)';
   if (y < sp2 * 0.02) return '水面';
@@ -5748,7 +5942,11 @@ function benchSample(now, dt){
   a.push(dt);
 
   /* 潜航と本文で時間を分けて送る */
+  /* 途中に急速潜航の区間を1つ挟んで、その間のフレーム時間も採る。
+     ★ 実際に速く巻かせるのではなく強度を注入する。巻き速度で起こすと
+       端末の速さによって発動したりしなかったりして、比較にならない。 */
   const u = Math.min(1, el / BENCH_SECONDS);
+  rapidForce = (u > 0.60 && u < 0.72) ? 0.95 : null;
   let y;
   if (u <= BENCH_DIVE_SHARE){
     y = bench.splitY * (u / BENCH_DIVE_SHARE);
@@ -5759,6 +5957,7 @@ function benchSample(now, dt){
   scrollTo(0, Math.round(y));
   if (el >= BENCH_SECONDS){
     scrollTo(0, bench.endY);
+    rapidForce = null;                 // ★ 注入を必ず外す
     bench.on = false; bench.done = true; benchReport();
   }
 }
@@ -5783,7 +5982,7 @@ function benchReport(){
   L.push(`コンテキスト喪失 ${window.__ctxLost || 0} 回 / 総フレーム ${framesTotal}`);
   L.push('');
   L.push('区間        枚数   平均fps  中央fps  下位5%  最悪1枚');
-  for (const k of ['水面','潜航(浅)','潜航(深)','本文(凪)']){
+  for (const k of ['水面','潜航(浅)','潜航(深)','急速潜航','本文(凪)']){
     const a = bench.phases.get(k);
     if (!a || !a.length){ L.push(k.padEnd(10) + '  —'); continue; }
     let sum = 0; for (const d of a) sum += d;
