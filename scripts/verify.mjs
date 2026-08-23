@@ -63,6 +63,8 @@ const VIEWS = {
   iphone2: { w: 459,  h: 869, dsf: 3, mobile: true  },
   /* 上のURLバーが出ている時の低い方 */
   iphone2s:{ w: 459,  h: 822, dsf: 3, mobile: true  },
+  /* ★ 利用者の実機(iPhone 14)の、URLバーが縮んだ後の高い方。 */
+  iphoneT: { w: 390,  h: 750, dsf: 3, mobile: true  },
   /* ★ 背の低い方の iPhone。ここでだけ出る崩れがある(px と vh を混ぜた所は
      画面が低いほど壊れる)。probe.mjs と同じ値にしておくこと。 */
   se:      { w: 375,  h: 553, dsf: 2, mobile: true  },   // SE  いちばん狭い
