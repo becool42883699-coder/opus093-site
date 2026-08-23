@@ -720,7 +720,12 @@
     #sim,#vert,#ruler{display:none}
     #meter{top:88px}
     #meter .v{font-size:13px}
-    #hero{left:var(--gut); right:var(--gut); max-width:none; top:20vh}
+    /* ★ #meter(DEPTH 000.0M)は top:88px の**固定px**で、下端は常に 135px。
+       一方ここは vh。画面が低いほど 20vh が縮んで meter に潜り込み、
+       実測で SE(553px高)は 111px から始まって**見出しがDEPTHに 24px 被って**いた
+       (mini -9px / iPhone14 -2px。844px の絵ばかり見ていて気付けなかった)。
+       px と vh を混ぜたら、必ず max() でどちらが勝つか決める。 */
+    #hero{left:var(--gut); right:var(--gut); max-width:none; top:max(20vh, 153px)}
     #lockup b{font-size:clamp(54px,16.5vw,92px); letter-spacing:.04em; text-indent:.04em}
     #lockup span{margin-top:12px; font-size:9.5px; letter-spacing:.34em; text-indent:.34em}
     #hero p{margin-top:22px; font-size:11.5px; line-height:2.05; max-width:none}
@@ -761,9 +766,26 @@
       linear-gradient(to top,    rgba(2,14,20,.50) 0, rgba(2,14,20,.18) 96px, transparent 184px),
       linear-gradient(180deg, rgba(2,14,20,.10) 0%, transparent 42%)}
   }
+  /* 背の低い縦画面(iPhone SE / 13 mini の Safari は 553〜629px しか無い)。
+     ★ 文章は削らない —— 「ホームページをつくっています。福岡・北九州から。」は
+       このサイトが何屋かを言う唯一の行で、いちばん狭い画面でこそ要る。
+       代わりに縦のリズムだけ詰め、DEPTH の計器を上げて場所を返す。
+       これをやらないと、文字とHUDに挟まれた帯が 70px しか残らず、
+       主役のカードがそこまで縮む(実測 SE で画面幅の 21%)。 */
+  @media (max-height:640px) and (min-height:521px){
+    #meter{top:64px}
+    #meter .cap{margin-bottom:6px}
+    #meter .v::after{margin-top:5px}
+    #hero{top:max(20vh, 122px)}
+    #lockup b{font-size:clamp(46px,13.5vw,72px)}
+    #lockup span{margin-top:9px}
+    #hero p{margin-top:15px; line-height:1.85}
+    #cta{margin-top:16px}
+  }
+
   /* 背の低い横向き */
   @media (max-height:520px){
-    #hero{top:16vh}
+    #hero{top:max(16vh, 153px)}
     #lockup b{font-size:clamp(34px,8.4vh,56px)}
     #lockup span{margin-top:9px; font-size:9px}
     #hero p{display:none}
@@ -2497,6 +2519,7 @@ const CARD_GEO = new THREE.PlaneGeometry(3.05, 1.72, 1, 1);
    こうするとシーンを2度描かずに、背景をガラス越しに歪ませられる。 */
 const cardScene = new THREE.Scene();
 const cards = [];
+let CARD_BASE_SCALE = 1;
 {
   /* 水中の縦一列に配置する。カメラはこの列を降りていく = camera journey。
      モバイルは横に散らすと見切れるので、Xを中央へ寄せてZを引く。 */
@@ -2648,6 +2671,7 @@ const cards = [];
     m.position.set(L[0], L[1], L[2]);
     m.rotation.y = L[3];
     m.scale.setScalar(L[4]);
+    if (i === 0) CARD_BASE_SCALE = L[4];   // 縮めたあと戻す先
     m.userData = { base:new THREE.Vector3(L[0],L[1],L[2]), baseRotY:L[3], uni, i, sway:Math.random()*6.28 };
     m.renderOrder = 4;
     cardScene.add(m); cards.push(m);
@@ -3971,6 +3995,30 @@ window.__diag = {
   get cardRects(){ return cardScreenRects(); },
   get dpr(){ return DPR; },
   get frames(){ return framesTotal; },
+  get cardScale0(){ return cards[0] ? cards[0].scale.x : 0; },
+  /* ヒーローの衝突。縦画面で「見出しがDEPTHに被る」「カードが上下のHUDに
+     食い込む」を外から機械的に見るための読み出し口。px と vh を混ぜた所は
+     画面が低いほど壊れるので、844px の絵だけ見ていると気付けない。 */
+  get heroFit(){
+    const box = s => { const e = document.querySelector(s); if (!e) return null;
+      if (getComputedStyle(e).display === 'none') return null;
+      const b = e.getBoundingClientRect(); return { t:b.top, b:b.bottom }; };
+    const meter = box('#meter'), h1 = box('#hero h1'), cta = box('#cta');
+    const c = cardScreenRects()[0];
+    let floor = innerHeight;
+    for (const sel of ['#diveBtn','#foot','#counter']){
+      const q = box(sel); if (q && q.t > 0 && q.t < floor) floor = q.t;
+    }
+    const over = (a, b) => Math.round(Math.max(0, a - b));
+    return {
+      portrait: innerHeight > innerWidth,
+      見出しがDEPTHに被る: meter && h1 ? over(meter.b, h1.t) : 0,
+      カードがCTAに被る:   cta && c   ? over(cta.b, c.y)     : 0,
+      カードが下HUDに被る: c ? over(c.y + c.h, floor)        : 0,
+      cardW: c ? Math.round(c.w / innerWidth * 1000) / 10 : 0,
+    };
+  },
+  get cardBase(){ return CARD_BASE_SCALE; },
   get fps(){ return fpsStats(); },
   get cost(){ return CAL && CAL.result; },
   get quality(){ return { step: qStep, dropped: LADDER.slice(0, qStep).map(l => l.name) }; },
@@ -5182,6 +5230,19 @@ let rulerH = 220;
 let PORTRAIT_LIFT = 0.22;
 const _pcam = new THREE.PerspectiveCamera();
 const _pv = new THREE.Vector3();
+/* 下のHUD(Dive ボタン / CURRENT LOCATION / 01 02)の上端。
+   カードはここへ潜り込んではいけない。 */
+function hudFloorY(){
+  let y = innerHeight;
+  for (const sel of ['#diveBtn', '#foot', '#counter']){
+    const el = document.querySelector(sel);
+    if (!el || !el.offsetParent && getComputedStyle(el).display === 'none') continue;
+    const t = el.getBoundingClientRect().top;
+    if (t > 0 && t < y) y = t;
+  }
+  return y;
+}
+
 function solvePortraitLift(){
   if (camera.aspect >= 1){ PORTRAIT_LIFT = 0; return; }
   const cta  = document.getElementById('cta');
@@ -5191,6 +5252,26 @@ function solvePortraitLift(){
                           lede ? lede.getBoundingClientRect().bottom : 0) + 18;
 
   const card  = cards[0];
+  /* ★ ここは長らく「カードの上端が文字より下」だけを保証していた。
+     下端は誰も見ていないので、画面が低いと**カードが下のHUDに潜り込む**
+     (実測 SE で 13px)。文字とHUDに挟まれた帯に収まる大きさまで縮める。
+     倍率と見かけの大きさは比例する(距離は変えないので)から一発で決まる。 */
+  const band = hudFloorY() - 14 - target;
+  /* ★ 投影を自前で解き直さないこと。一度そうしたら、実際に描かれる 112px に
+     対して 165px と答え、カードを必要の倍以上に縮めた(SE で幅の21%まで)。
+     カードには面のヨーとゆらぎが乗るので、素の高さ 1.72 からの計算とは
+     合わない。**実際に測っている cardScreenRects() をそのまま使う。**
+     ★ 縮める計算は「いまの倍率」からではなく必ず**元の倍率**から。
+     いまの倍率に係数を掛ける書き方だと、resize やフォント読込でこの関数が
+     複数回走るたびに掛け算が積もる。見かけの大きさは倍率に比例する
+     (距離は変えないので)から、元の倍率での高さは割り戻して出せる。 */
+  if (band > 40 && card.scale.x > 1e-3){
+    const r = cardScreenRects()[0];
+    if (r && r.h > 1){
+      const hAtBase = r.h * (CARD_BASE_SCALE / card.scale.x);
+      card.scale.setScalar(CARD_BASE_SCALE * Math.min(1, band / hAtBase));
+    }
+  }
   const halfH = 1.72 * card.scale.y * 0.5;
   /* 仰角 lift のときの、1枚目のカード上端の画面Y。lift を上げるほど
      カメラが上を向き、被写体は画面の下へ動く(= topY は単調増加)。 */
