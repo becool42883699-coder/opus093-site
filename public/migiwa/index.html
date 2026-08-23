@@ -1357,7 +1357,7 @@ const TIER = (() => {
   if (TPIN !== 'high' && (TPIN === 'low' || isMobile || lowEnd)) return {
     name:'low',
     seg: 110, dpr: 1.5,
-    motes: 96, bubbles: 78, fore: 14, fish: 14, shafts: 7,
+    motes: 96, bubbles: 78, fore: 14, fish: 14, shafts: 7, kelp: 34, rocks: 9,
     waveDetail: 5, skyOctaves: 2, causticOctaves: 2, causticRGB: false,
     bloom: true, godray: true, dof: false, smaa: false,
     reflect: false,     // モバイルは平面反射を持たず skyFn だけに戻す
@@ -1365,7 +1365,7 @@ const TIER = (() => {
   return {
     name:'high',
     seg: 240, dpr: 2,
-    motes: 210, bubbles: 168, fore: 26, fish: 24, shafts: 13,
+    motes: 210, bubbles: 168, fore: 26, fish: 24, shafts: 13, kelp: 88, rocks: 18,
     waveDetail: 5, skyOctaves: 3, causticOctaves: 3, causticRGB: true,
     bloom: true, godray: true, dof: true, smaa: true,
     reflect: true,
@@ -2291,6 +2291,192 @@ seabed.rotation.x = -Math.PI/2;
 seabed.position.y = -10.4;
 seabed.frustumCulled = false;
 scene.add(seabed);
+
+/* ================================================================
+   3.5) 海藻と岩 — 水槽に「底の造作」を入れる
+   ----------------------------------------------------------------
+   砂だけの平面だと、どれだけ水を澄ませても「広い床」にしか見えない。
+   大水槽らしさは縦の構造(立ち上がるもの)と、そこに当たる光でできている。
+   ★ カメラは x∈±0.30 / z∈±0.10 の細い筒を降りるだけなので、
+     半径 3.2m より外に置けば絶対にぶつからない(潜航の邪魔をしない)。
+   ★ 発光させない。暗い影として立たせて、光条と集光で浮かせる。
+   ================================================================ */
+let kelpUni = null, rockUni = null;
+const KELP_SEED = 20260823;
+const krnd = mulberry32(KELP_SEED);
+/* 底の造作を置いてよい場所。カメラの筒を避け、遠すぎる所には置かない
+   (霧で消えるだけなので費用の無駄)。 */
+function scatterOnFloor(rnd, rMin, rMax){
+  const a = rnd() * 6.2831853;
+  const r = rMin + (rMax - rMin) * Math.sqrt(rnd());   // 面積で一様に散らす
+  return [Math.cos(a) * r, Math.sin(a) * r];
+}
+
+/* ---- 海藻 --------------------------------------------------------
+   1枚のリボンを縦に8分割し、根元を固定して上ほど大きく揺らす。
+   束(3〜5枚)で1株にすると、板1枚が翻る不自然さが消える。 */
+{
+  /* ★ 幅 0.20 だと遠目に「ストロー」に見える。海藻は幅のある葉。
+     分割も8では折れ線が出るので12に上げる(instancing なので費用はほぼ0)。 */
+  const g = new THREE.PlaneGeometry(0.34, 1, 1, 12);
+  const N = TIER.kelp;
+  const mat = new THREE.ShaderMaterial({
+    transparent:true, depthWrite:true, side:THREE.DoubleSide,
+    uniforms:{ uTime:{value:0}, uDepth:{value:0}, uSun:{value:SUN}, uFog:{value:fogCol} },
+    vertexShader:`
+      attribute vec3 aRoot; attribute vec3 aCfg;   // aCfg = (丈, 位相, ねじれ)
+      varying vec2 vUv; varying vec3 vW; varying float vH;
+      uniform float uTime;
+      void main(){
+        vUv = uv; vH = uv.y;
+        vec3 p = position;
+        p.y = (uv.y - 0.5) * aCfg.x;               // 丈をここで与える(scaleは使わない)
+        /* 根元を固定して上ほど振れる。x^1.6 は「しなる」曲線 ——
+           線形にすると根元から折れ、二乗にすると先だけ跳ねる。 */
+        float k = pow(uv.y, 1.6);
+        float t = uTime * 0.55 + aCfg.y;
+        float sw = sin(t) * 0.42 + sin(t * 1.7 + 1.3) * 0.18;
+        /* ★ 静止時の曲がりを先に入れる。揺れだけだと、位相がたまたま
+           0 に近い株が**定規のように真っ直ぐ**立って造花に見える
+           (実測: 画面の海藻が全部まっすぐで「ストロー」と言われた)。
+           株ごとに向きと強さを変えた「くせ」を常に持たせる。 */
+        float lean = sin(aCfg.z) * 0.42 + 0.18;
+        p.x += (lean + sw * 0.55) * k * aCfg.x * 0.45;
+        p.z += cos(aCfg.z * 1.7) * k * aCfg.x * 0.30
+             + cos(t * 0.8 + aCfg.z) * k * aCfg.x * 0.18;
+        /* 上ほど細く。水草は先が細らないと造花に見える。
+           根元も少し絞る(葉柄)。中ほどが一番広い。 */
+        p.x *= mix(0.55, 1.0, smoothstep(0.0, 0.22, uv.y)) * mix(1.0, 0.38, pow(uv.y, 1.5));
+        vec3 wp = aRoot + p;
+        vW = wp;
+        gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
+      }`,
+    fragmentShader:`
+      uniform float uDepth; uniform vec3 uSun;
+      varying vec2 vUv; varying vec3 vW; varying float vH;
+      ${G_WATER}
+      void main(){
+        /* ★ 先端を尖らせる。頂点側の絞りだけだと uv.y=1 が**平らに切れた
+           断面**として残り、「切ったパイプ」に見える(実際にそう見えた)。
+           葉の幅そのものを高さの関数にして、先で 0 にする。 */
+        float w  = 1.0 - smoothstep(0.70, 1.0, vH);
+        float ax = abs(vUv.x - 0.5) * 2.0;
+        float edge = 1.0 - smoothstep(w * 0.58, w + 0.02, ax);
+        if (edge < 0.04) discard;
+        /* 根元は暗く、先へ行くほど光を透かす。
+           ★ 彩度を落とす。前の値(0.075,0.130,0.078)は青い水の中で
+             鮮やかな緑として浮き、造花に見えた。褐藻寄りのくすんだ色に。 */
+        vec3 col = mix(vec3(0.016,0.028,0.022), vec3(0.062,0.082,0.050), pow(vH, 1.3));
+        /* 中肋。1本入るだけで「葉」に見える。★ 強いと縫い目になる。 */
+        col *= 1.0 - 0.14 * (1.0 - smoothstep(0.0, 0.12, abs(vUv.x - 0.5)));
+        /* ★ 幅方向の丸み。これが無いと、どれだけ形を整えても
+           「平らな厚紙を立てた」ようにしか見えない(実際そう見えた)。
+           葉は樋状に反っているので、中央が明るく縁が落ちる。 */
+        float across = (vUv.x - 0.5) * 2.0;
+        col *= 0.70 + 0.30 * cos(across * 1.25);
+        /* 縦のむら。均一だと押し出し成形に見える。 */
+        col *= 0.92 + 0.08 * sin(vH * 22.0 + vUv.x * 3.0);
+        float d = length(vW - cameraPosition);
+        vec3 V = normalize(vW - cameraPosition);
+        col = waterFogV(col, d, uDepth, mix(1.0, 0.72, uDepth), vW.y, V, uSun);
+        col = mix(col, uFog, farFade(d));
+        gl_FragColor = vec4(col, edge * (1.0 - smoothstep(46.0, 78.0, d)));
+      }`,
+  });
+  const roots = new Float32Array(N*3), cfg = new Float32Array(N*3);
+  let i = 0;
+  while (i < N){
+    /* 1株 = 3〜5枚。同じ根から出して、位相だけずらす。 */
+    const blades = 3 + Math.floor(krnd()*3);
+    /* ★ 26m まで散らすと、大半が霧の中で消えて画面には2株しか出ない
+       (実測)。視程(51〜89M)より内側の、実際に見える範囲へ寄せる。 */
+    const [bx, bz] = scatterOnFloor(krnd, 3.2, 15.0);
+    const baseH = 1.5 + krnd()*3.4;
+    for (let b = 0; b < blades && i < N; b++, i++){
+      roots[i*3]   = bx + (krnd()-0.5)*0.5;
+      roots[i*3+1] = SEABED_Y + 0.02;
+      roots[i*3+2] = bz + (krnd()-0.5)*0.5;
+      cfg[i*3]     = baseH * (0.7 + krnd()*0.6);
+      cfg[i*3+1]   = krnd()*6.2831853;
+      cfg[i*3+2]   = krnd()*6.2831853;
+    }
+  }
+  g.setAttribute('aRoot', new THREE.InstancedBufferAttribute(roots, 3));
+  g.setAttribute('aCfg',  new THREE.InstancedBufferAttribute(cfg, 3));
+  const kelp = new THREE.InstancedMesh(g, mat, N);
+  /* 根の位置は属性で持つので instanceMatrix は単位のまま。境界球は
+     当てにならないのでカリングを切る(魚と同じ理由)。 */
+  kelp.frustumCulled = false;
+  kelp.renderOrder = 2;
+  scene.add(kelp);
+  kelpUni = mat.uniforms;
+  window.__kelp = kelp;
+}
+
+/* ---- 岩 ----------------------------------------------------------
+   低ポリの塊を潰して置くだけ。海藻の根元を隠し、砂の平面を切る。 */
+{
+  const N = TIER.rocks;
+  /* detail 1(80面)だと角張って「破片」に見える。2(320面)にして、
+     頂点のずらし方も大きくする＝丸みのある転石になる。 */
+  const g = new THREE.IcosahedronGeometry(1, 2);
+  /* 頂点をずらして「削れた石」にする。球のままだと団子に見える。 */
+  {
+    const pos = g.attributes.position;
+    for (let v = 0; v < pos.count; v++){
+      const f = 0.78 + krnd()*0.40;
+      pos.setXYZ(v, pos.getX(v)*f, pos.getY(v)*f*0.66, pos.getZ(v)*f);
+    }
+    g.computeVertexNormals();
+  }
+  const mat = new THREE.ShaderMaterial({
+    uniforms:{ uDepth:{value:0}, uSun:{value:SUN}, uFog:{value:fogCol} },
+    vertexShader:`
+      varying vec3 vW; varying vec3 vN;
+      void main(){
+        vec4 wp = modelMatrix * instanceMatrix * vec4(position,1.0);
+        vW = wp.xyz;
+        vN = normalize(mat3(modelMatrix) * normal);
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }`,
+    fragmentShader:`
+      uniform float uDepth; uniform vec3 uSun;
+      varying vec3 vW; varying vec3 vN;
+      ${G_NOISE}
+      ${G_WATER}
+      void main(){
+        /* 上面だけ砂をかぶって明るい。これが無いと「浮いている石」に見える。 */
+        float up = clamp(vN.y, 0.0, 1.0);
+        float gr = vnoise(vW.xz*2.6 + vW.y*1.4);
+        /* ★ 前の値(最大 0.062)は砂(最大 0.098)の6割しかなく、光の当たった
+           砂の上で**黒い影の塊**に見えた。岩は砂よりやや暗い程度が正しい。 */
+        vec3 col = mix(vec3(0.044,0.046,0.042), vec3(0.090,0.088,0.075), up*0.72 + gr*0.28);
+        float d = length(vW - cameraPosition);
+        vec3 V = normalize(vW - cameraPosition);
+        col = waterFogV(col, d, uDepth, mix(1.0, 0.72, uDepth), vW.y, V, uSun);
+        col = mix(col, uFog, farFade(d));
+        gl_FragColor = vec4(col, 1.0);
+      }`,
+  });
+  const rocks = new THREE.InstancedMesh(g, mat, N);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), pv = new THREE.Vector3();
+  for (let i = 0; i < N; i++){
+    const [rx, rz] = scatterOnFloor(krnd, 3.6, 16.0);
+    const sz = 0.35 + krnd()*1.15;
+    /* 半分は砂に埋める。全部載せると、置いただけの小道具に見える。 */
+    pv.set(rx, SEABED_Y + sz*0.30, rz);
+    q.setFromEuler(new THREE.Euler(krnd()*0.5, krnd()*6.28, krnd()*0.5));
+    sc.set(sz, sz*(0.6 + krnd()*0.5), sz);
+    m.compose(pv, q, sc);
+    rocks.setMatrixAt(i, m);
+  }
+  rocks.frustumCulled = false;
+  rocks.renderOrder = 2;
+  scene.add(rocks);
+  rockUni = mat.uniforms;
+  window.__rocks = rocks;
+}
+
 
 /* ================================================================
    4) 光芒(ゴッドレイ) — 幾何で作る"体積"の層
@@ -4466,6 +4652,10 @@ function frame(mode){
   sandUniforms.uTime.value  = T;  sandUniforms.uDepth.value  = depth01;
   shaftUniforms.uTime.value = T;  shaftUniforms.uDepth.value = depth01;
   fishUniforms.uTime.value  = T;  fishUniforms.uDepth.value  = depth01;
+  /* 海藻は水の時計(T)で揺れる。★ 別の時計にすると、水が凪いでいるのに
+     海藻だけ動く／その逆が起きる。「読書中の凪」もこれで一緒に効く。 */
+  if (kelpUni){ kelpUni.uTime.value = T; kelpUni.uDepth.value = depth01; }
+  if (rockUni){ rockUni.uDepth.value = depth01; }
   skyDome.position.copy(camera.position);
   water.position.x = camera.position.x; water.position.z = camera.position.z;
   waterUniforms.uOrigin.value.set(water.position.x, water.position.z);
