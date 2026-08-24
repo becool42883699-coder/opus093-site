@@ -2938,7 +2938,7 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
   /* ★ 8角形だと背中の稜がカクついて「多角形の筒」に見えた。断面を14角に
      上げても 570三角形。この規模なら描画コストは測定の揺れに埋もれる。 */
   const SEG = 20, RING = 14;             // 断面の数 / 断面の角数
-  const pos = [], uvs = [], idx = [];
+  const pos = [], uvs = [], idx = [], sys = [];   // sys = 断面上の高さ(sin)
   /* 体の太さ。u=0 が鼻先、1 が尾の付け根。頭は丸く、中ほどが太く、
      尾柄(0.8以降)へ絞る。0 まで落とさない —— 落とすと胴と尾が
      切り離れて「2つの塊」に見える(魚で同じ罠を踏んでいる)。 */
@@ -2970,10 +2970,28 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
          見えた(実測)。ナガスクジラの背びれは低くてなだらか。釣鐘で盛る。 */
       const fin = 0.028 * Math.exp(-Math.pow((u - 0.70) / 0.105, 2))
                         * Math.pow(Math.max(0, sy), 3);
+      /* ---- ここから「クジラ感」を決めている3つ ----------------------
+         ★ 円錐で終わる頭はイルカにも潜水艦にも見える。横顔のクジラを
+           クジラにしているのは、**深い下顎**と**平らな吻**の組み合わせ。 */
+      /* 下顎。下側だけ u=0.02〜0.32 でふくらませる(最大は 0.13)。 */
+      const jaw = 0.030 * Math.exp(-Math.pow((u - 0.13) / 0.115, 2))
+                        * Math.pow(Math.max(0, -sy), 1.4);
+      /* 吻は平ら。ナガスクジラの頭の上面はほぼ直線で、丸くない。 */
+      const flat = 1 - 0.22 * Math.max(0, 1 - u / 0.26) * Math.max(0, sy);
+      /* 尾柄をさらに絞る。★ 細い尾柄から広い尾びれが出る対比が、
+         「大きな海獣」の手応えそのもの。ここが太いと胴の延長に見える。 */
+      /* ★ 0.55 まで絞ったら、細い棒の先に幅広の板が付いた「エイ」に見えた
+         (実測)。尾柄は細いが、胴から連続して見える太さは要る。 */
+      const pedu = 1 - 0.34 * Math.max(0, (u - 0.80) / 0.20);
       /* ★ x は 0.57-u。**機首を +X に向ける**ため反転してある。進行方向へ
          向けるときに基底をそのまま作れるのと、原点が体の真ん中に来る。 */
-      pos.push(0.57 - u, sy * rr * 0.90 + fin, cz * rr * 1.04 * lat);
+      pos.push(0.57 - u,
+               sy * rr * 0.90 * flat * pedu - jaw + fin,
+               cz * rr * 1.04 * lat * pedu);
       uvs.push(u, j / RING);
+      /* ★ 口の線を uv.y から戻すと、j=RING-1 → 0 の継ぎ目で値が 0.93→0 と
+         飛び、そこだけ帯が崩れる。断面上の高さは連続なので属性で渡す。 */
+      sys.push(sy);
     }
   }
   for (let i = 0; i < SEG; i++){
@@ -2991,11 +3009,11 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
   const fluke = (sgn) => {
     const b = pos.length / 3;
     pos.push(-0.400, 0.000, 0.0,              // 付け根
-             -0.435, 0.004, 0.070*sgn,        // 前縁の内側
-             -0.560, 0.042, 0.238*sgn,        // 先端(後ろへ、少し上へ)
-             -0.516, 0.020, 0.118*sgn,        // 後縁(凹む)
-             -0.500, 0.006, 0.0);             // 中央の切れ込み
-    for (let k=0;k<5;k++) uvs.push(1, 0.5 + 0.1*k);
+             -0.435, 0.004, 0.078*sgn,        // 前縁の内側
+             -0.566, 0.045, 0.262*sgn,        // 先端(後ろへ、少し上へ)
+             -0.520, 0.021, 0.128*sgn,        // 後縁(凹む)
+             -0.505, 0.006, 0.0);             // 中央の切れ込み
+    for (let k=0;k<5;k++){ uvs.push(1, 0.5 + 0.1*k); sys.push(0); }
     const tri = [[b,b+1,b+2],[b,b+2,b+3],[b,b+3,b+4]];
     for (const t of tri) sgn > 0 ? idx.push(t[0],t[1],t[2]) : idx.push(t[0],t[2],t[1]);
   };
@@ -3005,13 +3023,14 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
      程度でよく、面積を持たせると必ずスラブになる。 */
   for (const sgn of [1, -1]){
     const b = pos.length / 3;
-    pos.push(0.27, -0.02, 0.055*sgn,  0.13, -0.045, 0.215*sgn,  0.17, -0.03, 0.060*sgn);
-    uvs.push(0.3,0.5, 0.44,0.5, 0.40,0.5);
+    pos.push(0.27, -0.028, 0.055*sgn,  0.125, -0.062, 0.200*sgn,  0.17, -0.035, 0.060*sgn);
+    uvs.push(0.3,0.5, 0.44,0.5, 0.40,0.5); sys.push(0,0,0);
     sgn > 0 ? idx.push(b, b+1, b+2) : idx.push(b, b+2, b+1);
   }
   const wg = new THREE.BufferGeometry();
   wg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   wg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  wg.setAttribute('aSy', new THREE.Float32BufferAttribute(sys, 1));
   wg.setIndex(idx);
   wg.computeVertexNormals();
 
@@ -3024,9 +3043,10 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
                uSun:{value:SUN}, uFog:{value:fogCol} },
     vertexShader:`
       uniform float uTime;
-      varying vec3 vW; varying vec3 vN; varying float vU;
+      attribute float aSy;
+      varying vec3 vW; varying vec3 vN; varying float vU, vV;
       void main(){
-        vU = uv.x;
+        vU = uv.x; vV = aSy;
         vec3 p = position;
         /* ゆったりしたうねり。★ 振れは尾に寄るほど大きい。頭まで動かすと
            「棒がしなっている」に見える。周期は約5.4秒 —— 魚(1秒前後)と
@@ -3045,7 +3065,7 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
       /* ★ uFog は G_WATER 側が宣言している。ここで書くと二重宣言で
          シェーダのコンパイルに落ちる(実際に落とした)。 */
       uniform float uAmt, uDepth; uniform vec3 uSun;
-      varying vec3 vW; varying vec3 vN; varying float vU;
+      varying vec3 vW; varying vec3 vN; varying float vU, vV;
       ${G_WATER}
       void main(){
         if (uAmt < 0.004) discard;
@@ -3061,6 +3081,13 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
              これが無いと、どれだけ形を作っても「切り紙」から抜けない。 */
         float ridge = smoothstep(0.42, 0.92, N.y) * pow(1.0 - abs(dot(N, V)), 1.8);
         col += vec3(0.052, 0.070, 0.078) * ridge;
+        /* 口の線。★ 模様ではなく「顎の合わせ目」。横顔のクジラが
+           クジラに見えるかどうかは、下顎の深さとこの1本でほぼ決まる。
+           vV には断面上の高さ(aSy)が入っている。顎の高さ(-0.22)の帯だけを
+           暗くする。頭の範囲(vU < 0.34)だけに掛ける。 */
+        float mouth = exp(-pow((vV + 0.22) / 0.14, 2.0))
+                    * smoothstep(0.34, 0.28, vU) * smoothstep(0.010, 0.045, vU);
+        col *= 1.0 - 0.34 * mouth;
         /* ★ 光の引数を 0.34 に落とす。周囲と同じ 1.0 で通すと内散乱で
            体が白茶け、**背景より明るい木の葉**になった(実測)。降ってくる光を
            遮っている巨体なので、暗いのが正しい。 */
@@ -3109,7 +3136,14 @@ if (TIER.name !== 'high'){
      「背の直線が一度だけ折れる」を板でも作らないと、ティアで別の生き物になる。
      大きさも同じ(u=0.70 で局所半径の半分ほど)。 */
   const dors = u => 0.028 * Math.exp(-Math.pow((u - 0.70) / 0.105, 2));
-  for (let i = 0; i <= 90; i++){ const u = i/90; g.lineTo(X(u), Y(rad(u) + dors(u))); }
+  /* ★ メッシュ側で入れた「深い下顎」「平らな吻」「細い尾柄」を板でも作る。
+     ここを揃えないと、ティアが切り替わった瞬間に頭の形が別物になる。 */
+  const pedu = u => 1 - 0.34 * Math.max(0, (u - 0.80) / 0.20);
+  const jaw  = u => 0.030 * Math.exp(-Math.pow((u - 0.13) / 0.115, 2));
+  const flat = u => 1 - 0.22 * Math.max(0, 1 - u / 0.26);
+  const topY = u => rad(u) * 0.90 * flat(u) * pedu(u) + dors(u);
+  const botY = u => rad(u) * 1.017 * pedu(u) + jaw(u);
+  for (let i = 0; i <= 90; i++){ const u = i/90; g.lineTo(X(u), Y(topY(u))); }
   /* ★ 尾びれ。最初ここを縦に開く扇で描いたら、**魚の尾**になった(実測)。
      クジラの尾は水平なので、真横からは「後ろへ伸びる細い刃」に見える。
      先を少し上へ振るだけで、扇にはしない。メッシュ側と同じ思想。 */
@@ -3122,7 +3156,7 @@ if (TIER.name !== 'high'){
   g.lineTo(X(1.012), Y( 0.006));   // 中央の切れ込み
   g.lineTo(X(1.052), Y(-0.008));
   g.lineTo(X(1.100), Y(-0.022));   // 下葉の先
-  for (let i = 90; i >= 0; i--){ const u = i/90; g.lineTo(X(u), Y(-rad(u))); }
+  for (let i = 90; i >= 0; i--){ const u = i/90; g.lineTo(X(u), Y(-botY(u))); }
   g.closePath(); g.fill();
   /* 胸びれ */
   g.beginPath();
@@ -3170,6 +3204,13 @@ if (TIER.name !== 'high'){
         float mUp = texture2D(uMask, vUv + vec2(0.0, 0.010)).r;
         float rim = clamp(m - mUp, 0.0, 1.0) * step(0.5, vUv.y);
         col += vec3(0.050, 0.068, 0.076) * rim * 1.6;
+        /* 口の線。板には断面が無いので、マスクの中の「下から3割ほどの高さ」を
+           頭の範囲だけ暗くする。メッシュ側と同じ役割。 */
+        /* ★ マスクは機首が右なので、頭は vUv.x が 0.70〜0.96 のあたり。
+           顎の線は腹から3割ほど上＝ vUv.y ≈ 0.35。 */
+        float mouth = exp(-pow((vUv.y - 0.350) / 0.028, 2.0))
+                    * smoothstep(0.685, 0.720, vUv.x) * smoothstep(0.975, 0.945, vUv.x);
+        col *= 1.0 - 0.34 * mouth;
         float d = length(vW - cameraPosition);
         vec3 V = normalize(vW - cameraPosition);
         col = waterFogV(col, d, uDepth, 0.34, vW.y, V, uSun);
