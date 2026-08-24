@@ -2779,8 +2779,12 @@ const _wq = new THREE.Quaternion(), _wAt = new THREE.Vector3();
 let whaleAvoid = 0;              // >0 の間だけ魚がクジラを避ける
 const _wf = new THREE.Vector3(), _wr = new THREE.Vector3(), _wu = new THREE.Vector3();
 function whaleAt(q, out){
-  const across = (q * 2 - 1) * whaleLen * 1.15 * whaleDir;
-  const away   = WH_Z_FAR - (WH_Z_FAR - WH_Z_NEAR) * Math.sin(q * Math.PI);
+  /* ★ 等速で横切ると「通り過ぎた」で終わる。最接近の前後だけ遅くして、
+     見送る間を作る。e(0)=0 / e(1)=1 で単調(係数が1未満なら微分は正)。
+     微分は 1 + 0.42*cos(2πq) —— 真ん中で 0.58倍、両端で 1.42倍。 */
+  const e = q + 0.42 * Math.sin(q * 6.2831853) / 6.2831853;
+  const across = (e * 2 - 1) * whaleLen * 1.15 * whaleDir;
+  const away   = WH_Z_FAR - (WH_Z_FAR - WH_Z_NEAR) * Math.sin(e * Math.PI);
   _wf.set(0, 0, -1).applyQuaternion(camera.quaternion);
   _wr.set(1, 0,  0).applyQuaternion(camera.quaternion);
   _wu.set(0, 1,  0).applyQuaternion(camera.quaternion);
@@ -3633,6 +3637,9 @@ let CARD_BASE_SCALE = 1;
    「魚が居る」と分かる手段を、明るさに依存しないものへ1本持たせる
    ―― 屋外のスマホでも、雪の割れは輝度に関係なく読める。
    ★ 品質の梯子でこれを切らない。落としてよいのは「距離」だけ。 */
+/* クジラが水を押しのける量。浮遊物の3層が同じオブジェクトを共有する。
+   ★ makeMotes より前に置くこと(uniforms の初期化時に参照される)。 */
+const whaleU = { pos:{ value:new THREE.Vector3() }, r:{ value:0 } };
 const wakeU = {
   uFishPos:{ value:[new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
   uFishDir:{ value:[new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
@@ -3673,6 +3680,9 @@ function makeMotes(count, opt){
     uFishPos:wakeU.uFishPos, uFishDir:wakeU.uFishDir, uFishSide:wakeU.uFishSide,
     uFishWake:wakeU.uFishWake, uWakeAny:wakeU.uWakeAny,
     uOrigin:{value:new THREE.Vector3()},
+    /* クジラが押しのける分。3層で同じオブジェクトを共有する(魚と同じ作り)。
+       uWhaleR が 0 の間は分岐にすら入らない。 */
+    uWhalePos:whaleU.pos, uWhaleR:whaleU.r,
     /* ★ 水は uTime に t*0.8 を使う。粒子は t を使うので、
        同じ数字を別に渡さないと水面の判定が1割ずれる。 */
     uWaveT:{value:0},
@@ -3684,6 +3694,7 @@ function makeMotes(count, opt){
       uniform float uTime, uPix, uWobble, uWakeAny, uFloc, uWaveT;
       uniform vec3 uFishPos[3], uFishDir[3], uFishSide[3], uOrigin;
       uniform float uFishWake[3];
+      uniform vec3 uWhalePos; uniform float uWhaleR;
       attribute float aSeed, aSize, aSpeed;
       varying float vFade, vSeed, vDist;
       ${G_SURF}
@@ -3706,6 +3717,15 @@ function makeMotes(count, opt){
             float f = exp(-dot(dd,dd) * 2.8) * uFishWake[k];
             p += uFishDir[k] * 0.30 * f + uFishSide[k] * 0.12 * f;
           }
+        }
+        /* クジラが水を押しのける。★ 姿が大きいだけでは「そこに在る」だけで、
+           まわりの水を動かして初めて「進んでいる」に見える。
+           体の中心から外向きに逃がす(巨体なので向きの細工は要らない)。 */
+        if (uWhaleR > 0.0){
+          vec3 dw = (p + uOrigin) - uWhalePos;
+          float dl = length(dw) + 1e-4;
+          float f = 1.0 - smoothstep(uWhaleR * 0.40, uWhaleR, dl);
+          p += dw * (1.0 / dl) * uWhaleR * 0.17 * f;
         }
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vDist = -mv.z;
@@ -4719,7 +4739,8 @@ const touchdownEl = document.getElementById('touchdown');
 const landingEl   = document.getElementById('landing');
 const sonarEl   = document.getElementById('sonar');
 const sonarDEl  = document.getElementById('sonarD');
-let rapidWarnWas = false, tdShown = '', snShown = '', snDist = '';
+let rapidWarnWas = false, tdShown = '', snShown = '', snDist = '', snTick = -1;
+const SN_TICK = 0.45;            // ソナーが読み直す間隔(秒)
 const simRate = document.getElementById('simRate');
 const simPit  = document.getElementById('simPit');
 const simSea  = document.getElementById('simSea');
@@ -5874,7 +5895,7 @@ function frame(mode){
     const other = body === whaleMesh ? whaleSprite : whaleMesh;
     if (other && other.visible) other.visible = false;
     if (body.visible !== (amt > 0.004)) body.visible = amt > 0.004;
-    if (amt <= 0.004) whaleAvoid = 0;
+    if (amt <= 0.004){ whaleAvoid = 0; whaleU.r.value = 0; }
     if (amt > 0.004){
       /* ★ 世界のy基準で置いてはいけない。この帯(280〜380m)ではカメラが
          +8.6° 上を向いていて、camera.y+1.15 に置くと画面の下の外に落ちる
@@ -5896,8 +5917,10 @@ function frame(mode){
       _wq.setFromAxisAngle(_wx, 0.15 * Math.sin(q * 6.2831853) * whaleDir);
       body.quaternion.premultiply(_wq);
       body.scale.setScalar(whaleLen);
-      /* 魚に居場所を知らせる(下の回避で使う)。 */
+      /* 魚と浮遊物に居場所を知らせる(魚は回避、粒子は押しのけに使う)。 */
       whaleAvoid = amt; _wAt.copy(body.position);
+      whaleU.pos.value.copy(body.position);
+      whaleU.r.value = whaleLen * 0.42 * amt;
       uni.uTime.value = t;
       uni.uAmt.value = amt;
       uni.uDepth.value = depth01;
@@ -5905,9 +5928,16 @@ function frame(mode){
     /* ソナー。距離は世界単位を専用の尺で読む(深度の 69.8m/単位 で出すと
        画面いっぱいのクジラに 600M 超と出て計器が嘘になる)。 */
     if (sonarEl){
-      const sn = amt > 0.004 ? Math.min(1, amt * 1.8).toFixed(3) : '0';
+      /* ★ 毎フレーム数字が変わると、ソナーではなく「速度計」に見える。
+         0.45秒ごとに1回だけ読み直し、読み直した直後がいちばん明るい。
+         計器は連続値ではなく「掃引のたびに更新される」もの。 */
+      const tick = T >= 0 ? Math.floor(T / SN_TICK) : -1;
+      const frac = T >= 0 ? (T / SN_TICK) - tick : 0;
+      const sn = amt > 0.004
+        ? (Math.min(1, amt * 1.8) * (0.78 + 0.22 * (1 - frac))).toFixed(3) : '0';
       if (sn !== snShown){ snShown = sn; sonarEl.style.setProperty('--sn', sn); }
-      if (amt > 0.004){
+      if (amt > 0.004 && tick !== snTick){
+        snTick = tick;
         const dm = String(Math.round(
           Math.hypot(body.position.x - camera.position.x,
                      body.position.y - camera.position.y,
