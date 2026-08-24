@@ -901,7 +901,10 @@
     RATE <b id="simRate">+00.0</b>M/S &nbsp; PITCH <b id="simPit">-03.4</b>°<br>
     SEA <b id="simSea">+0.00</b>M &nbsp; VIS <b id="simVis">22</b>M<br>
     TEMP <b id="simTemp">21.4</b>°C<br>
-    DPR ×<span id="dprv">2.0</span> — <span id="fpsv">60</span>/<span id="fpsmin">60</span> FPS
+    <!-- ★ この行だけは「実測の計器」で、reduced-motion でも実時間で動く。
+         degrade.mjs の「24フレーム空けた2枚が1画素も違わない」を落とすので、
+         あちらで id を掴んで隠せるように包んである。 -->
+    <span id="simTel">DPR ×<span id="dprv">2.0</span> — <span id="fpsv">60</span>/<span id="fpsmin">60</span> FPS</span>
   </div>
 
   <div id="meter">
@@ -2772,6 +2775,8 @@ let whaleLen = 14;               // 発火時に画角から決める(下の wha
 const _wp = new THREE.Vector3(), _wp2 = new THREE.Vector3();
 const _wx = new THREE.Vector3(), _wy = new THREE.Vector3(), _wz = new THREE.Vector3();
 const _wup = new THREE.Vector3(0, 1, 0), _wm = new THREE.Matrix4();
+const _wq = new THREE.Quaternion(), _wAt = new THREE.Vector3();
+let whaleAvoid = 0;              // >0 の間だけ魚がクジラを避ける
 const _wf = new THREE.Vector3(), _wr = new THREE.Vector3(), _wu = new THREE.Vector3();
 function whaleAt(q, out){
   const across = (q * 2 - 1) * whaleLen * 1.15 * whaleDir;
@@ -5869,6 +5874,7 @@ function frame(mode){
     const other = body === whaleMesh ? whaleSprite : whaleMesh;
     if (other && other.visible) other.visible = false;
     if (body.visible !== (amt > 0.004)) body.visible = amt > 0.004;
+    if (amt <= 0.004) whaleAvoid = 0;
     if (amt > 0.004){
       /* ★ 世界のy基準で置いてはいけない。この帯(280〜380m)ではカメラが
          +8.6° 上を向いていて、camera.y+1.15 に置くと画面の下の外に落ちる
@@ -5885,7 +5891,13 @@ function frame(mode){
       _wy.crossVectors(_wz, _wx).normalize();
       _wm.makeBasis(_wx, _wy, _wz);
       body.quaternion.setFromRotationMatrix(_wm);
+      /* バンク。★ 進路は奥行き方向へ弧を描いているので、真っ直ぐ立てたままだと
+         「レールの上の模型」に見える。旋回の内側へ倒す。前半と後半で逆向き。 */
+      _wq.setFromAxisAngle(_wx, 0.15 * Math.sin(q * 6.2831853) * whaleDir);
+      body.quaternion.premultiply(_wq);
       body.scale.setScalar(whaleLen);
+      /* 魚に居場所を知らせる(下の回避で使う)。 */
+      whaleAvoid = amt; _wAt.copy(body.position);
       uni.uTime.value = t;
       uni.uAmt.value = amt;
       uni.uDepth.value = depth01;
@@ -6192,7 +6204,25 @@ function updateFish(fdt, focusAmt, fdtA = fdt){
       } else _fs.normalize();
       const push = (1 - dist/rad) * (1.1 + 1.4*fStart[i]);
       tx += _fs.x * rad * push; ty += _fs.y * rad * push * 0.45; tz += _fs.z * rad * push;
-    } else if (alive && !isHero1 && idle > 0.02 && dist > rad*1.7){
+    }
+    /* クジラからも逃げる。★ カメラの間合い(速さ・正対で半径が変わる)とは
+       別扱いにする —— 相手が大きすぎて、寄られたら無条件に退くのが正しい。
+       半径は体長の 0.55倍。逃げ方はカメラと同じ「必ず横へ抜ける」ではなく、
+       体から遠ざかる向き(巨体なので横も縦も無い)。 */
+    if (whaleAvoid > 0.004 && alive && !isHero1){
+      const wx = fPos[o] - _wAt.x, wy = fPos[o+1] - _wAt.y, wz = fPos[o+2] - _wAt.z;
+      const wd = Math.hypot(wx, wy, wz);
+      const wrad = whaleLen * 0.55;
+      if (wd < wrad){
+        const inv = 1 / Math.max(wd, 1e-3);
+        const push = (1 - wd / wrad) * whaleAvoid;
+        tx += wx * inv * wrad * push * 1.25;
+        ty += wy * inv * wrad * push * 0.50;
+        tz += wz * inv * wrad * push * 1.25;
+        if (fPause[i] <= 0 && fStart[i] < 0.2){ fPause[i] = 0.18; fStart[i] = 1; }
+      }
+    }
+    if (alive && !isHero1 && idle > 0.02 && dist > rad*1.7){
       /* 止まっていると近づく。ただし警戒の半径の 1.7倍までで止める
          (そこから内側は上の逃避が受け持つので、寄っては離れる間合いになる)。 */
       tx += (cam.x - fPos[o])   * 0.22 * idle;
