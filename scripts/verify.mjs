@@ -322,10 +322,25 @@ if (await page.evaluate(() => !!(window.__diag && window.__diag.seam))) {
       if (await page.evaluate(() => window.__diag.frames) >= f0 + n) return;
     }
   };
+  /* ★ hp は hpR へ一次遅れ(lag1 0.09s)で追う。固定フレーム数で待つと
+     追いつく前に読む回があり、0.60 の標本だけ uRim の裾が 0.001〜0.004 で
+     揺れて**合否が入れ替わった**(実測)。frames ではなく「hp が hpR に
+     追いついたか」で待つ。waitDot() と同じ直し方。 */
+  const waitSeam = async (maxMs = 30000) => {
+    const t0 = Date.now();
+    while (Date.now() - t0 < maxMs) {
+      await page.waitForTimeout(250);
+      const g = await page.evaluate(() => {
+        const s = window.__diag.seam; return { hp: s.hp, hpR: s.hpR };
+      });
+      if (Math.abs(g.hp - g.hpR) < 0.0015) return;
+    }
+  };
   const rows = [];
   for (const h of [0.40, 0.44, 0.47, 0.50, 0.53, 0.56, 0.60, 0.64]) {
     await page.evaluate(y => scrollTo(0, y), Math.round(base.ct - base.ih * (1 - h)));
-    await waitFrames(5);
+    await waitFrames(3);
+    await waitSeam();
     rows.push(await page.evaluate(() => {
       const s = window.__diag.seam;
       return { hpR:+s.hpR.toFixed(3), d:+(s.seamPx - s.horizonPx).toFixed(1),
@@ -338,6 +353,7 @@ if (await page.evaluate(() => !!(window.__diag && window.__diag.seam))) {
      シートのずれが 0 に戻っていること。 */
   await page.evaluate(y => scrollTo(0, y), Math.round(base.ct + base.ih * 0.4));
   await waitFrames(3);
+  await waitSeam();
   const frozen = await page.evaluate(() => {
     const s = window.__diag.seam;
     return { reading:s.reading, settled:s.settledDone, sd:s.seamDelta,
