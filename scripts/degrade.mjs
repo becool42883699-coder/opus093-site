@@ -60,6 +60,12 @@ const md5 = (b) => crypto.createHash('md5').update(b).digest('hex').slice(0,12);
   /* ★ 起動直後はコスト計測(calibrate)が構成を切り替えながら描くので、
      絵が変わって当たり前。終わるまで待たないと「静止していない」と誤判定する。 */
   await page.waitForFunction(() => window.__diag && window.__diag.cost, null, { timeout:180000 }).catch(()=>{});
+  /* ★ #simTel(DPR × … FPS)だけは「実測の計器」で、reduced-motion でも
+     実時間で動く。ここが1桁変わるだけで 48画素・maxDelta 19 の差分が出て
+     「静止していない」と落ちる(実際に落ちた)。**画の話ではないので外す。**
+     RATE / PITCH / SEA / VIS / TEMP はシーンから導く値なので隠さない ——
+     あれらが動いたら本当に不合格。 */
+  await page.addStyleTag({ content: '#simTel{visibility:hidden}' });
   await waitFrames(page, 40);
   const a = await page.screenshot();
   await waitFrames(page, 24);
