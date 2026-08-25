@@ -178,35 +178,94 @@
     transition:transform .18s linear;
   }
 
-  /* ---- ヒーロー ---- */
-  #hero{position:absolute; left:var(--gut); top:26vh; max-width:min(620px,52vw); will-change:opacity,transform}
-  #hero .eyebrow{margin-bottom:26px}
-  /* ロックアップ。和文4字＋欧文の2段組。ブランド名を一番大きく出す。
-     和文は欧文用の字送りをそのまま当てると「ばらけた4文字」に見えるので、
-     詰め気味(.06em)にして塊で読ませ、欧文を下に敷いて重さを支える。 */
-  #hero h1{color:var(--bone); line-height:1}
+  /* ---- ヒーロー: 画面中央を通る1本の軸 ----
+     ★ 中央揃えは transform ではなく left:0/right:0 で作る。
+       JS(HUDの退場)が heroEl.style.transform に translateY を書くので、
+       translateX(-50%) を持たせると毎フレーム上書きされて軸が左へ飛ぶ。
+     ★ pointer-events は殺す。中央の広い面がクリックを飲むと、
+       海面のソナー(ping)が撃てなくなる。 */
+  #hero{
+    position:absolute; left:0; right:0; top:14vh;
+    display:flex; flex-direction:column; align-items:center;
+    text-align:center; pointer-events:none; will-change:opacity,transform;
+  }
+  /* ★ 実測で、中央の文字のコントラストが 1.4〜3.2:1 しか無かった。
+     夕景の明るい雲と太陽の道の上に細い文字を置いたため —— 文字を白く
+     しても、背景が明るい側では比は上がらない(影を濃くしても最悪ケースは
+     背景の上位10%なので効かない)。
+     板や帯を敷くと「中央に大きなオブジェクトを置かない」を破るので、
+     軸に沿った**縦長のにじみ**を1枚だけ落とす。四方へ完全に消えるので
+     輪郭が出ず、写真は左右にそのまま残る。 */
+  #hero::before{
+    content:""; position:absolute; z-index:-1; pointer-events:none;
+    left:50%; transform:translateX(-50%);
+    top:calc(-1 * clamp(40px,7vh,90px)); bottom:calc(-1 * clamp(56px,9vh,120px));
+    width:min(600px, 84vw);
+    /* ★ 1枚では足りなかった。軸の上半分(汀・縦組み)は空に乗るが、下半分
+       (惹句・所在地)は**太陽の道が走る水面**に乗る —— そこは画面でいちばん
+       明るい。実測で上半分 5.03/7.06 に対し下半分は 2.07/2.86 のままだった。
+       楕円を2枚にして、下の帯を別に受け持たせる。 */
+    background:
+      radial-gradient(58% 48% at 50% 40%,
+        rgba(2,14,20,.62) 0%, rgba(2,14,20,.46) 38%, rgba(2,14,20,.20) 68%, rgba(2,14,20,0) 86%),
+      radial-gradient(50% 26% at 50% 85%,
+        rgba(2,14,20,.60) 0%, rgba(2,14,20,.42) 40%, rgba(2,14,20,.18) 68%, rgba(2,14,20,0) 88%);
+  }
+  /* ★ 中央の軸は「空のいちばん明るい所」と「太陽の道が走る水面」の
+     両方に重なる。.shade(全体共通の弱い影)では小さい文字が沈む —— 実測で
+     縦組みと所在地が背景に溶けた。中央に帯や板を敷くと写真を汚すので、
+     ヒーローの文字だけ影を濃くして読ませる。 */
+  #hero h1,#hero .lead,#place{
+    text-shadow:0 1px 20px rgba(2,14,20,.92), 0 0 7px rgba(2,14,20,.60),
+                0 1px 2px rgba(2,14,20,.55);
+  }
+  .srOnly{
+    position:absolute; width:1px; height:1px; margin:-1px; padding:0;
+    overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap;
+  }
+  /* 軸。1文字を「置く」のではなく「通す」ためのガイド。
+     上下とも端に向かって消す —— 端が硬いと定規に見える。 */
+  #hero h1{
+    display:flex; flex-direction:column; align-items:center;
+    color:var(--bone); line-height:1;
+  }
+  #lockup .ax{display:block; width:1px}
+  #lockup .axTop{
+    height:clamp(36px,5.6vh,58px);
+    background:linear-gradient(to bottom, rgba(222,240,242,0), rgba(222,240,242,.44));
+  }
+  #lockup .axBot{
+    height:clamp(24px,3.8vh,40px);
+    background:linear-gradient(to top, rgba(222,240,242,0), rgba(222,240,242,.34));
+  }
+  /* 「汀」1文字。横へは広げない —— 字送りを0にして、縦の軸だけを残す。 */
   #lockup b{
     display:block; font-family:var(--f-serif-jp); font-weight:400;
-    font-size:clamp(62px,10.5vw,148px); letter-spacing:.06em; text-indent:.06em;
+    font-size:clamp(88px,9.6vw,150px); letter-spacing:0; text-indent:0;
+    margin:clamp(14px,2.2vh,26px) 0 clamp(12px,1.9vh,22px);
   }
-  #lockup span{
-    display:block; margin-top:clamp(14px,1.6vw,22px);
-    font-size:clamp(10px,1.05vw,13px); font-weight:500;
-    letter-spacing:.42em; text-indent:.42em; color:rgba(222,240,242,.72);
+  /* MIGIWA STUDIO を1文字ずつ縦へ。writing-mode で組むので、
+     文字はテキストのまま(選択・検索・読み上げが効く)。
+     letter-spacing は縦組みでは「字間＝行方向の間隔」になる。 */
+  #lockup .en{
+    writing-mode:vertical-rl; text-orientation:upright; font-style:normal;
+    font-size:clamp(8.5px,.72vw,10px); font-weight:500;
+    letter-spacing:.34em; color:rgba(238,247,249,.96);
+    margin-bottom:clamp(10px,1.6vh,20px);
   }
-  #hero p{
-    margin-top:30px; max-width:33em;
-    font-size:12.5px; line-height:2.25; letter-spacing:.045em;
-    color:rgba(222,240,242,.82);
+  #hero .lead{
+    margin-top:clamp(20px,2.6vh,34px);
+    font-family:var(--f-serif-jp); font-weight:400;
+    font-size:clamp(13px,1.15vw,17px); line-height:2.5;
+    letter-spacing:.16em; text-indent:.16em;
+    color:rgba(246,251,252,1);
   }
-  #cta{
-    display:inline-flex; align-items:center; gap:12px; margin-top:30px;
-    padding-bottom:8px; border-bottom:1px solid var(--line-dim);
-    transition:border-color .35s var(--ease), gap .35s var(--ease);
+  #place{
+    margin-top:clamp(12px,1.7vh,20px);
+    font-size:clamp(8.5px,.72vw,10px); font-weight:500;
+    letter-spacing:.34em; text-indent:.34em;
+    color:rgba(242,249,250,.97);
   }
-  #cta:hover{border-color:var(--line); gap:16px}
-  #cta em{font-style:normal; transition:transform .35s var(--ease)}
-  #cta:hover em{transform:translate(3px,3px)}
 
   /* ---- 右: 縦組みラベルと章インデックス ---- */
   #vert{
@@ -821,6 +880,7 @@
   #noscriptNote .nsName{font-size:30px; letter-spacing:.14em; line-height:1.5; margin:0}
   #noscriptNote .nsName .mono{display:block; font-size:11px; letter-spacing:.34em; opacity:.72; margin-top:10px}
   #noscriptNote .nsLead{margin:22px 0 0}
+  #noscriptNote .nsPlace{margin:14px 0 0; font-size:10px; letter-spacing:.3em; opacity:.55}
   #noscriptNote .nsNote{margin:28px 0 0; opacity:.66}
 
   /* ============================ モバイル ============================
@@ -838,11 +898,30 @@
        実測で SE(553px高)は 111px から始まって**見出しがDEPTHに 24px 被って**いた
        (mini -9px / iPhone14 -2px。844px の絵ばかり見ていて気付けなかった)。
        px と vh を混ぜたら、必ず max() でどちらが勝つか決める。 */
-    #hero{left:var(--gut); right:var(--gut); max-width:none; top:max(20vh, 153px)}
-    #lockup b{font-size:clamp(54px,16.5vw,92px); letter-spacing:.04em; text-indent:.04em}
-    #lockup span{margin-top:12px; font-size:9.5px; letter-spacing:.34em; text-indent:.34em}
-    #hero p{margin-top:22px; font-size:11.5px; line-height:2.05; max-width:none}
-    #cta{margin-top:24px}
+    /* ★ 実測(iPhone 390×664)で、所在地の下端 608px に対して下のHUDの上端が
+       571px —— 37px 食い込んでいた。使える帯は #meter の下(135px)から
+       HUDの床(571px)まで 436px しかない。縦組みの字間と軸の長さで詰める
+       (「汀」は主役なので最後まで削らない)。 */
+    /* ★ 縦画面はにじみを濃くする。狭い画角では太陽が軸のすぐ隣に来るうえ
+       (SUN_AZ が半視野の際まで寄る)、縦組みが縦に長いぶん明るい雲を長く
+       横切る。実測で desktop は全項目 4.5:1 以上に届いたのに、iPhone だけ
+       惹句 3.06 / 縦組み 4.14 が残った。写真の見え幅も狭いので、ここは
+       濃くしても「海と夕日が見えない」にはならない。 */
+    #hero::before{
+      width:min(560px, 96vw);
+      background:
+        radial-gradient(62% 48% at 50% 40%,
+          rgba(2,14,20,.74) 0%, rgba(2,14,20,.56) 38%, rgba(2,14,20,.26) 70%, rgba(2,14,20,0) 88%),
+        radial-gradient(56% 27% at 50% 85%,
+          rgba(2,14,20,.80) 0%, rgba(2,14,20,.58) 42%, rgba(2,14,20,.24) 70%, rgba(2,14,20,0) 90%);
+    }
+    #hero{left:0; right:0; top:max(14vh, 122px)}
+    #lockup .axTop{height:clamp(24px,4.4vh,44px)}
+    #lockup .axBot{height:clamp(16px,3vh,28px)}
+    #lockup b{font-size:clamp(66px,19.5vw,100px); margin:clamp(8px,1.5vh,16px) 0 clamp(8px,1.4vh,14px)}
+    #lockup .en{font-size:8.5px; letter-spacing:.34em; margin-bottom:clamp(8px,1.3vh,14px)}
+    #hero .lead{margin-top:clamp(14px,2.1vh,24px); font-size:13px; line-height:2.05}
+    #place{margin-top:clamp(10px,1.5vh,15px); font-size:9px; letter-spacing:.3em; text-indent:.3em}
     /* 章インデックスは #counter と重複するので出さない。
        作品名もカード自身が読めるので隠し、「作品を見る」導線だけ残す。 */
     #dive{display:none}
@@ -880,47 +959,50 @@
       linear-gradient(180deg, rgba(2,14,20,.10) 0%, transparent 42%)}
   }
   /* 背の低い縦画面(iPhone SE / 13 mini の Safari は 553〜629px しか無い)。
-     ★ 文章は削らない —— 「ホームページをつくっています。福岡・北九州から。」は
+     ★ 文章は削らない —— 「デザインで選ばれるホームページをつくる。」は
        このサイトが何屋かを言う唯一の行で、いちばん狭い画面でこそ要る。
        代わりに縦のリズムだけ詰め、DEPTH の計器を上げて場所を返す。
-       これをやらないと、文字とHUDに挟まれた帯が 70px しか残らず、
-       主役のカードがそこまで縮む(実測 SE で画面幅の 21%)。 */
+       軸(線→汀→縦組み→線)は全部残す。1本でも欠けると中央が散る。 */
   @media (max-height:640px) and (min-height:521px){
     #meter{top:64px}
     #meter .cap{margin-bottom:6px}
     #meter .v::after{margin-top:5px}
-    #hero{top:max(20vh, 122px)}
-    #lockup b{font-size:clamp(46px,13.5vw,72px)}
-    #lockup span{margin-top:9px}
-    #hero p{margin-top:15px; line-height:1.85}
-    #cta{margin-top:16px}
+    #hero{top:max(13vh, 104px)}
+    #lockup .axTop{height:26px} #lockup .axBot{height:18px}
+    #lockup b{font-size:clamp(58px,17vw,84px); margin:12px 0 9px}
+    #lockup .en{font-size:8.5px; letter-spacing:.44em; margin-bottom:9px}
+    #hero .lead{margin-top:15px; font-size:12.5px; line-height:2.0}
+    #place{margin-top:11px; font-size:8.5px}
   }
 
   /* 背の低い横向き */
   @media (max-height:520px){
-    #hero{top:max(16vh, 153px)}
-    #lockup b{font-size:clamp(34px,8.4vh,56px)}
-    #lockup span{margin-top:9px; font-size:9px}
-    #hero p{display:none}
+    #hero{top:max(11vh, 92px)}
+    #lockup .ax{display:none}
+    #lockup b{font-size:clamp(34px,8.4vh,56px); margin:0 0 8px}
+    #lockup .en{writing-mode:horizontal-tb; text-orientation:mixed;
+                font-size:9px; letter-spacing:.34em; text-indent:.34em; margin-bottom:0}
+    #hero .lead{display:none}
+    #place{display:none}
     #diveBtn{display:none}
     #ruler{display:none}
   }
 
   @media (prefers-reduced-motion:reduce){
-    body,#cta,#cta em,#diveBtn i,nav a,nav a::after{transition:none}
+    body,#diveBtn i,nav a,nav a::after{transition:none}
     #diveBtn::after{animation:none}
-    #hero .eyebrow,#hero h1,#hero p,#cta{transition:none!important; opacity:1!important; transform:none!important}
+    #hero h1,#hero p{transition:none!important; opacity:1!important; transform:none!important}
   }
 
   /* ヒーローの入場。1回だけ、重さのある stagger */
-  html.js #hero .eyebrow,html.js #hero h1,html.js #hero p,html.js #cta{
-    opacity:0; transform:translateY(28px);
-    transition:opacity 1.1s var(--ease), transform 1.25s var(--ease);
+  /* ★ 軸は「上から降りてくる」のではなく、その場で濃くなる。
+     縦へ動かすと、中央を通る1本の線という主張が入場のたびに折れる。 */
+  html.js #hero h1,html.js #hero .lead,html.js #place{
+    opacity:0; transition:opacity 1.15s var(--ease);
   }
-  html.js body.ready #hero .eyebrow{opacity:1; transform:none; transition-delay:.20s}
-  html.js body.ready #hero h1{opacity:1; transform:none; transition-delay:.34s}
-  html.js body.ready #hero p{opacity:1; transform:none; transition-delay:.56s}
-  html.js body.ready #cta{opacity:1; transform:none; transition-delay:.74s}
+  html.js body.ready #hero h1{opacity:1; transition-delay:.26s}
+  html.js body.ready #hero .lead{opacity:1; transition-delay:.54s}
+  html.js body.ready #place{opacity:1; transition-delay:.74s}
 </style>
 </head>
 <body>
@@ -978,16 +1060,23 @@
     </nav>
   </div>
 
-  <!-- 水面。置くのはロックアップと業種の一行、潜行の誘導だけ。
+  <!-- 水面。画面中央を1本の軸が通る:
+         細い縦線 → 「汀」 → MIGIWA STUDIO の縦組み → 細い縦線 → 惹句 → 所在地。
        ここに他の文字を足さない —— 名乗りが一目で終わるから体験が壊れない。
-       最初の描画で読める必要があるので、フェードインの対象に入れない。 -->
+       最初の描画で読める必要があるので、フェードインの対象に入れない。
+       ★ 中央には板もカードも置かない。主役は1文字と縦の軸。 -->
   <section id="hero">
     <h1 class="shade" id="lockup">
-      <b>汀ノ庭</b>
-      <span class="mono">MIGIWA STUDIO</span>
+      <!-- 読み上げと検索には正式名称を渡す。見えている「汀」1文字は
+           意匠なので aria から外す(「汀 汀ノ庭」と二重に読まれない)。 -->
+      <span class="srOnly">汀ノ庭 MIGIWA STUDIO</span>
+      <i class="ax axTop" aria-hidden="true"></i>
+      <b aria-hidden="true">汀</b>
+      <em class="mono en" aria-hidden="true">MIGIWA STUDIO</em>
+      <i class="ax axBot" aria-hidden="true"></i>
     </h1>
-    <p class="shade">ホームページをつくっています。<br>福岡・北九州から。</p>
-    <a id="cta" class="mono shade" href="#works">スクロールで、潜ります。 <em>↓</em></a>
+    <p class="lead shade">デザインで選ばれる<br>ホームページをつくる。</p>
+    <p id="place" class="mono shade">FUKUOKA / KITAKYUSHU</p>
   </section>
 
   <div id="vert" class="mono">Selected works / 02 projects</div>
@@ -1023,9 +1112,12 @@
   </div>
 
   <div id="counter" class="mono">
-    <span class="n"><span id="secNo">01</span><small> / <span id="secAll">02</span></small></span>
+    <!-- ★ 初期値は 00。水面ではまだ1枚も見ていない。
+         JS 側の lastSec も -1 で始まるので、ここを 01 にしておくと
+         「値が変わっていない」と判定されて永久に 01 のまま出る。 -->
+    <span class="n"><span id="secNo">00</span><small> / <span id="secAll">02</span></small></span>
     <div class="track">
-      <span class="seg on"></span><span class="seg"></span>
+      <span class="seg"></span><span class="seg"></span>
     </div>
   </div>
 </div>
@@ -1062,7 +1154,8 @@
 <noscript>
   <div id="noscriptNote">
     <h1 class="nsName"><b>汀ノ庭</b><span class="mono">MIGIWA STUDIO</span></h1>
-    <p class="nsLead">ホームページをつくっています。<br>福岡・北九州から。</p>
+    <p class="nsLead">デザインで選ばれる<br>ホームページをつくる。</p>
+    <p class="nsPlace mono">FUKUOKA / KITAKYUSHU</p>
     <p class="nsNote mono">JavaScript が無効のため、水中の3D表現は再生されません。本文はそのままお読みいただけます。</p>
   </div>
 </noscript>
@@ -3510,10 +3603,15 @@ let CARD_BASE_SCALE = 1;
        しかも水平線際に貼り付いていて、下に空の水面が画面の1/3残る。
        主役なので寄せる。CTAの下端より上へ出ないことは solvePortraitLift が
        仰角を解いて保証するので、大きくしても文字には被らない。 */
+  /* ★ 1枚目は長らく水面の上(y=+0.92/+1.05)に浮かべていた。ファーストビューの
+     主役を「汀」1文字と縦の軸にしたので、中央に板を置かない —— 1枚目も
+     水面下へ沈める。潜り始めてすぐ(depth 約60〜90m)に最初の1枚が現れる。
+     ★ y を 0.4 より下げると uVis の「水面より上のカードは潜ると消える」分岐から
+     外れ、常時可視になる(水中の板として正しい)。 */
   const layout = isMobile
-    ? [[ 0.06,  1.05, -6.70, -0.06, 0.86],
+    ? [[ 0.06, -1.35, -6.10, -0.06, 0.86],
        [ 0.04, -5.10, -5.50,  0.06, 0.66]]
-    : [[-0.05,  0.92, -5.35, -0.08, 1.00],
+    : [[-0.05, -1.30, -5.35, -0.08, 1.00],
        [ 1.20, -5.00, -6.30, -0.20, 1.00]];
 
   for (let i=0;i<Math.min(WORKS.length, layout.length);i++){
@@ -4832,10 +4930,11 @@ const toWorks = (e) => {
   const c = cards[1] || cards[0];
   scrollToP(c ? spForCamY(c.userData.base.y) : 0.58, true);
 };
-/* ヒーローの「スクロールで、潜ります。」は works ではなく
-   「潜り始めた」位置(camY=-1.11 / 約77M)へ。 */
-const toDive = (e) => { e.preventDefault(); scrollToP(0.30, true); };
-document.getElementById('cta').addEventListener('click', toDive);
+/* ★ ヒーローの「スクロールで、潜ります。」リンクは廃止した —— 中央下の
+   DIVE ボタン(#diveBtn)が同じ役割を持っており、導線が2つ要らない。
+   ここで getElementById('cta') を掴んだままにしていたら、null に
+   addEventListener してモジュールごと落ちた(実際に落とした)。
+   **要素を消したら、それを掴んでいる行を必ず同じ変更の中で消す。** */
 document.getElementById('navWorks').addEventListener('click', toWorks);
 
 /* ---- カードのホバーとクリック --------------------------------------
@@ -5321,18 +5420,30 @@ window.__diag = {
     const box = s => { const e = document.querySelector(s); if (!e) return null;
       if (getComputedStyle(e).display === 'none') return null;
       const b = e.getBoundingClientRect(); return { t:b.top, b:b.bottom }; };
-    const meter = box('#meter'), h1 = box('#hero h1'), cta = box('#cta');
+    /* ★ 矩形は左右も見る。中央の軸(#hero h1)と DEPTH の計器は縦に重なるが
+       横は 200px 近く離れている —— 縦だけで見ると「被った」と嘘を言う。 */
+    const box2 = s => { const e = document.querySelector(s); if (!e) return null;
+      if (getComputedStyle(e).display === 'none') return null;
+      const b = e.getBoundingClientRect();
+      return { t:b.top, b:b.bottom, l:b.left, r:b.right }; };
+    const meter = box2('#meter'), h1 = box2('#hero h1'), cta = box('#place');
     const c = cardScreenRects()[0];
     let floor = innerHeight;
     for (const sel of ['#diveBtn','#foot','#counter']){
       const q = box(sel); if (q && q.t > 0 && q.t < floor) floor = q.t;
     }
     const over = (a, b) => Math.round(Math.max(0, a - b));
+    const xHit = (a, b) => a && b && a.l < b.r && b.l < a.r;
+    /* ★ 1枚目のカードを水面下へ沈めた(ヒーローの主役を1文字にしたため)。
+       水面は不透明なので、水面より下のカードは**画面に出ていない**。
+       幾何の矩形だけで見ると下のHUDに被っていることになるが、それは
+       「見えない板の位置」を測っているだけ。潜り始めるまで判定しない。 */
+    const cardShown = c && c.visible > 0.02 && sp > 0.03;
     return {
       portrait: innerHeight > innerWidth,
-      見出しがDEPTHに被る: meter && h1 ? over(meter.b, h1.t) : 0,
-      カードがCTAに被る:   cta && c   ? over(cta.b, c.y)     : 0,
-      カードが下HUDに被る: c ? over(c.y + c.h, floor)        : 0,
+      見出しがDEPTHに被る: (meter && h1 && xHit(meter, h1)) ? over(meter.b, h1.t) : 0,
+      カードが本文に被る:  (cardShown && cta) ? over(cta.b, c.y) : 0,
+      カードが下HUDに被る: cardShown ? over(c.y + c.h, floor)   : 0,
       cardW: c ? Math.round(c.w / innerWidth * 1000) / 10 : 0,
     };
   },
@@ -5934,8 +6045,12 @@ function frame(mode){
   setOp(headerEl,  retire(0.20,0.42));        // 名前は #seamName が引き継ぐ
   setOp(counterEl, retire(0.08,0.30));        // 章が終わったので最初に退く
   setOp(simEl,     0.42*retire(0.16,0.36));
-  setOp(vertEl,    0.50*retire(0.08,0.30));
-  setOp(diveNavEl, retire(0.08,0.30));
+  /* ★ 水面では出さない。ファーストビューは中央の軸だけに任せる
+     (右にもう1本の縦組みがあると、軸が2本に見えて主役が決まらない)。
+     潜り始めたら章の道しるべとして戻ってくる。 */
+  const surfaced = ss(0.02, 0.10, sp);
+  setOp(vertEl,    0.50*retire(0.08,0.30)*surfaced);
+  setOp(diveNavEl, retire(0.08,0.30)*surfaced);
   setOp(meterEl,   retire(0.34,0.52));        // 600.0M を出したまま最後に消える
   /* #ruler は画面幅で運命が変わる。1240px 以上は目次へ転生、
      それ未満は場所を譲って退役する(本文カラムと重なるため)。 */
@@ -5967,7 +6082,9 @@ function frame(mode){
     ((Math.min(1, depthM/DEPTH_MAX)*(1-wmix) + readHeadP()*wmix) * rulerH).toFixed(1)}px, 0)`;
 
   const SECN = Math.max(1, cards.length);
-  const sec = Math.min(SECN - 1, Math.floor(sp * SECN));
+  /* ★ 水面ではまだ1枚も見ていないので 00。1枚目を水面下へ沈めた以上、
+     何も映っていない画面で「01」と出るのは計器の嘘になる。 */
+  const sec = sp < 0.05 ? -1 : Math.min(SECN - 1, Math.floor(sp * SECN));
   if (sec !== lastSec){
     lastSec = sec;
     secNoEl.textContent = '0' + (sec+1);
@@ -6833,8 +6950,6 @@ const depthVel = { v: 0 }, expVel = { v: 0 };
 let expShown = _expInit;
 let rulerH = 220;
 let PORTRAIT_LIFT = 0.22;
-const _pcam = new THREE.PerspectiveCamera();
-const _pv = new THREE.Vector3();
 /* 下のHUD(Dive ボタン / CURRENT LOCATION / 01 02)の上端。
    カードはここへ潜り込んではいけない。 */
 function hudFloorY(){
@@ -6849,50 +6964,30 @@ function hudFloorY(){
 }
 
 function solvePortraitLift(){
-  if (camera.aspect >= 1){ PORTRAIT_LIFT = 0; return; }
-  const cta  = document.getElementById('cta');
-  const lede = document.querySelector('#hero p');
-  if (!cta) return;
-  const target = Math.max(cta.getBoundingClientRect().bottom,
-                          lede ? lede.getBoundingClientRect().bottom : 0) + 18;
+  /* ★ 以前はここで「1枚目のカードの上端が本文より下」を、しかも縦画面でだけ
+     解いていた。ファーストビューからカードを外した(水面下へ沈めた)ので、
+     いま押し下げるべき対象は**水平線**であり、それは横画面でも同じ問題になる
+     —— 実測(1600×900)で水平線が画面の45%に来て、MIGIWA STUDIO の縦組みが
+     水面のギラつきの上に落ちて読めなかった。横でも解く。
+     基準は軸(線→汀→縦組み→線)の下端。惹句と所在地まで空へ上げようとすると
+     仰角が上限に張り付き、海がほとんど映らなくなる(「海と夕日は十分に見せる」)。 */
+  const h1 = document.querySelector('#hero h1');
+  if (!h1) return;
+  /* HUDの床(DIVEボタン等)より上へも出しておく。下の帯まで海で埋めない。 */
+  const target = Math.min(h1.getBoundingClientRect().bottom + 24, hudFloorY() - 20);
 
-  const card  = cards[0];
-  /* ★ ここは長らく「カードの上端が文字より下」だけを保証していた。
-     下端は誰も見ていないので、画面が低いと**カードが下のHUDに潜り込む**
-     (実測 SE で 13px)。文字とHUDに挟まれた帯に収まる大きさまで縮める。
-     倍率と見かけの大きさは比例する(距離は変えないので)から一発で決まる。 */
-  const band = hudFloorY() - 14 - target;
-  /* ★ 投影を自前で解き直さないこと。一度そうしたら、実際に描かれる 112px に
-     対して 165px と答え、カードを必要の倍以上に縮めた(SE で幅の21%まで)。
-     カードには面のヨーとゆらぎが乗るので、素の高さ 1.72 からの計算とは
-     合わない。**実際に測っている cardScreenRects() をそのまま使う。**
-     ★ 縮める計算は「いまの倍率」からではなく必ず**元の倍率**から。
-     いまの倍率に係数を掛ける書き方だと、resize やフォント読込でこの関数が
-     複数回走るたびに掛け算が積もる。見かけの大きさは倍率に比例する
-     (距離は変えないので)から、元の倍率での高さは割り戻して出せる。 */
-  if (band > 40 && card.scale.x > 1e-3){
-    const r = cardScreenRects()[0];
-    if (r && r.h > 1){
-      const hAtBase = r.h * (CARD_BASE_SCALE / card.scale.x);
-      card.scale.setScalar(CARD_BASE_SCALE * Math.min(1, band / hAtBase));
-    }
-  }
-  const halfH = 1.72 * card.scale.y * 0.5;
-  /* 仰角 lift のときの、1枚目のカード上端の画面Y。lift を上げるほど
-     カメラが上を向き、被写体は画面の下へ動く(= topY は単調増加)。 */
+  /* 仰角 lift のときの水平線の画面Y。透視投影では視線が水平の点は
+     y = h/2 * (1 + tan(θ)/tan(fov/2)) に出る。lift を上げるほどカメラが
+     上を向き、水平線は画面の下へ動く(= 単調増加)。 */
   const topY = (lift) => {
-    _pcam.fov = camera.fov; _pcam.aspect = camera.aspect;
-    _pcam.near = camera.near; _pcam.far = camera.far;
-    _pcam.position.set(0, 0.95, 0);
-    _pcam.rotation.order = 'YXZ';
-    _pcam.rotation.set(-0.06 + lift, 0, 0);
-    _pcam.updateProjectionMatrix();
-    _pcam.updateMatrixWorld(true);
-    _pv.set(card.userData.base.x, card.userData.base.y + halfH, card.userData.base.z).project(_pcam);
-    return (1 - (_pv.y * 0.5 + 0.5)) * innerHeight;
+    const th = -0.06 + lift;
+    const half = Math.tan(camera.fov * Math.PI / 360);
+    return innerHeight * 0.5 * (1 + Math.tan(th) / half);
   };
 
-  let lo = 0.06, hi = 0.52;
+  /* 横画面は上限を低くする。縦ほど画角が縦に広くないので、同じ仰角でも
+     水平線がずっと大きく動く(＝空だけの絵になりやすい)。 */
+  let lo = 0.02, hi = camera.aspect >= 1 ? 0.30 : 0.52;
   if (topY(hi) < target){ PORTRAIT_LIFT = hi; return; }   // 上限でも届かない
   if (topY(lo) >= target){ PORTRAIT_LIFT = lo; return; }  // 下限で足りている
   for (let k = 0; k < 20; k++){
