@@ -11,4 +11,4 @@
 :HL["/opus093-site/_next/static/chunks/3vzc9n441c25l.css","style"]
 :HL["/opus093-site/becool/img/symbol.svg","image"]
 :HL["/opus093-site/becool/img/photo-porsche.webp","image"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"stock","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"MO1Y8JMlqR2OggcK-JT3d"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"stock","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"BH38vCDTpcYOGZOSkdDF1"}
