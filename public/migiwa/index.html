@@ -189,6 +189,21 @@
     display:flex; flex-direction:column; align-items:center;
     text-align:center; pointer-events:none; will-change:opacity,transform;
   }
+  /* ★ 実測で、中央の文字のコントラストが 1.4〜3.2:1 しか無かった。
+     夕景の明るい雲と太陽の道の上に細い文字を置いたため —— 文字を白く
+     しても、背景が明るい側では比は上がらない(影を濃くしても最悪ケースは
+     背景の上位10%なので効かない)。
+     板や帯を敷くと「中央に大きなオブジェクトを置かない」を破るので、
+     軸に沿った**縦長のにじみ**を1枚だけ落とす。四方へ完全に消えるので
+     輪郭が出ず、写真は左右にそのまま残る。 */
+  #hero::before{
+    content:""; position:absolute; z-index:-1; pointer-events:none;
+    left:50%; transform:translateX(-50%);
+    top:calc(-1 * clamp(40px,7vh,90px)); bottom:calc(-1 * clamp(30px,5vh,70px));
+    width:min(600px, 84vw);
+    background:radial-gradient(58% 50% at 50% 50%,
+      rgba(2,14,20,.62) 0%, rgba(2,14,20,.46) 38%, rgba(2,14,20,.20) 66%, rgba(2,14,20,0) 84%);
+  }
   /* ★ 中央の軸は「空のいちばん明るい所」と「太陽の道が走る水面」の
      両方に重なる。.shade(全体共通の弱い影)では小さい文字が沈む —— 実測で
      縦組みと所在地が背景に溶けた。中央に帯や板を敷くと写真を汚すので、
@@ -228,7 +243,7 @@
   #lockup .en{
     writing-mode:vertical-rl; text-orientation:upright; font-style:normal;
     font-size:clamp(8.5px,.72vw,10px); font-weight:500;
-    letter-spacing:.34em; color:rgba(232,244,246,.88);
+    letter-spacing:.34em; color:rgba(238,247,249,.96);
     margin-bottom:clamp(10px,1.6vh,20px);
   }
   #hero .lead{
@@ -242,7 +257,7 @@
     margin-top:clamp(12px,1.7vh,20px);
     font-size:clamp(8.5px,.72vw,10px); font-weight:500;
     letter-spacing:.34em; text-indent:.34em;
-    color:rgba(232,244,246,.80);
+    color:rgba(238,247,249,.90);
   }
 
   /* ---- 右: 縦組みラベルと章インデックス ---- */
