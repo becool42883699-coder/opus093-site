@@ -1623,8 +1623,15 @@ camera.position.set(0, 0.95, 0);
        光条だけが古い太陽を向いたままになる。回転しても太陽は動かさない。 */
 const SUN_FOV0 = innerHeight > innerWidth ? 64 : 56;
 const SUN_HALF = Math.atan(Math.tan(SUN_FOV0 * Math.PI/360) * (innerWidth / Math.max(1, innerHeight))) * 57.29578;
-const SUN_AZ   = Math.max(11, Math.min(30, SUN_HALF - 5.5)) * Math.PI / 180;
+/* ★ 「半視野-5.5°」で試したら、縦画面では太陽が画角の内側に入りすぎて
+   ハローが画面の4割を洗い、カードが逆光で読めなくなった(実測)。
+   円盤は「右端に半分掛かる」位置(半視野-1.5°)に置く —— 光の道は
+   画面内に入り、ハローの中心は縁の外に逃げる。 */
+const SUN_AZ   = Math.min(30, SUN_HALF - 1.5) * Math.PI / 180;
 const SUN = new THREE.Vector3(Math.sin(SUN_AZ), 0.085, -Math.cos(SUN_AZ)).normalize();
+/* 縦画面はさらにハローと広域散乱を絞る。狭い画面では同じ角度半径でも
+   面積比が大きく、洗い出しになる。円盤(core)は触らない。 */
+const SUN_DAMP = innerHeight > innerWidth ? 0.55 : 1.0;
 
 /* ================================================================
    共有GLSL
@@ -1915,8 +1922,8 @@ vec3 skyFn(vec3 dir){
   // 太陽。芯は鋭く、広い散乱は狭める(旧版はこれで空全体が乳白色になっていた)
   float occ = 1.0 - dens*0.80;
   sky += vec3(1.00,0.70,0.42) * pow(s, 3000.0) * ${RENDER.sunCore.toFixed(3)} * occ;
-  sky += vec3(1.00,0.58,0.30) * pow(s, 190.0)  * ${RENDER.sunHalo.toFixed(3)} * occ;
-  sky += vec3(0.80,0.42,0.24) * pow(s, 15.0)   * ${RENDER.sunBroad.toFixed(3)} * occ;
+  sky += vec3(1.00,0.58,0.30) * pow(s, 190.0)  * ${(RENDER.sunHalo * SUN_DAMP).toFixed(3)} * occ;
+  sky += vec3(0.80,0.42,0.24) * pow(s, 15.0)   * ${(RENDER.sunBroad * SUN_DAMP).toFixed(3)} * occ;
 
   vec3 below = mix(vec3(0.018,0.065,0.088), vec3(0.0015,0.011,0.023), smoothstep(0.0,0.5,-h));
   return mix(below, sky, smoothstep(-0.02, 0.02, h));
@@ -5257,6 +5264,11 @@ window.__diag = {
   get resurfacing(){ return resurfacing; },
   /* クジラを外から観測する口 */
   set whaleForce(v){ whaleForce = v; if (v != null && !whaleLen) whaleLen = whaleSize(); },
+  /* 生物発光。setter は検証用(減衰が毎フレーム走るので、保持したい時は
+     インターバルで書き続ける)。gate は motes 層の uBio(=幕の立ち上がり)。 */
+  set bioStim(v){ bioStim = Math.max(0, Math.min(1, v)); },
+  get bioState(){ return { stim:+bioStim.toFixed(3),
+    gate:+motes.userData.uni.uBio.value.toFixed(3) }; },
   set whaleSize(v){ whaleLen = v; },
   get whale(){
     const b = whaleMesh;
@@ -5604,16 +5616,19 @@ function frame(mode){
      水面に入るまでの間だけカメラを上へ振り、水平線を画面の下寄りへ送る
      (＝空を多く見せ、1枚目のカードを本文の下に落とす)。 */
   const portraitLift = PORTRAIT_LIFT * (1 - ss(0.02, 0.20, sp));
-  /* 陽光帯の見上げ。潜り始めの一拍だけ機首を上げ、離れていく水面 ——
+  /* 陽光帯の見上げ。水に入って一拍おいてから機首を上げ、離れていく水面 ——
      スネルの窓の縁と、そこに滲む太陽 —— を見送る。
      窓の縁は水平から41.4°上にあり、素の振り付け(最大+2°)では画角の上端
      (+28°/縦+32°)に一度も入らなかった。+0.30radで上端が43.6°/47.6°に届く。
-     0.34 までに元の振り付けへ返す(最初のカードに入る前)。 */
+     ★ 最初は sp 0.05-0.34 に置いたら、着水が sp≈0.19 なので
+       山がまだ「水の上」だった(実測: DEPTH 000.0M で空を見上げていた)。
+       窓は水中からしか見えない。20〜80m帯(sp 0.20-0.35)に置き直し、
+       最初のカードへ寄る前(0.35)に返し終える。 */
   /* 最後の項が汀線。潜航の終端でピッチは -0.170rad(-9.7°)。そこへ
      +0.170 を足して hpR≥0.44 で厳密に 0 にする。θ=0 の透視投影では
      床の消失線が必ず画面の垂直中央に出るので、水平線がそこへ「駐車」する。 */
   camera.rotation.x = (-0.06 + portraitLift
-                    + 0.30*ss(0.05,0.16,sp)*(1 - ss(0.22,0.34,sp))
+                    + 0.30*ss(0.20,0.27,sp)*(1 - ss(0.29,0.35,sp))
                     + 0.21*ss(0.10,0.46,sp) - 0.32*ss(0.60,0.97,sp))
                     + 0.170*ss(0.04, 0.44, hPose)
                     + (py*-0.030
