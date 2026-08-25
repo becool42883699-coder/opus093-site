@@ -16,3 +16,6 @@ scratch/
 
 # Graft のビルド生成物（graft build で再生成できる）
 graft/.cache/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/
