@@ -189,6 +189,14 @@
     display:flex; flex-direction:column; align-items:center;
     text-align:center; pointer-events:none; will-change:opacity,transform;
   }
+  /* ★ 中央の軸は「空のいちばん明るい所」と「太陽の道が走る水面」の
+     両方に重なる。.shade(全体共通の弱い影)では小さい文字が沈む —— 実測で
+     縦組みと所在地が背景に溶けた。中央に帯や板を敷くと写真を汚すので、
+     ヒーローの文字だけ影を濃くして読ませる。 */
+  #hero h1,#hero .lead,#place{
+    text-shadow:0 1px 20px rgba(2,14,20,.92), 0 0 7px rgba(2,14,20,.60),
+                0 1px 2px rgba(2,14,20,.55);
+  }
   .srOnly{
     position:absolute; width:1px; height:1px; margin:-1px; padding:0;
     overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap;
@@ -201,40 +209,40 @@
   }
   #lockup .ax{display:block; width:1px}
   #lockup .axTop{
-    height:clamp(46px,8.5vh,104px);
+    height:clamp(36px,5.6vh,58px);
     background:linear-gradient(to bottom, rgba(222,240,242,0), rgba(222,240,242,.44));
   }
   #lockup .axBot{
-    height:clamp(30px,5.5vh,66px);
+    height:clamp(24px,3.8vh,40px);
     background:linear-gradient(to top, rgba(222,240,242,0), rgba(222,240,242,.34));
   }
   /* 「汀」1文字。横へは広げない —— 字送りを0にして、縦の軸だけを残す。 */
   #lockup b{
     display:block; font-family:var(--f-serif-jp); font-weight:400;
-    font-size:clamp(88px,11.2vw,172px); letter-spacing:0; text-indent:0;
-    margin:clamp(16px,2.6vh,34px) 0 clamp(14px,2.2vh,28px);
+    font-size:clamp(88px,9.6vw,150px); letter-spacing:0; text-indent:0;
+    margin:clamp(14px,2.2vh,26px) 0 clamp(12px,1.9vh,22px);
   }
   /* MIGIWA STUDIO を1文字ずつ縦へ。writing-mode で組むので、
      文字はテキストのまま(選択・検索・読み上げが効く)。
      letter-spacing は縦組みでは「字間＝行方向の間隔」になる。 */
   #lockup .en{
     writing-mode:vertical-rl; text-orientation:upright; font-style:normal;
-    font-size:clamp(8.5px,.78vw,10.5px); font-weight:500;
-    letter-spacing:.58em; color:rgba(222,240,242,.62);
-    margin-bottom:clamp(12px,2vh,24px);
+    font-size:clamp(8.5px,.72vw,10px); font-weight:500;
+    letter-spacing:.34em; color:rgba(232,244,246,.88);
+    margin-bottom:clamp(10px,1.6vh,20px);
   }
   #hero .lead{
-    margin-top:clamp(24px,3.2vh,44px);
+    margin-top:clamp(20px,2.6vh,34px);
     font-family:var(--f-serif-jp); font-weight:400;
     font-size:clamp(13px,1.15vw,17px); line-height:2.5;
     letter-spacing:.16em; text-indent:.16em;
-    color:rgba(222,240,242,.90);
+    color:rgba(240,248,250,.97);
   }
   #place{
-    margin-top:clamp(14px,2.1vh,24px);
+    margin-top:clamp(12px,1.7vh,20px);
     font-size:clamp(8.5px,.72vw,10px); font-weight:500;
     letter-spacing:.34em; text-indent:.34em;
-    color:rgba(222,240,242,.54);
+    color:rgba(232,244,246,.80);
   }
 
   /* ---- 右: 縦組みラベルと章インデックス ---- */
@@ -6909,19 +6917,17 @@ function hudFloorY(){
 }
 
 function solvePortraitLift(){
-  if (camera.aspect >= 1){ PORTRAIT_LIFT = 0; return; }
-  /* ★ 以前はここで「1枚目のカードの上端が本文より下」を解いていた。
-     ファーストビューからカードを外した(水面下へ沈めた)ので、
-     いま押し下げるべき対象は**水平線**になった。中央の縦の軸は空を背に
-     立たせたい —— 水平線が軸のいちばん下(所在地の行)より上に来ると、
-     文字が海に乗って濁る。 */
-  const foot = document.getElementById('place') || document.querySelector('#hero .lead');
-  const h1   = document.querySelector('#hero h1');
-  if (!foot && !h1) return;
-  const bottom = Math.max(foot ? foot.getBoundingClientRect().bottom : 0,
-                          h1   ? h1.getBoundingClientRect().bottom   : 0);
+  /* ★ 以前はここで「1枚目のカードの上端が本文より下」を、しかも縦画面でだけ
+     解いていた。ファーストビューからカードを外した(水面下へ沈めた)ので、
+     いま押し下げるべき対象は**水平線**であり、それは横画面でも同じ問題になる
+     —— 実測(1600×900)で水平線が画面の45%に来て、MIGIWA STUDIO の縦組みが
+     水面のギラつきの上に落ちて読めなかった。横でも解く。
+     基準は軸(線→汀→縦組み→線)の下端。惹句と所在地まで空へ上げようとすると
+     仰角が上限に張り付き、海がほとんど映らなくなる(「海と夕日は十分に見せる」)。 */
+  const h1 = document.querySelector('#hero h1');
+  if (!h1) return;
   /* HUDの床(DIVEボタン等)より上へも出しておく。下の帯まで海で埋めない。 */
-  const target = Math.min(bottom + 26, hudFloorY() - 20);
+  const target = Math.min(h1.getBoundingClientRect().bottom + 24, hudFloorY() - 20);
 
   /* 仰角 lift のときの水平線の画面Y。透視投影では視線が水平の点は
      y = h/2 * (1 + tan(θ)/tan(fov/2)) に出る。lift を上げるほどカメラが
@@ -6932,7 +6938,9 @@ function solvePortraitLift(){
     return innerHeight * 0.5 * (1 + Math.tan(th) / half);
   };
 
-  let lo = 0.06, hi = 0.52;
+  /* 横画面は上限を低くする。縦ほど画角が縦に広くないので、同じ仰角でも
+     水平線がずっと大きく動く(＝空だけの絵になりやすい)。 */
+  let lo = 0.02, hi = camera.aspect >= 1 ? 0.30 : 0.52;
   if (topY(hi) < target){ PORTRAIT_LIFT = hi; return; }   // 上限でも届かない
   if (topY(lo) >= target){ PORTRAIT_LIFT = lo; return; }  // 下限で足りている
   for (let k = 0; k < 20; k++){
