@@ -1638,7 +1638,7 @@ const SUN_DAMP = innerHeight > innerWidth ? 0.55 : 1.0;
    pow(s,15) は狭い画角では画面の大半で 0.3〜0.6 になる。
    縦画面だけ: 芯 0.45倍(円盤はACESで飽和したまま・にじみの源だけ減る)、
    ハロー指数 190→320、広域指数 15→34(半値幅を約2/3に)。 */
-const SUN_CORE_DAMP = innerHeight > innerWidth ? 0.45 : 1.0;
+const SUN_CORE_DAMP = innerHeight > innerWidth ? 0.32 : 1.0;
 const SUN_HALO_POW  = innerHeight > innerWidth ? '320.0' : '190.0';
 const SUN_BROAD_POW = innerHeight > innerWidth ? '34.0'  : '15.0';
 
