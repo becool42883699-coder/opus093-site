@@ -1627,7 +1627,10 @@ const SUN_HALF = Math.atan(Math.tan(SUN_FOV0 * Math.PI/360) * (innerWidth / Math
    ハローが画面の4割を洗い、カードが逆光で読めなくなった(実測)。
    円盤は「右端に半分掛かる」位置(半視野-1.5°)に置く —— 光の道は
    画面内に入り、ハローの中心は縁の外に逃げる。 */
-const SUN_AZ   = Math.min(30, SUN_HALF - 1.5) * Math.PI / 180;
+/* ★ 下限11°は必須。SUN_HALF = atan(tan(32°)·aspect) なので、細い縦窓
+   (スプリットスクリーン等 aspect<0.36)では方位が11°を割り、狭いほど
+   0°(=カードの真後ろ)へ寄る。逆光で作品が読めなくなる。 */
+const SUN_AZ   = Math.max(11, Math.min(30, SUN_HALF - 1.5)) * Math.PI / 180;
 const SUN = new THREE.Vector3(Math.sin(SUN_AZ), 0.085, -Math.cos(SUN_AZ)).normalize();
 /* 縦画面はさらにハローと広域散乱を絞る。狭い画面では同じ角度半径でも
    面積比が大きく、洗い出しになる。円盤(core)は触らない。 */
@@ -1639,6 +1642,11 @@ const SUN_DAMP = innerHeight > innerWidth ? 0.55 : 1.0;
    縦画面だけ: 芯 0.45倍(円盤はACESで飽和したまま・にじみの源だけ減る)、
    ハロー指数 190→320、広域指数 15→34(半値幅を約2/3に)。 */
 const SUN_CORE_DAMP = innerHeight > innerWidth ? 0.32 : 1.0;
+/* 生物発光の強さ。★ Bloom 閾値は HDR 1.00 / LDR 0.60 の2本立てで、
+   LDR では発光項(最大 G≈0.73)にベース項(G≈0.10)が乗ると luma≈0.67 となり
+   閾値を超える —— 8bit 端末でだけ水が動くたび粒が滲む(「強い発光」禁止)。
+   LDR は 0.62倍に落として luma 最大を約0.45に収める。 */
+const BIO_GAIN = HDR ? 1.0 : 0.62;
 const SUN_HALO_POW  = innerHeight > innerWidth ? '320.0' : '190.0';
 const SUN_BROAD_POW = innerHeight > innerWidth ? '34.0'  : '15.0';
 
@@ -3836,7 +3844,7 @@ function makeMotes(count, opt){
         if (uBio > 0.001){
           float pulse = pow(0.5 + 0.5*sin(uTime*(0.55 + fract(vSeed*3.3)*0.9) + vSeed*11.0), 3.0);
           float stim  = clamp(uBioStim + vStim * 2.0, 0.0, 1.0);
-          col += vec3(0.060,0.70,0.60) * (0.06 + pulse*(0.16 + 0.84*stim))
+          col += vec3(0.060,0.70,0.60) * ${BIO_GAIN.toFixed(3)} * (0.06 + pulse*(0.16 + 0.84*stim))
                * a * vFade * uBio * vBioSel * exp(-ABSORB * vDist * MEDIUM_K * 2.6);
         }
         gl_FragColor = vec4(col, 1.0);
