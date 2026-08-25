@@ -1632,6 +1632,15 @@ const SUN = new THREE.Vector3(Math.sin(SUN_AZ), 0.085, -Math.cos(SUN_AZ)).normal
 /* 縦画面はさらにハローと広域散乱を絞る。狭い画面では同じ角度半径でも
    面積比が大きく、洗い出しになる。円盤(core)は触らない。 */
 const SUN_DAMP = innerHeight > innerWidth ? 0.55 : 1.0;
+/* ★ 0.55倍だけでは足りなかった(実測: まだ画面の4割が洗われる)。
+   洗いの正体は3つの合算 —— HDRの芯(55倍)を Bloom が塗り広げ、
+   ATMOS の水上ベース散乱(0.10)が同じ芯を筋に伸ばし、広域散乱
+   pow(s,15) は狭い画角では画面の大半で 0.3〜0.6 になる。
+   縦画面だけ: 芯 0.45倍(円盤はACESで飽和したまま・にじみの源だけ減る)、
+   ハロー指数 190→320、広域指数 15→34(半値幅を約2/3に)。 */
+const SUN_CORE_DAMP = innerHeight > innerWidth ? 0.45 : 1.0;
+const SUN_HALO_POW  = innerHeight > innerWidth ? '320.0' : '190.0';
+const SUN_BROAD_POW = innerHeight > innerWidth ? '34.0'  : '15.0';
 
 /* ================================================================
    共有GLSL
@@ -1921,9 +1930,9 @@ vec3 skyFn(vec3 dir){
 
   // 太陽。芯は鋭く、広い散乱は狭める(旧版はこれで空全体が乳白色になっていた)
   float occ = 1.0 - dens*0.80;
-  sky += vec3(1.00,0.70,0.42) * pow(s, 3000.0) * ${RENDER.sunCore.toFixed(3)} * occ;
-  sky += vec3(1.00,0.58,0.30) * pow(s, 190.0)  * ${(RENDER.sunHalo * SUN_DAMP).toFixed(3)} * occ;
-  sky += vec3(0.80,0.42,0.24) * pow(s, 15.0)   * ${(RENDER.sunBroad * SUN_DAMP).toFixed(3)} * occ;
+  sky += vec3(1.00,0.70,0.42) * pow(s, 3000.0) * ${(RENDER.sunCore * SUN_CORE_DAMP).toFixed(3)} * occ;
+  sky += vec3(1.00,0.58,0.30) * pow(s, ${SUN_HALO_POW})  * ${(RENDER.sunHalo * SUN_DAMP).toFixed(3)} * occ;
+  sky += vec3(0.80,0.42,0.24) * pow(s, ${SUN_BROAD_POW})   * ${(RENDER.sunBroad * SUN_DAMP).toFixed(3)} * occ;
 
   vec3 below = mix(vec3(0.018,0.065,0.088), vec3(0.0015,0.011,0.023), smoothstep(0.0,0.5,-h));
   return mix(below, sky, smoothstep(-0.02, 0.02, h));
@@ -3733,12 +3742,12 @@ function makeMotes(count, opt){
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
     uniforms: uni,
     vertexShader:`
-      uniform float uTime, uPix, uWobble, uWakeAny, uFloc, uWaveT;
+      uniform float uTime, uPix, uWobble, uWakeAny, uFloc, uWaveT, uBio;
       uniform vec3 uFishPos[3], uFishDir[3], uFishSide[3], uOrigin;
       uniform float uFishWake[3];
       uniform vec3 uWhalePos; uniform float uWhaleR;
       attribute float aSeed, aSize, aSpeed;
-      varying float vFade, vSeed, vDist, vStim;
+      varying float vFade, vSeed, vDist, vStim, vBioSel;
       ${G_SURF}
       varying vec3 vSpin;          // xy=回転の基底 / z=細長さ
       void main(){
@@ -3774,8 +3783,12 @@ function makeMotes(count, opt){
         }
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vDist = -mv.z;
+        /* 発光する個体の選別は頂点で1回。発光中は粒をわずかに大きくする
+           (1〜2pxの点は明るくしても読めない。大きさが「生きている」を作る) */
+        vBioSel = step(0.84, fract(aSeed * 7.91));
         // 距離減衰。近すぎる粒は巨大化してノイズになるので上限を切る
-        gl_PointSize = min(aSize * uPix * (34.0 / max(vDist, 0.35)), 90.0*uPix);
+        gl_PointSize = min(aSize * uPix * (34.0 / max(vDist, 0.35)), 90.0*uPix)
+                     * (1.0 + 0.25 * vBioSel * uBio);
         // 手前すぎ / 遠すぎを消す
         vFade = smoothstep(0.25, 1.4, vDist) * (1.0 - smoothstep(16.0, 30.0, vDist));
         /* ★ 粒子はカメラ中心の帯を折り返すので、水面近くでは帯の上半分が
@@ -3790,7 +3803,7 @@ function makeMotes(count, opt){
       }`,
     fragmentShader:`
       uniform float uGain, uSoft, uDepth, uTime, uFloc, uBio, uBioStim;
-      varying float vFade, vSeed, vDist, vStim;
+      varying float vFade, vSeed, vDist, vStim, vBioSel;
       varying vec3 vSpin;
       ${G_MEDIUM}
       void main(){
@@ -3821,11 +3834,10 @@ function makeMotes(count, opt){
            水が動く(スクロール・ping・クジラ)と一斉に強まる。
            ★ 係数は Bloom 閾値(1.0)の下に収める。「強い発光」は禁止事項。 */
         if (uBio > 0.001){
-          float sel   = step(0.84, fract(vSeed * 7.91));
           float pulse = pow(0.5 + 0.5*sin(uTime*(0.55 + fract(vSeed*3.3)*0.9) + vSeed*11.0), 3.0);
           float stim  = clamp(uBioStim + vStim * 2.0, 0.0, 1.0);
-          col += vec3(0.055,0.60,0.52) * (0.05 + pulse*(0.15 + 0.85*stim))
-               * a * vFade * uBio * sel * exp(-ABSORB * vDist * MEDIUM_K * 2.6);
+          col += vec3(0.060,0.70,0.60) * (0.06 + pulse*(0.16 + 0.84*stim))
+               * a * vFade * uBio * vBioSel * exp(-ABSORB * vDist * MEDIUM_K * 2.6);
         }
         gl_FragColor = vec4(col, 1.0);
       }`,
@@ -5622,13 +5634,15 @@ function frame(mode){
      (+28°/縦+32°)に一度も入らなかった。+0.30radで上端が43.6°/47.6°に届く。
      ★ 最初は sp 0.05-0.34 に置いたら、着水が sp≈0.19 なので
        山がまだ「水の上」だった(実測: DEPTH 000.0M で空を見上げていた)。
-       窓は水中からしか見えない。20〜80m帯(sp 0.20-0.35)に置き直し、
-       最初のカードへ寄る前(0.35)に返し終える。 */
+       窓は水中からしか見えない。24〜38m の浅場に置き直し、最初の
+       カードへ寄る前(0.33)に返し終える。
+       ★ 45mで試したら暖色が吸収で死んでいた(赤は2単位で落ちる)。
+         窓の色が残るのは浅場だけ —— 深さも「幕」の言語で選ぶ。 */
   /* 最後の項が汀線。潜航の終端でピッチは -0.170rad(-9.7°)。そこへ
      +0.170 を足して hpR≥0.44 で厳密に 0 にする。θ=0 の透視投影では
      床の消失線が必ず画面の垂直中央に出るので、水平線がそこへ「駐車」する。 */
   camera.rotation.x = (-0.06 + portraitLift
-                    + 0.30*ss(0.20,0.27,sp)*(1 - ss(0.29,0.35,sp))
+                    + 0.30*ss(0.195,0.235,sp)*(1 - ss(0.27,0.33,sp))
                     + 0.21*ss(0.10,0.46,sp) - 0.32*ss(0.60,0.97,sp))
                     + 0.170*ss(0.04, 0.44, hPose)
                     + (py*-0.030
