@@ -378,6 +378,53 @@
 
   /* ---- 画面全体の仕上げ ---- */
   /* 周辺減光は「1枚だけ」。3D側にもVignetteを入れると二重になるので入れていない。 */
+  /* ---- 潜る儀式。最初のスクロールの1.4秒だけ ----
+     ★ 暗転はごく浅く(0.55)。「演出が始まった」ではなく「水に入った」に
+       読ませる。泡は8粒だけ、コンポジタで動く(transform/opacity のみ)。 */
+  #diveVeil{position:fixed; inset:0; z-index:4; pointer-events:none; opacity:0;
+    background:radial-gradient(ellipse at 50% 42%, rgba(2,10,16,0) 30%, rgba(2,10,16,.55) 100%);
+    transition:opacity .45s var(--ease)}
+  #diveVeil.on{opacity:1}
+  #diveVeil i{position:absolute; bottom:-4vh; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, rgba(215,240,246,.72), rgba(150,200,214,.16) 68%, transparent 72%);
+    opacity:0; will-change:transform}
+  #diveVeil.on i{animation:diveBub 1.30s cubic-bezier(.22,.61,.36,1) forwards}
+  @keyframes diveBub{
+    0%{opacity:0; transform:translateY(0) scale(.7)}
+    12%{opacity:.9}
+    100%{opacity:0; transform:translateY(-52vh) scale(1.06)}
+  }
+  #diveVeil i:nth-child(1){left:12%; width:5px;  height:5px;  animation-delay:.02s}
+  #diveVeil i:nth-child(2){left:23%; width:9px;  height:9px;  animation-delay:.16s}
+  #diveVeil i:nth-child(3){left:38%; width:4px;  height:4px;  animation-delay:.05s}
+  #diveVeil i:nth-child(4){left:47%; width:12px; height:12px; animation-delay:.24s}
+  #diveVeil i:nth-child(5){left:58%; width:6px;  height:6px;  animation-delay:.10s}
+  #diveVeil i:nth-child(6){left:69%; width:5px;  height:5px;  animation-delay:.30s}
+  #diveVeil i:nth-child(7){left:80%; width:10px; height:10px; animation-delay:.07s}
+  #diveVeil i:nth-child(8){left:90%; width:4px;  height:4px;  animation-delay:.20s}
+  @media (prefers-reduced-motion:reduce){ #diveVeil{display:none} }
+
+  /* ---- ソナーの ping。タップ/クリックで1回だけ広がる輪 ----
+     文字は光らせない決まりだが、これは計器の発信音の絵。線1本と
+     ごく薄い残響の2重輪、0.85秒で消える。 */
+  .sonarPing{position:fixed; z-index:5; pointer-events:none;
+    width:16px; height:16px; margin:-8px 0 0 -8px; border-radius:50%;
+    border:1px solid rgba(143,212,222,.62);
+    animation:snPing .85s cubic-bezier(.16,.84,.44,1) forwards}
+  .sonarPing.echo{border-color:rgba(143,212,222,.30); animation-delay:.16s; opacity:0}
+
+  /* ---- 浮上の導線 ---- */
+  .resurfaceRow{margin-top:44px}
+  #resurface{
+    display:inline-block; font-size:10.5px; letter-spacing:.34em; text-indent:.34em;
+    color:var(--line); text-decoration:none; padding-bottom:8px;
+    border-bottom:1px solid rgba(143,212,222,.30); transition:opacity .35s var(--ease)}
+  #resurface:hover{opacity:.72}
+  @keyframes snPing{
+    0%{opacity:.85; transform:scale(.35)}
+    100%{opacity:0; transform:scale(10.5)}
+  }
+
   #vig{position:fixed; inset:0; z-index:6; pointer-events:none;
     background:radial-gradient(124% 96% at 50% 46%, transparent 54%, rgba(1,9,13,.62) 100%)}
   /* 文字が乗るところだけ、ごく薄く沈める(可読性を影ではなく地で作る)。
@@ -990,10 +1037,12 @@
      どの画面幅でも文字の領域と取り合わないため。#sim(計器)は 820px 以下で
      隠れるので、そこへ入れるとスマホで一度も出ない。 -->
 <div id="rapid" class="mono" aria-hidden="true">RAPID DESCENT</div>
+<!-- 潜る儀式。最初のスクロールでだけ点く暗転と泡。 -->
+<div id="diveVeil" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 <!-- 着底。★ RAPID DESCENT と同じ理由で中央に置く(#sim は 820px 以下で隠れる)。 -->
 <div id="touchdown" class="mono" aria-hidden="true">TOUCHDOWN — SEABED</div>
 <!-- ソナーの接触。クジラが横切っているあいだだけ。距離は通過に合わせて増減する。 -->
-<div id="sonar" class="mono" aria-hidden="true">CONTACT — UNKNOWN / <b id="sonarD">000</b>M</div>
+<div id="sonar" class="mono" aria-hidden="true">CONTACT — <b id="sonarN">UNKNOWN</b> / <b id="sonarD">000</b>M</div>
 
 <div id="reticle" aria-hidden="true">
   <span class="rBrk rL"></span><span class="rBrk rR"></span>
@@ -1256,6 +1305,9 @@
               <dd>社内で回覧したいときや、資料を添えたいときに。</dd>
             </div>
           </dl>
+          <!-- 浮上。潜って読んだ体験を、往復で閉じる帰り道。
+               JS無効でも href="#" が素のジャンプとして働く。 -->
+          <p class="resurfaceRow"><a id="resurface" class="mono" href="#">RESURFACE — 浮上する ↑</a></p>
         </div>
       </section>
       <section id="about" data-reveal>
@@ -1593,8 +1645,19 @@ float fbm(vec2 p, int oct){
 const FOG_SHALLOW = new THREE.Color(0.038, 0.132, 0.168);
 /* ★ 水槽の底の色。外洋の深場は (0.0035, 0.0195, 0.0380) のほぼ黒だったが、
    大水槽は底まで青が残る。浅い側との差は「明るさが少し落ちて青へ寄る」だけ。 */
-const FOG_DEEP    = new THREE.Color(0.0230, 0.0930, 0.1400);
+/* 潜航の4幕(GLSL 側 actScatter と同じ考え)。
+   旧 FOG_DEEP (0.0230, 0.0930, 0.1400) は SHALLOW→DEEP の一次 lerp 用で、
+   浅い側とほぼ同色相だった —— それが「21画面が同じシアン」の正体。
+   FOG_MID / FOG_TWILIGHT の3段に置き換えて廃止。遠景の壁がこの3段を
+   踏むことで、初めて「降りるほど景色が変わる」が遠景にも出る。 */
+const FOG_MID      = new THREE.Color(0.0180, 0.0790, 0.1290);
+const FOG_TWILIGHT = new THREE.Color(0.0058, 0.0245, 0.0560);
 const fogCol = new THREE.Color().copy(FOG_SHALLOW);
+const _fogTmp = new THREE.Color();
+function actFog(d01){
+  fogCol.copy(FOG_SHALLOW).lerp(_fogTmp.copy(FOG_MID), ss(0.10, 0.45, d01));
+  fogCol.lerp(_fogTmp.copy(FOG_TWILIGHT), ss(0.55, 0.95, d01));
+}
 
 /* 水面の揺らぎ由来のスカラー1本。海底の集光・光芒・カードの縁・
    水中の内散乱が「同じ脈」で明滅する。0.35Hz以下・振幅±6%に固定し、
@@ -1692,8 +1755,27 @@ ${waveCall('waveTerm', ', p, t, h, lap')}
      同じ距離の魚とカードで霞み方が違う状態に逆戻りする。 */
 const G_MEDIUM = `
 const vec3 ABSORB  = vec3(0.115, 0.032, 0.018);   // 距離あたりの吸収
-const vec3 SCATTER = vec3(0.052, 0.196, 0.246);   // 散乱して返る色
+const vec3 SCATTER = vec3(0.052, 0.196, 0.246);   // 散乱して返る色(陽光帯)
 const float MEDIUM_K = 0.165;
+/* ---- 潜航の4幕 --------------------------------------------------
+   実測で、2画面目から着底まで21画面が色相185〜195°のほぼ同じシアンだった。
+   潜っても景色が変わらないので「長い」と感じる。散乱色と光量を深度の
+   関数にして、0-60m 陽光帯 / 〜330m 中層 / 330m〜 薄暮帯 の3段を作る
+   (4幕目の着底はサーチライトが受け持つ)。
+   ★ 吸収(ABSORB)は触らない。VIS 計器が吸収から視程を解いているので、
+     吸収を深度で変えると計器だけが嘘をつく(README の教訓)。
+     変えるのは「returns してくる光の色と量」だけ。 */
+vec3 actScatter(float d01){
+  vec3 mid = vec3(0.034, 0.132, 0.204);   // 中層。青へ寄る
+  vec3 twi = vec3(0.013, 0.048, 0.106);   // 薄暮帯。暗いネイビー
+  vec3 c = mix(SCATTER, mid, smoothstep(0.10, 0.45, d01));
+  return mix(c, twi, smoothstep(0.55, 0.95, d01));
+}
+float actLight(float d01){
+  /* 1.0 → 0.78(中層) → 0.34(薄暮帯)。★ 一次の mix にしない —— 単調な
+     グラデーションは「変化した」と知覚されない。段で落とす。 */
+  return 1.0 - 0.22*smoothstep(0.10, 0.45, d01) - 0.44*smoothstep(0.55, 0.95, d01);
+}
 `;
 
 const G_FAR = `
@@ -1758,19 +1840,19 @@ vec3 waterFogV(vec3 col, float dist, float depth01, float light, float y, vec3 V
   /* 深いほど届く光が減る。★ 外洋なら 0.16 まで落ちるが、水槽は上から
      均一に照らすので底まで明るい。ここを落とすと、下へ行くほど絵が
      消えていき「大水槽」ではなく「深海」に戻る。 */
-  float dl = mix(1.0, 0.72, depth01);
+  float dl = actLight(depth01);
   vec3 t = exp(-ABSORB * turbidity(y) * dist * MEDIUM_K * 6.0);
   /* 等方成分を残したまま前方のローブを足す。全部をローブにすると
      太陽と反対側が真っ暗になり、水ではなく煙に見える。 */
   float ph = phaseFwd(dot(V, S));
-  vec3 inscatter = SCATTER * light * dl * ph * (1.0 - t);
+  vec3 inscatter = actScatter(depth01) * light * dl * ph * (1.0 - t);
   return col * t + inscatter;
 }
 /* 視線を持たない呼び出し用(方向による偏りなし) */
 vec3 waterFog(vec3 col, float dist, float depth01, float light, float y){
-  float dl = mix(1.0, 0.72, depth01);
+  float dl = actLight(depth01);
   vec3 t = exp(-ABSORB * turbidity(y) * dist * MEDIUM_K * 6.0);
-  return col * t + SCATTER * light * dl * (1.0 - t);
+  return col * t + actScatter(depth01) * light * dl * (1.0 - t);
 }
 
 /* 遠景が媒質の色へ収束するまでの距離。これも媒質の性質なので1本にする
@@ -2297,8 +2379,12 @@ const sandMat = new THREE.ShaderMaterial({
       vec3 sand = mix(vec3(0.052,0.050,0.041), vec3(0.098,0.093,0.076), rip*0.55 + grain*0.45);
 
       /* 集光。q は「水面の曲率がどれだけ光を寄せるか」の係数で、
-         これを上げるほど焦線が細く鋭くなる。 */
-      float reach = mix(1.0, 0.66, uDepth) * uPulse;   // 光の脈を共有(水槽は底まで届く)
+         これを上げるほど焦線が細く鋭くなる。
+         ★ 薄暮帯では水面の網は届かない。光条と同じカーブで消し、
+           砂のアルベドも落とす。着底のサーチライトと砂煙が浮き上がる。 */
+      float reach = (1.0 - 0.30*smoothstep(0.10, 0.50, uDepth))
+                  * (1.0 - smoothstep(0.55, 0.95, uDepth)*0.90) * uPulse;
+      sand *= 1.0 - 0.42*smoothstep(0.55, 0.95, uDepth);
       const float Q = 2.6;
       vec3 ca;
     #if C_RGB
@@ -2331,7 +2417,11 @@ const sandMat = new THREE.ShaderMaterial({
       }
 
       vec3 V = normalize(vW - cameraPosition);
-      vec3 col = waterFogV(sand, dd, uDepth, reach, vW.y, V, uSun);
+      /* ★ light は reach を渡さない。reach は「水面の網が届くか」で、薄暮帯
+         では 0.07 まで落ちる。これを媒質の light に流すと、砂だけ内散乱が
+         1/9 になり、隣の岩・海藻・砂煙(全員 0.72)と霞み方が食い違う
+         (「媒質は1本」の原則への退行。レビューで発覚)。 */
+      vec3 col = waterFogV(sand, dd, uDepth, mix(1.0, 0.72, uDepth) * uPulse, vW.y, V, uSun);
       col = mix(col, fogAt(uFog, V, uSun, uDepth), farFade(dd));
       gl_FragColor = vec4(col, 1.0);
     }`,
@@ -2569,7 +2659,9 @@ const shaftMat = new THREE.ShaderMaterial({
       /* 浅いところで光芒が一切立たないと、潜り始めの水が「色の付いた板」に
          なる(実測で画面 180px にわたり画素値が動かなかった)。実際の海は
          水面直下がいちばん光条が強い。立ち上がりを早める。 */
-      float gate = smoothstep(0.012, 0.19, uDepth) * (1.0 - smoothstep(0.72, 1.0, uDepth)*0.72);
+      /* ★ 薄暮帯では光条は届かない。0.72 で 28% 残していたのを、0.92 で
+         完全に消す。着底のサーチライトが「暗いから点く」になる。 */
+      float gate = smoothstep(0.012, 0.19, uDepth) * (1.0 - smoothstep(0.55, 0.92, uDepth));
       /* カメラに近すぎる板は消す(顔に貼り付くのを防ぐ)。
          傾けてからは板がカメラの脇を斜めに抜けるので、消し始めを早める。 */
       float near = smoothstep(1.2, 5.0, length(vW - cameraPosition));
@@ -2746,7 +2838,7 @@ let touchForce = null;        // 検証用: 着底からの経過秒を外から
      画面いっぱいのクジラに「628M」と出て計器が嘘になる。
    ================================================================ */
 const WH_BAND     = [280, 380];  // この帯に初めて入ったら発火(m)
-const WH_DUR      = 12.5;        // 通過にかける秒(仕様 10〜15 の中央)
+const WH_DUR      = 12.0;        // 通過にかける秒(仕様 8〜12 の上限)
 /* ★ 仕様は「画面幅の1.5倍程度」。1.5 で出したら**画面の6割を占める黒い塊**に
    なり、形として読めなくなった(実測)。輪郭を霧に溶かす指定とも噛み合わない
    —— 近すぎて溶ける距離(farFadeは16m以遠)に入らない。1.15 まで落として、
@@ -2755,9 +2847,12 @@ const WH_LEN_SCR  = 1.15;        // 最接近時に画面幅の何倍に見せ�
 /* ★ 下限は 5.0。7.0 にしていたら縦画面が下限に貼り付いて、0.82 に落とした
    倍率が効かなかった(実測: 5.68 が 7.0 に押し戻された)。 */
 const WH_LEN_CLAMP= [5.0, 21.0]; // 世界単位での上下限(水柱は約11単位しかない)
-const WH_Z_FAR    = 21.0;        // 出てくる側のカメラからの奥行き
+/* ★ 21 だと farFade(16→86m)の入口すぎて、出現がフォグではなく
+   「不透明度のフェード」に読めた。24 まで奥へ —— 吸収の透過率も約半分に
+   なる距離なので、輪郭が霧からにじみ出てくる。 */
+const WH_Z_FAR    = 24.0;        // 出てくる側のカメラからの奥行き
 const WH_Z_NEAR   = 12.0;        // 最接近の奥行き
-const WH_FADE     = [0.06, 0.16];// 出入りのフェード(通過の進捗 0..1 で)
+const WH_FADE     = [0.09, 0.16];// 出入りのフェード(通過の進捗 0..1 で)
 const WH_SONAR_M  = 4.2;         // 世界単位 → ソナー表示のメートル
 let whaleDone = false;           // 1セッション1回。戻っても戻らない
 let whaleT = -1;                 // -1 = 出ていない。0以上で経過秒
@@ -2792,6 +2887,10 @@ function whaleAt(q, out){
      .addScaledVector(_wf, away)
      .addScaledVector(_wr, across)
      .addScaledVector(_wu, whaleLen * 0.06);
+  /* ゆっくりした浮上・沈降。通過中に1回半だけ上下する。
+     ★ whaleAt は向きもここから採る(少し先との差分)ので、浮けば機首が
+       上がり、沈めば下がる —— 別々に作ると首と体が食い違う。 */
+  out.y += Math.sin(q * 5.2) * whaleLen * 0.02;
   /* ★ 水面(0)を突き抜けさせない・海底(-10.4)へ潜り込ませない。
      体の半径は体長の 0.084、尾の振れが 0.095。合わせて 0.11 を余裕に取る。
      (この世界の水柱は約11単位しかない。体長26単位のクジラでも縦には
@@ -3082,10 +3181,20 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
            「棒がしなっている」に見える。周期は約5.4秒 —— 魚(1秒前後)と
            同じ速さにすると大きさが伝わらない。大きいものはゆっくり動く。 */
         float ph = uv.x * 2.30 - uTime * 1.16;
-        float amp = pow(clamp(uv.x, 0.0, 1.0), 2.15) * 0.095;
+        /* ★ 振幅は頭:尾 = 1:4(頭 0.028 → 尾 0.112)。前は尾だけを振っていて
+           (頭はほぼ 0)、棒の先がしなって見えた。クジラは背骨全体が
+           縦にうねる哺乳類 —— 頭もわずかに上下してこそ「泳いでいる」。
+           位相は uv.x で遅れる = うねりが頭から尾へ伝播する。 */
+        float amp = 0.028 + 0.084 * pow(clamp(uv.x, 0.0, 1.0), 2.0);
         p.y += sin(ph) * amp;
-        /* 胴のごく浅い横揺れ。上下だけだとレールの上を進んでいるように見える */
-        p.z += sin(ph * 0.5 + 0.9) * amp * 0.28;
+        /* 胴のごく浅い横揺れ(二次)。★ 主運動は必ず縦。横を主にすると魚になる */
+        p.z += sin(ph * 0.5 + 0.9) * amp * 0.18;
+        /* 胸びれの二次モーション。本体と別位相・約11秒でゆっくり羽ばたく。
+           左右は sign(z) で位相をずらし、付け根(|z|小)は動かさない=蝶番。
+           尾びれ(uv.x=1)には掛けない。 */
+        p.y += aFin * (1.0 - step(0.6, uv.x))
+             * sin(uTime * 0.55 + sign(position.z) * 1.7)
+             * 0.026 * clamp(abs(position.z) * 7.0, 0.0, 1.0);
         vec4 wp = modelMatrix * vec4(p, 1.0);
         vW = wp.xyz;
         vN = normalize(mat3(modelMatrix) * normal);
@@ -3097,6 +3206,7 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
       uniform float uAmt, uDepth, uPulse; uniform vec3 uSun;
       uniform vec3 uShaft[12]; uniform int uShaftN;
       varying vec3 vW; varying vec3 vN; varying float vU, vV, vFin;
+      ${G_NOISE}
       ${G_WATER}
       void main(){
         if (uAmt < 0.004) discard;
@@ -3107,7 +3217,7 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
            背は暗い色素でよく光が当たり、腹は明るい色素で光が当たらない。
            掛け合わせた結果いちばん明るくなるのは**体側**で、そこが本物の顔。 */
         vec3 pigD = vec3(0.014, 0.021, 0.028);      // 背(暗い色素)
-        vec3 pigB = vec3(0.100, 0.118, 0.130);      // 腹(明るい色素)
+        vec3 pigB = vec3(0.108, 0.118, 0.124);      // 腹(明るいグレー。青すぎない)
         vec3 pig  = mix(pigB, pigD, smoothstep(-0.75, 0.85, ny));
         float lam = 0.26 + 0.74 * clamp(0.5 + 0.5 * ny, 0.0, 1.0);
         vec3 col = pig * lam;
@@ -3129,6 +3239,11 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
         col *= mix(1.0, 0.42, vFin);
         float d = length(vW - cameraPosition);
         vec3 V = normalize(vW - cameraPosition);
+        /* 体表の微細な凹凸。★ 近距離(8→16mで消える)でだけ、±5%の明暗。
+           遠くから見えると「テクスチャを貼った」に読まれるので、
+           シルエットの距離では完全に消す。 */
+        float skin = vnoise(vW.xz * 7.0 + vec2(vW.y * 9.0, vW.y * 5.0));
+        col *= 1.0 + (skin - 0.5) * 0.10 * (1.0 - smoothstep(8.0, 16.0, d)) * (1.0 - vFin);
         /* 背の稜。上を向いていて、かつ視線から逃げていく面 ＝ 輪郭の上側。
            ★ 面で光らせない。細い線に留める(発光は禁止・シルエットが崩れる)。
              これが無いと、どれだけ形を作っても「切り紙」から抜けない。 */
@@ -3156,7 +3271,10 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
         /* ★ 輪郭は霧に溶かす。farFade を掛けないと、遠いのに縁だけ硬い
            「貼り付けた影」になる。頭の先も少し薄くする。 */
         col = mix(col, uFog, farFade(d));
-        float a = uAmt * (1.0 - farFade(d) * 0.55) * (0.72 + 0.28 * smoothstep(0.0, 0.14, vU));
+        /* ★ 遠いほど「消える」のではなく「霧になる」。alpha を落とすと
+           水の向こうに居る感じが消えるので、色は既に fog へ収束済み・
+           alpha は 0.72 まで浅く落とすに留める。 */
+        float a = uAmt * (1.0 - farFade(d) * 0.72) * (0.72 + 0.28 * smoothstep(0.0, 0.14, vU));
         /* 輪郭のきわをほんの少し透かす。硬いまま切ると「型紙」に見える。
            ★ 効かせすぎると体が薄くなって水に溶ける。0.86 止まり。 */
         a *= mix(1.0, 0.86, pow(1.0 - abs(dot(N, V)), 3.0));
@@ -4309,6 +4427,12 @@ const GRADE = {
       col = max(col - 0.004, 0.0);
       col = (col - 0.5) * 1.075 + 0.5 + 0.008;
 
+      /* 幕の光量。薄暮帯(330m〜)でフレームの光量そのものを落とす。
+         個々の材質に配って回らず、最終パス1箇所で全員が同じだけ沈む。
+         ★ 0.26 まで。黒潰れ禁止 —— ディザが下で守っているのは階調で、
+           潰した黒は救えない。 */
+      col *= 1.0 - 0.26 * smoothstep(0.55, 0.95, uDepth01);
+
       float l = dot(col, vec3(0.2126,0.7152,0.0722));
       col = mix(vec3(l), col, mix(1.07, 1.16, uDepth01));
 
@@ -4422,6 +4546,86 @@ addEventListener('scroll', readScroll, { passive:true });
 addEventListener('resize', readScroll);
 readScroll();
 sp = targetP;
+
+/* ---- 潜る儀式 ----------------------------------------------------
+   最初のスクロールの1.4秒だけ、浅い暗転と泡で「水に入った」の合図を出す。
+   ★ 武装は「ページの先頭で開いたとき」だけ。深い位置で再読み込みすると
+     sp が起動時から高く、スクロールしていないのに発火してしまう。 */
+const diveVeilEl = document.getElementById('diveVeil');
+let diveArmed = targetP < 0.012 && !reduced;
+let diveDone = false;
+
+/* ---- ソナーの ping ------------------------------------------------
+   タップ/クリックで輪が1回広がり、その筋の先にいる魚が驚いて散る。
+   驚きは既にある「間合い」の仕組み(fStart)をそのまま使う。
+   ★ リンク・ボタン・本文の上では撃たない。読むための操作を演出が
+     横取りしない。reduced-motion でも撃たない。 */
+const _pingV = new THREE.Vector3();
+let pingN = 0, pingStartled = 0;
+function firePing(cx, cy){
+  pingN++;
+  for (const echo of ['', 'echo']){
+    const el = document.createElement('div');
+    el.className = 'sonarPing' + (echo ? ' ' + echo : '');
+    el.style.left = cx + 'px'; el.style.top = cy + 'px';
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+    setTimeout(() => el.remove(), 1600);   // animationend の保険
+  }
+  /* クリックの視線の筋(約10度)にいる魚を驚かせる */
+  const nx = (cx / innerWidth) * 2 - 1, ny = -(cy / innerHeight) * 2 + 1;
+  _pingV.set(nx, ny, 0.5).unproject(camera).sub(camera.position).normalize();
+  for (let i = 0; i < NF; i++){
+    const o = i * 3;
+    const dx = fPos[o] - camera.position.x,
+          dy = fPos[o+1] - camera.position.y,
+          dz = fPos[o+2] - camera.position.z;
+    const d = Math.hypot(dx, dy, dz);
+    if (d < 0.5 || d > 22) continue;
+    const cosA = (dx*_pingV.x + dy*_pingV.y + dz*_pingV.z) / d;
+    if (cosA > 0.982){ fStart[i] = 1; fPause[i] = Math.max(fPause[i], 0.15); pingStartled++; }
+  }
+}
+addEventListener('click', (e) => {
+  if (reduced || !document.body.classList.contains('ready')) return;
+  if (e.target.closest('a,button,input,textarea,select,#content,#diag')) return;
+  firePing(e.clientX, e.clientY);
+});
+
+/* ---- 浮上 ---------------------------------------------------------
+   本文の末尾から水面まで、3.2秒のトゥイーンで戻す。
+   ★ ブラウザの smooth は距離でペースが変わり、端末ごとに別の体験になる。
+     時間で決める。イージングは両端が緩い3次。
+     ★ 中央の最速区間は RAPID の発動域(|scrollVel| 0.55)を超える —— つまり
+       浮上の途中で急速モードが点く。これは意図した動き: 文言は向きで
+       「RAPID ASCENT」に替わり、泡は下へ流れ、RATE は負を振る。
+       浮上が一番速い所で計器が総出になる。
+     途中でユーザーが操作したら即座に手を放す。 */
+let resurfacing = 0;
+{
+  const el = document.getElementById('resurface');
+  if (el) el.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (reduced){ scrollTo(0, 0); return; }
+    if (resurfacing) return;   // 連打で rAF ループを2本走らせない(レビューで発覚)
+    const from = scrollY, t0 = performance.now(), DUR = 3200;
+    resurfacing = 1;
+    const stop = () => { resurfacing = 0; };
+    addEventListener('wheel', stop, { once:true, passive:true });
+    addEventListener('touchstart', stop, { once:true, passive:true });
+    /* キーボードスクロールとスクロールバーのドラッグでも手を放す */
+    addEventListener('keydown', stop, { once:true, passive:true });
+    addEventListener('pointerdown', stop, { once:true, passive:true });
+    const step = (now) => {
+      if (!resurfacing) return;
+      let q = Math.min(1, (now - t0) / DUR);
+      q = q < 0.5 ? 4*q*q*q : 1 - Math.pow(-2*q + 2, 3) / 2;   // easeInOutCubic
+      scrollTo(0, from * (1 - q));
+      if (q < 1) requestAnimationFrame(step); else resurfacing = 0;
+    };
+    requestAnimationFrame(step);
+  });
+}
 
 if (fine && !reduced){
   addEventListener('pointermove', (e) => {
@@ -4641,6 +4845,10 @@ const sonarEl   = document.getElementById('sonar');
 const sonarDEl  = document.getElementById('sonarD');
 let rapidWarnWas = false, tdShown = '', snShown = '', snDist = '', snTick = -1;
 const SN_TICK = 0.45;            // ソナーが読み直す間隔(秒)
+/* 接触の対象を1人に絞る。クジラが最優先、いなければ近くの作品カード。
+   snClock は「接触が続いている秒数」——掃引の刻みはこれで打つ。 */
+let snName = '', snClock = -1, cardContactI = -1;
+const sonarNEl = document.getElementById('sonarN');
 const simRate = document.getElementById('simRate');
 const simPit  = document.getElementById('simPit');
 const simSea  = document.getElementById('simSea');
@@ -4825,7 +5033,7 @@ const DEPTH_MAX = 600;                 // ルーラー最下段の目盛りと�
 
 
 const DEPTH_PER_UNIT = 69.8;           // ワールド1単位あたりの表示メートル
-const LOC_BLUE = 4, LOC_ABYSS = 230;   // 現在地の帯の境目
+const LOC_BLUE = 4, LOC_TWILIGHT = 300, LOC_ABYSS = 520;   // 現在地の帯(4幕)
 
 function ss(a,b,x){ x = Math.min(1, Math.max(0, (x-a)/(b-a))); return x*x*(3-2*x); }
 
@@ -4992,6 +5200,18 @@ window.__diag = {
   /* 急速潜航を外から観測する口 */
   set rapidForce(v){ rapidForce = v; },
   set touchForce(v){ touchForce = v; },
+  /* ACDE を外から観測する口 */
+  get acts(){ return { d01:+(lastDepthM/600).toFixed(3),
+    fog:[+fogCol.r.toFixed(4), +fogCol.g.toFixed(4), +fogCol.b.toFixed(4)],
+    loc: locWant }; },
+  /* ★ dive は既存の getter(潜航の進捗 sp)が下にあり、同名は後勝ちで
+     こちらが死ぬ(レビューで発覚)。儀式の口は別名にする。 */
+  get diveRitual(){ return { armed: diveArmed, done: diveDone,
+    veil: diveVeilEl ? diveVeilEl.classList.contains('on') : null }; },
+  get contact(){ return { name: snName, amt: snShown, card: cardContactI, dist: snDist }; },
+  get pingStat(){ return { n: pingN, startled: pingStartled }; },
+  firePing(x, y){ firePing(x, y); },
+  get resurfacing(){ return resurfacing; },
   /* クジラを外から観測する口 */
   set whaleForce(v){ whaleForce = v; if (v != null && !whaleLen) whaleLen = whaleSize(); },
   set whaleSize(v){ whaleLen = v; },
@@ -5295,6 +5515,15 @@ function frame(mode){
   scrollVel = Math.max(-1, Math.min(1, velX));
   updateRapid(dt);
 
+  /* 潜る儀式。sp が動き出した最初の1回だけ。 */
+  if (diveArmed && !diveDone && sp > 0.012 && diveVeilEl){
+    diveDone = true;
+    diveVeilEl.classList.add('on');
+    /* ★ 1400ms だと遅延の大きい泡(delay .30s + 1.30s = 1.60s)が
+       フェードの途中でスナップして消える。全員が終わるまで待つ。 */
+    setTimeout(() => diveVeilEl.classList.remove('on'), 1700);
+  }
+
   /* --- カメラの旅程 ------------------------------------------
      単なる縦移動ではなく、俯角と画角も一緒に動かす。
      水面直下で見上げ、海底へ近づくと見下ろす。 */
@@ -5377,7 +5606,7 @@ function frame(mode){
   /* --- 共有ユニフォーム --- */
   const T = t*0.8; waveT = T;
   // 1つの Color を全マテリアルが共有しているので、ここ1箇所の更新で全部に効く
-  fogCol.copy(FOG_SHALLOW).lerp(FOG_DEEP, depth01);
+  actFog(depth01);   // 4幕の遠景の壁(旧: SHALLOW→DEEP の一次 lerp)
   pulseU.value = reduced ? 1 : lightPulse(t);
   waterUniforms.uTime.value = T;  waterUniforms.uDepth.value = depth01;
   skyUniforms.uTime.value   = T;  skyUniforms.uDepth.value   = depth01;
@@ -5511,7 +5740,7 @@ function frame(mode){
   const inFront = camFwd.dot(rayFrom) > 0.02;
   atmosPass.uniforms.uSunUV.value.set(tmpV.x*0.5+0.5, tmpV.y*0.5+0.5);
   // 水中でだけ強く出す(水上は空の描画そのものが眩しさを持っている)
-  const rayAmt = (inFront ? (0.10 + 0.62*ss(0.03,0.34,depth01)) * (1 - ss(0.80,1.0,depth01)*0.55) : 0)
+  const rayAmt = (inFront ? (0.10 + 0.62*ss(0.03,0.34,depth01)) * (1 - ss(0.55,0.92,depth01)) : 0)
                  * (RENDER.godrayOcclusion ? 1 : 0.55);   // 遮蔽できないぶん控えめに
   atmosPass.uniforms.uRay.value += (rayAmt - atmosPass.uniforms.uRay.value) * ease1(2.5, dt);
   atmosPass.uniforms.uDepth01.value = depth01;
@@ -5599,7 +5828,9 @@ function frame(mode){
   }
   /* 現在地の名前。潜航中は深度の帯、汀を過ぎたら店の名前。 */
   locWant = hpR > 0.16 ? SITE_LOC
-    : (depthM < LOC_BLUE ? 'SURFACE' : (depthM < LOC_ABYSS ? 'THE BLUE' : 'THE ABYSS'));
+    : (depthM < LOC_BLUE ? 'SURFACE'
+    : (depthM < LOC_TWILIGHT ? 'THE BLUE'
+    : (depthM < LOC_ABYSS ? 'THE TWILIGHT' : 'THE ABYSS')));
   capWant = hp > 0.56 ? 'Reading' : 'Current location';
   tickLabels();
 
@@ -5814,7 +6045,9 @@ function frame(mode){
       body.quaternion.setFromRotationMatrix(_wm);
       /* バンク。★ 進路は奥行き方向へ弧を描いているので、真っ直ぐ立てたままだと
          「レールの上の模型」に見える。旋回の内側へ倒す。前半と後半で逆向き。 */
-      _wq.setFromAxisAngle(_wx, 0.15 * Math.sin(q * 6.2831853) * whaleDir);
+      /* ★ 0.15rad(8.6°)は倒しすぎで「旋回する潜水艦」になった。
+         実物のロールは3〜5° —— 0.07rad(4.0°)。 */
+      _wq.setFromAxisAngle(_wx, 0.07 * Math.sin(q * 6.2831853) * whaleDir);
       body.quaternion.premultiply(_wq);
       body.scale.setScalar(whaleLen);
       /* 魚と浮遊物に居場所を知らせる(魚は回避、粒子は押しのけに使う)。 */
@@ -5826,23 +6059,52 @@ function frame(mode){
       uni.uDepth.value = depth01;
     }
     /* ソナー。距離は世界単位を専用の尺で読む(深度の 69.8m/単位 で出すと
-       画面いっぱいのクジラに 600M 超と出て計器が嘘になる)。 */
+       画面いっぱいのクジラに 600M 超と出て計器が嘘になる)。
+       ★ 接触の対象は1人。クジラが最優先(珍しい方が勝つ)、いなければ
+         近くの作品カード —— 「計器で海を読む」の言語を作品閲覧まで通す。 */
     if (sonarEl){
+      let cName = null, cDist = 0, cAmt = 0;
+      if (amt > 0.004){
+        cName = 'UNKNOWN';
+        cDist = body.position.distanceTo(camera.position);
+        cAmt  = Math.min(1, amt * 1.8);
+        cardContactI = -1;   // ヒステリシスを持ち越さない
+      } else if (sp > 0.03 && sp < 0.92 && hpR < 0.30){
+        /* ★ 上限 0.92。着底間際まで許すと TOUCHDOWN の一拍に
+           CONTACT が重なって、いちばん静かであるべき瞬間が騒がしくなる。 */
+        /* カードの接近。入り 7.0 / 出 8.2 のヒステリシス(境目でチラつかせない) */
+        let best = -1, bd = 1e9;
+        for (let i = 0; i < cards.length; i++){
+          if (!cards[i].visible) continue;
+          const d = cards[i].position.distanceTo(camera.position);
+          const lim = cardContactI === i ? 8.2 : 7.0;
+          if (d < lim && d < bd){
+            _fs.copy(cards[i].position).sub(camera.position).normalize();
+            if (_fs.dot(camFwd) > 0.10){ best = i; bd = d; }
+          }
+        }
+        cardContactI = best;
+        if (best >= 0){ cName = WORKS[best].title.toUpperCase(); cDist = bd; cAmt = 0.85; }
+      }
       /* ★ 毎フレーム数字が変わると、ソナーではなく「速度計」に見える。
          0.45秒ごとに1回だけ読み直し、読み直した直後がいちばん明るい。
-         計器は連続値ではなく「掃引のたびに更新される」もの。 */
-      const tick = T >= 0 ? Math.floor(T / SN_TICK) : -1;
-      const frac = T >= 0 ? (T / SN_TICK) - tick : 0;
-      const sn = amt > 0.004
-        ? (Math.min(1, amt * 1.8) * (0.78 + 0.22 * (1 - frac))).toFixed(3) : '0';
-      if (sn !== snShown){ snShown = sn; sonarEl.style.setProperty('--sn', sn); }
-      if (amt > 0.004 && tick !== snTick){
-        snTick = tick;
-        const dm = String(Math.round(
-          Math.hypot(body.position.x - camera.position.x,
-                     body.position.y - camera.position.y,
-                     body.position.z - camera.position.z) * WH_SONAR_M)).padStart(3, '0');
-        if (dm !== snDist){ snDist = dm; sonarDEl.textContent = dm; }
+         計器は連続値ではなく「掃引のたびに更新される」もの。
+         掃引の時計は「接触が続いている秒数」——対象が替わったら仕切り直す。 */
+      if (cName){
+        if (cName !== snName){ snName = cName; snClock = 0; snTick = -1; sonarNEl.textContent = cName; }
+        else snClock += dt;
+        const tick = Math.floor(snClock / SN_TICK);
+        const frac = (snClock / SN_TICK) - tick;
+        const sn = (cAmt * (0.78 + 0.22 * (1 - frac))).toFixed(3);
+        if (sn !== snShown){ snShown = sn; sonarEl.style.setProperty('--sn', sn); }
+        if (tick !== snTick){
+          snTick = tick;
+          const dm = String(Math.round(cDist * WH_SONAR_M)).padStart(3, '0');
+          if (dm !== snDist){ snDist = dm; sonarDEl.textContent = dm; }
+        }
+      } else {
+        snName = ''; snClock = -1; cardContactI = -1;
+        if (snShown !== '0'){ snShown = '0'; sonarEl.style.setProperty('--sn', '0'); }
       }
     }
   }
@@ -5850,6 +6112,10 @@ function frame(mode){
   /* 色収差は低ティアでは出さない(仕様) */
   gradePass.uniforms.uRapid.value = TIER.name === 'high' ? rapid : 0;
   if (rapidEl){
+    /* ★ 上向きの急行で「RAPID DESCENT」と出たら計器が嘘になる。
+       文言は向きで替える(浮上の導線ができたので上向きが実在する)。 */
+    const rTxt = rapidDir < 0 ? 'RAPID ASCENT' : 'RAPID DESCENT';
+    if (rapidEl.textContent !== rTxt) rapidEl.textContent = rTxt;
     rapidEl.style.setProperty('--rap', (rapid > 0.05 ? Math.min(1, rapid*1.6) : 0).toFixed(3));
     const warn = rapid > 0.25;
     if (warn !== rapidWarnWas){
