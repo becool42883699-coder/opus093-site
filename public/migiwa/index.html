@@ -1613,8 +1613,18 @@ camera.position.set(0, 0.95, 0);
 
 /* 太陽。空・水面反射・シャフト・カードのスペキュラ・後処理の散乱、
    すべてがこの1本のベクトルを共有する(光の方向が食い違わない) */
-/* 画面の右 30度・水平線の少し上。カードの真後ろに置くと逆光で作品が読めない */
-const SUN = new THREE.Vector3(0.500, 0.085, -0.866).normalize();
+/* 画面の右 30度・水平線の少し上。カードの真後ろに置くと逆光で作品が読めない。
+   ★ ただし縦画面は半視野が約17°しかなく、方位30°だと太陽も水面の光の道も
+     画角の外に切れる(実測: iPhone縦のヒーローは空だけ暖色で、水面に主光源が
+     無かった)。初期画角から「半視野 - 5.5°」まで方位を寄せる。下限11°は
+     カードの真後ろへ入れないため(逆光で作品が読めない)。
+     ★ 決めるのは初期化の一度だけ。CAUSTIC_SHIFT / RAY_DIR / SHAFT_LEN が
+       このベクトルから一度だけ導かれるので、resize で動かすと海底の集光と
+       光条だけが古い太陽を向いたままになる。回転しても太陽は動かさない。 */
+const SUN_FOV0 = innerHeight > innerWidth ? 64 : 56;
+const SUN_HALF = Math.atan(Math.tan(SUN_FOV0 * Math.PI/360) * (innerWidth / Math.max(1, innerHeight))) * 57.29578;
+const SUN_AZ   = Math.max(11, Math.min(30, SUN_HALF - 5.5)) * Math.PI / 180;
+const SUN = new THREE.Vector3(Math.sin(SUN_AZ), 0.085, -Math.cos(SUN_AZ)).normalize();
 
 /* ================================================================
    共有GLSL
@@ -3658,6 +3668,10 @@ let CARD_BASE_SCALE = 1;
 /* クジラが水を押しのける量。浮遊物の3層が同じオブジェクトを共有する。
    ★ makeMotes より前に置くこと(uniforms の初期化時に参照される)。 */
 const whaleU = { pos:{ value:new THREE.Vector3() }, r:{ value:0 } };
+/* 生物発光の刺激(0..1)。スクロール(=水の動き)とソナーのpingで上がり、
+   1秒ほどで減衰する。3層で同じオブジェクトを共有する(クジラと同じ作り)。 */
+const bioStimU = { value: 0 };
+let bioStim = 0;
 const wakeU = {
   uFishPos:{ value:[new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
   uFishDir:{ value:[new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()] },
@@ -3704,6 +3718,9 @@ function makeMotes(count, opt){
     /* ★ 水は uTime に t*0.8 を使う。粒子は t を使うので、
        同じ数字を別に渡さないと水面の判定が1割ずれる。 */
     uWaveT:{value:0},
+    /* 生物発光。opt.bio の層(マリンスノー)だけ >0 が入る。
+       泡は泡(生物ではない)、手前のボケ層は形が無いので光らせない。 */
+    uBio:{value:0}, uBioStim:bioStimU,
   };
   const mat = new THREE.ShaderMaterial({
     transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
@@ -3714,7 +3731,7 @@ function makeMotes(count, opt){
       uniform float uFishWake[3];
       uniform vec3 uWhalePos; uniform float uWhaleR;
       attribute float aSeed, aSize, aSpeed;
-      varying float vFade, vSeed, vDist;
+      varying float vFade, vSeed, vDist, vStim;
       ${G_SURF}
       varying vec3 vSpin;          // xy=回転の基底 / z=細長さ
       void main(){
@@ -3728,12 +3745,14 @@ function makeMotes(count, opt){
         /* 姿が見えなくても、雪が割れれば「そこに居る」と分かる。
            明るさに依存しない読み取り手段なので、品質を落としても切らない。
            固定3回展開・分岐1つ・テクスチャ参照なし。 */
+        vStim = 0.0;
         if (uWakeAny > 0.0){
           vec3 wp = p + uOrigin;
           for (int k = 0; k < 3; k++){
             vec3 dd = wp - uFishPos[k];
             float f = exp(-dot(dd,dd) * 2.8) * uFishWake[k];
             p += uFishDir[k] * 0.30 * f + uFishSide[k] * 0.12 * f;
+            vStim += f;                    // 生物発光は撹乱に反応する
           }
         }
         /* クジラが水を押しのける。★ 姿が大きいだけでは「そこに在る」だけで、
@@ -3744,6 +3763,7 @@ function makeMotes(count, opt){
           float dl = length(dw) + 1e-4;
           float f = 1.0 - smoothstep(uWhaleR * 0.40, uWhaleR, dl);
           p += dw * (1.0 / dl) * uWhaleR * 0.17 * f;
+          vStim += f * 1.4;                // クジラの通過は強い撹乱
         }
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         vDist = -mv.z;
@@ -3762,8 +3782,8 @@ function makeMotes(count, opt){
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader:`
-      uniform float uGain, uSoft, uDepth, uTime, uFloc;
-      varying float vFade, vSeed, vDist;
+      uniform float uGain, uSoft, uDepth, uTime, uFloc, uBio, uBioStim;
+      varying float vFade, vSeed, vDist, vStim;
       varying vec3 vSpin;
       ${G_MEDIUM}
       void main(){
@@ -3787,7 +3807,20 @@ function makeMotes(count, opt){
            死んで青く沈み、近い粒だけが白く残る = 層が距離で分かれる。
            以前は距離に関係なく同じ色だったので、全部が同じ面に見えていた。 */
         vec3 tint = vec3(0.62,0.88,0.92) * exp(-ABSORB * vDist * MEDIUM_K * 2.6);
-        gl_FragColor = vec4(tint * a * uGain * tw * vFade * depthDim, 1.0);
+        vec3 col = tint * a * uGain * tw * vFade * depthDim;
+        /* 生物発光。薄暮帯(第3幕)より深くで、雪の一部(約16%)が青緑の微光を
+           持つ。自光なので周囲の減光(depthDim)は掛けない —— 暗いほど際立つ。
+           経路の吸収だけは通す(遠い光は青く沈む)。静かな時はほのかな明滅、
+           水が動く(スクロール・ping・クジラ)と一斉に強まる。
+           ★ 係数は Bloom 閾値(1.0)の下に収める。「強い発光」は禁止事項。 */
+        if (uBio > 0.001){
+          float sel   = step(0.84, fract(vSeed * 7.91));
+          float pulse = pow(0.5 + 0.5*sin(uTime*(0.55 + fract(vSeed*3.3)*0.9) + vSeed*11.0), 3.0);
+          float stim  = clamp(uBioStim + vStim * 2.0, 0.0, 1.0);
+          col += vec3(0.055,0.60,0.52) * (0.05 + pulse*(0.15 + 0.85*stim))
+               * a * vFade * uBio * sel * exp(-ABSORB * vDist * MEDIUM_K * 2.6);
+        }
+        gl_FragColor = vec4(col, 1.0);
       }`,
   });
   const pts = new THREE.Points(geo, mat);
@@ -3804,6 +3837,7 @@ function makeMotes(count, opt){
      「埃だらけの水」に見える。数と濃さを落とす —— 消しはしない。
      ゼロにすると水に厚みが無くなり、魚が空中を泳いでいるように見える。 */
 const motes = makeMotes(TIER.motes, {
+  bio:1,
   spread:[17,0,15], zNear:-1.0, yMin:-9.6, yMax:0.4,
   size:[0.5,1.5], speed:[-0.055,-0.012], gain:0.16, soft:2.4, wobble:0.10, lag:0.22, drift:0.010,
 });
@@ -3883,9 +3917,14 @@ const fishMat = new THREE.ShaderMaterial({
       float Y = (vUv.y - 0.5) * 0.4762;
       float aa = 0.011;
 
+      /* 種でシルエットを変える。色の差は霧で最初に死ぬが、形は最後まで残る。
+         黄帯=体高のある鯛型 / 濃紺=細長い青物型 / 銀=基準のアジ型。 */
+      float wYs = max(0.0, 1.0 - abs(vSp - 1.0));
+      float wNs = max(0.0, 1.0 - abs(vSp - 2.0));
+      float hMul = 1.0 + 0.17*wYs - 0.13*wNs;
       /* 胴。頭は丸く、尾柄へ細る。背びれと尻びれをわずかに立てる。 */
       float u  = clamp((X - 0.03) / 0.70, 0.0, 1.0);
-      float hb = 0.118 * sin(3.14159265 * pow(u, 0.60));
+      float hb = 0.118 * hMul * sin(3.14159265 * pow(u, 0.60));
       /* 尾柄は絞り切らない。ここが 0 まで落ちると胴と尾が切り離れて
          「2つの塊」に見える(以前の実装は 0.60〜0.66 が空白だった)。 */
       hb = max(hb, 0.026 * smoothstep(0.03, 0.09, X) * (1.0 - smoothstep(0.70, 0.80, X)));
@@ -3893,8 +3932,8 @@ const fishMat = new THREE.ShaderMaterial({
          塗られ、輪郭の一部にしか見えない。鰭は薄く透ける。 */
       float hCore = hb;
       float up = step(0.0, Y);
-      hb += 0.042 * exp(-pow((X - 0.44) / 0.13,  2.0)) * up;
-      hb += 0.030 * exp(-pow((X - 0.60) / 0.085, 2.0)) * (1.0 - up);
+      hb += 0.042 * hMul * exp(-pow((X - 0.44) / 0.13,  2.0)) * up;
+      hb += 0.030 * hMul * exp(-pow((X - 0.60) / 0.085, 2.0)) * (1.0 - up);
       float mBody = 1.0 - smoothstep(hb - aa, hb + aa, abs(Y));
       float fin   = smoothstep(hCore - 0.004, hCore + 0.014, abs(Y));
 
@@ -3902,8 +3941,10 @@ const fishMat = new THREE.ShaderMaterial({
       float tv   = clamp((X - 0.72) / 0.26, 0.0, 1.0);
       /* ★ ここを tv*tv にすると鰭が軸に貼りついたまま先端だけ開き、
          上下の葉が細い筋になって「燕の尾」に見える。0.8乗で早めに開かせる。 */
-      float ht   = mix(0.026, 0.145, pow(tv, 0.80));
-      float xEnd = 0.980 - 0.105 * (1.0 - smoothstep(0.0, 0.145, abs(Y)));
+      /* 濃紺は尾が大きく早く開く(青物の三日月型へ寄る)。黄帯は浅い扇。 */
+      float ht   = mix(0.026, 0.145 * (1.0 + 0.22*wNs), pow(tv, 0.80 - 0.16*wNs));
+      float xEnd = 0.980 - 0.105 * (1.0 + 0.35*wNs - 0.45*wYs)
+                         * (1.0 - smoothstep(0.0, 0.145, abs(Y)));
       float mTail = (1.0 - smoothstep(ht - aa, ht + aa, abs(Y)))
                   * smoothstep(0.68, 0.72, X)
                   * (1.0 - smoothstep(xEnd - 0.012, xEnd + 0.012, X));
@@ -4063,7 +4104,8 @@ for (let i=0;i<NF;i++){
   fSize[i] = sp === 2 ? (2.05 + frnd()*0.95)
            : sp === 1 ? (1.05 + frnd()*0.55)
                       : (0.78 + frnd()*0.62);
-  fBeat[i] = 6.0 + frnd()*3.4;
+  /* 大きい種ほどゆっくり打つ。同じ拍だと結局「同じ魚の色違い」に見える */
+  fBeat[i] = (6.0 + frnd()*3.4) * (sp === 2 ? 0.60 : sp === 1 ? 0.84 : 1.0);
   fAttr.aPhase.array[i]  = frnd()*6.2831;
   fAmp0[i]               = 0.018 + frnd()*0.010;
   fAttr.aAmp.array[i]    = fAmp0[i];
@@ -4564,6 +4606,7 @@ const _pingV = new THREE.Vector3();
 let pingN = 0, pingStartled = 0;
 function firePing(cx, cy){
   pingN++;
+  bioStim = 1;                       // 薄暮帯の生物発光が音に応える
   for (const echo of ['', 'echo']){
     const el = document.createElement('div');
     el.className = 'sonarPing' + (echo ? ' ' + echo : '');
@@ -5515,6 +5558,11 @@ function frame(mode){
   scrollVel = Math.max(-1, Math.min(1, velX));
   updateRapid(dt);
 
+  /* 生物発光の刺激。水の動き(スクロール)で強まり、約1秒で減衰する。
+     ping は firePing() が 1 を立てる。reduced では常に 0(明滅を止める)。 */
+  bioStim = Math.max(bioStim * Math.exp(-dt * 1.1), Math.min(1, Math.abs(scrollVel) * 1.15));
+  bioStimU.value = reduced ? 0 : bioStim;
+
   /* 潜る儀式。sp が動き出した最初の1回だけ。 */
   if (diveArmed && !diveDone && sp > 0.012 && diveVeilEl){
     diveDone = true;
@@ -5556,10 +5604,16 @@ function frame(mode){
      水面に入るまでの間だけカメラを上へ振り、水平線を画面の下寄りへ送る
      (＝空を多く見せ、1枚目のカードを本文の下に落とす)。 */
   const portraitLift = PORTRAIT_LIFT * (1 - ss(0.02, 0.20, sp));
+  /* 陽光帯の見上げ。潜り始めの一拍だけ機首を上げ、離れていく水面 ——
+     スネルの窓の縁と、そこに滲む太陽 —— を見送る。
+     窓の縁は水平から41.4°上にあり、素の振り付け(最大+2°)では画角の上端
+     (+28°/縦+32°)に一度も入らなかった。+0.30radで上端が43.6°/47.6°に届く。
+     0.34 までに元の振り付けへ返す(最初のカードに入る前)。 */
   /* 最後の項が汀線。潜航の終端でピッチは -0.170rad(-9.7°)。そこへ
      +0.170 を足して hpR≥0.44 で厳密に 0 にする。θ=0 の透視投影では
      床の消失線が必ず画面の垂直中央に出るので、水平線がそこへ「駐車」する。 */
   camera.rotation.x = (-0.06 + portraitLift
+                    + 0.30*ss(0.05,0.16,sp)*(1 - ss(0.22,0.34,sp))
                     + 0.21*ss(0.10,0.46,sp) - 0.32*ss(0.60,0.97,sp))
                     + 0.170*ss(0.04, 0.44, hPose)
                     + (py*-0.030
@@ -5709,6 +5763,8 @@ function frame(mode){
     uni.uTime.value = t;
     uni.uWaveT.value = T;                 // 水と同じ時計(t*0.8)を渡す
     uni.uDepth.value = depth01;
+    /* 生物発光は薄暮帯(4幕の第3幕)から。幕と同じ曲線で立ち上げる。 */
+    uni.uBio.value = opt.bio ? ss(0.50, 0.85, depth01) : 0;
 
     /* 層ごとに違う遅れでカメラを追う。旧実装は3層とも camY をそのまま
        代入していたため、層間の縦方向の視差が数学的にゼロだった
