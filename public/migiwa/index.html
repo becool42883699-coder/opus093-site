@@ -5420,18 +5420,30 @@ window.__diag = {
     const box = s => { const e = document.querySelector(s); if (!e) return null;
       if (getComputedStyle(e).display === 'none') return null;
       const b = e.getBoundingClientRect(); return { t:b.top, b:b.bottom }; };
-    const meter = box('#meter'), h1 = box('#hero h1'), cta = box('#place');
+    /* ★ 矩形は左右も見る。中央の軸(#hero h1)と DEPTH の計器は縦に重なるが
+       横は 200px 近く離れている —— 縦だけで見ると「被った」と嘘を言う。 */
+    const box2 = s => { const e = document.querySelector(s); if (!e) return null;
+      if (getComputedStyle(e).display === 'none') return null;
+      const b = e.getBoundingClientRect();
+      return { t:b.top, b:b.bottom, l:b.left, r:b.right }; };
+    const meter = box2('#meter'), h1 = box2('#hero h1'), cta = box('#place');
     const c = cardScreenRects()[0];
     let floor = innerHeight;
     for (const sel of ['#diveBtn','#foot','#counter']){
       const q = box(sel); if (q && q.t > 0 && q.t < floor) floor = q.t;
     }
     const over = (a, b) => Math.round(Math.max(0, a - b));
+    const xHit = (a, b) => a && b && a.l < b.r && b.l < a.r;
+    /* ★ 1枚目のカードを水面下へ沈めた(ヒーローの主役を1文字にしたため)。
+       水面は不透明なので、水面より下のカードは**画面に出ていない**。
+       幾何の矩形だけで見ると下のHUDに被っていることになるが、それは
+       「見えない板の位置」を測っているだけ。潜り始めるまで判定しない。 */
+    const cardShown = c && c.visible > 0.02 && sp > 0.03;
     return {
       portrait: innerHeight > innerWidth,
-      見出しがDEPTHに被る: meter && h1 ? over(meter.b, h1.t) : 0,
-      カードがCTAに被る:   cta && c   ? over(cta.b, c.y)     : 0,
-      カードが下HUDに被る: c ? over(c.y + c.h, floor)        : 0,
+      見出しがDEPTHに被る: (meter && h1 && xHit(meter, h1)) ? over(meter.b, h1.t) : 0,
+      カードが本文に被る:  (cardShown && cta) ? over(cta.b, c.y) : 0,
+      カードが下HUDに被る: cardShown ? over(c.y + c.h, floor)   : 0,
       cardW: c ? Math.round(c.w / innerWidth * 1000) / 10 : 0,
     };
   },
