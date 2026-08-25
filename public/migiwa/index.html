@@ -2947,7 +2947,9 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
   /* ★ 8角形だと背中の稜がカクついて「多角形の筒」に見えた。断面を14角に
      上げても 570三角形。この規模なら描画コストは測定の揺れに埋もれる。 */
   const SEG = 20, RING = 14;             // 断面の数 / 断面の角数
-  const pos = [], uvs = [], idx = [], sys = [];   // sys = 断面上の高さ(sin)
+  const pos = [], uvs = [], idx = [], sys = [], fins = []; // sys = 断面上の高さ(sin) / fins = 鰭か
+  /* ★ 配列名を fin にしたら、断面ループ内の背びれの隆起(const fin)に
+     内側で影を作られ、数値に .push して落ちた。名前は fins。 */
   /* 体の太さ。u=0 が鼻先、1 が尾の付け根。頭は丸く、中ほどが太く、
      尾柄(0.8以降)へ絞る。0 まで落とさない —— 落とすと胴と尾が
      切り離れて「2つの塊」に見える(魚で同じ罠を踏んでいる)。 */
@@ -3000,7 +3002,7 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
       uvs.push(u, j / RING);
       /* ★ 口の線を uv.y から戻すと、j=RING-1 → 0 の継ぎ目で値が 0.93→0 と
          飛び、そこだけ帯が崩れる。断面上の高さは連続なので属性で渡す。 */
-      sys.push(sy);
+      sys.push(sy); fins.push(0);
     }
   }
   for (let i = 0; i < SEG; i++){
@@ -3008,6 +3010,24 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
       const a = i*RING + j, b = i*RING + (j+1)%RING;
       const c = (i+1)*RING + j, d = (i+1)*RING + (j+1)%RING;
       idx.push(a, c, b, b, c, d);
+    }
+  }
+  /* 鼻先と尾柄の端を塞ぐ。★ 開いた筒のままだと、FrontSide なので
+     真正面や真後ろから「体の中を素通しで」背景が見える。半径は小さいが、
+     入り際は頭が正面を向くのでそこだけ穴が抜ける。 */
+  for (const endI of [0, SEG]){
+    const b = pos.length / 3;
+    const u = endI / SEG;
+    let cx = 0, cy = 0, cz = 0;
+    for (let j = 0; j < RING; j++){
+      const k = (endI*RING + j) * 3;
+      cx += pos[k]; cy += pos[k+1]; cz += pos[k+2];
+    }
+    pos.push(cx/RING, cy/RING, cz/RING);
+    uvs.push(u, 0.5); sys.push(0); fins.push(0);
+    for (let j = 0; j < RING; j++){
+      const a = endI*RING + j, c = endI*RING + (j+1)%RING;
+      endI === 0 ? idx.push(b, a, c) : idx.push(b, c, a);
     }
   }
   /* 尾びれ。★ 水平。クジラの尾は横に広がる(縦だと魚になる)。
@@ -3022,7 +3042,7 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
              -0.566, 0.045, 0.262*sgn,        // 先端(後ろへ、少し上へ)
              -0.520, 0.021, 0.128*sgn,        // 後縁(凹む)
              -0.505, 0.006, 0.0);             // 中央の切れ込み
-    for (let k=0;k<5;k++){ uvs.push(1, 0.5 + 0.1*k); sys.push(0); }
+    for (let k=0;k<5;k++){ uvs.push(1, 0.5 + 0.1*k); sys.push(0); fins.push(1); }
     const tri = [[b,b+1,b+2],[b,b+2,b+3],[b,b+3,b+4]];
     for (const t of tri) sgn > 0 ? idx.push(t[0],t[1],t[2]) : idx.push(t[0],t[2],t[1]);
   };
@@ -3033,13 +3053,14 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
   for (const sgn of [1, -1]){
     const b = pos.length / 3;
     pos.push(0.27, -0.028, 0.055*sgn,  0.125, -0.062, 0.200*sgn,  0.17, -0.035, 0.060*sgn);
-    uvs.push(0.3,0.5, 0.44,0.5, 0.40,0.5); sys.push(0,0,0);
+    uvs.push(0.3,0.5, 0.44,0.5, 0.40,0.5); sys.push(0,0,0); fins.push(1,1,1);
     sgn > 0 ? idx.push(b, b+1, b+2) : idx.push(b, b+2, b+1);
   }
   const wg = new THREE.BufferGeometry();
   wg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   wg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   wg.setAttribute('aSy', new THREE.Float32BufferAttribute(sys, 1));
+  wg.setAttribute('aFin', new THREE.Float32BufferAttribute(fins, 1));
   wg.setIndex(idx);
   wg.computeVertexNormals();
 
@@ -3052,10 +3073,10 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
                uSun:{value:SUN}, uFog:{value:fogCol} },
     vertexShader:`
       uniform float uTime;
-      attribute float aSy;
-      varying vec3 vW; varying vec3 vN; varying float vU, vV;
+      attribute float aSy, aFin;
+      varying vec3 vW; varying vec3 vN; varying float vU, vV, vFin;
       void main(){
-        vU = uv.x; vV = aSy;
+        vU = uv.x; vV = aSy; vFin = aFin;
         vec3 p = position;
         /* ゆったりしたうねり。★ 振れは尾に寄るほど大きい。頭まで動かすと
            「棒がしなっている」に見える。周期は約5.4秒 —— 魚(1秒前後)と
@@ -3075,7 +3096,7 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
          シェーダのコンパイルに落ちる(実際に落とした)。 */
       uniform float uAmt, uDepth, uPulse; uniform vec3 uSun;
       uniform vec3 uShaft[12]; uniform int uShaftN;
-      varying vec3 vW; varying vec3 vN; varying float vU, vV;
+      varying vec3 vW; varying vec3 vN; varying float vU, vV, vFin;
       ${G_WATER}
       void main(){
         if (uAmt < 0.004) discard;
@@ -3101,6 +3122,11 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
           shaft += pool * pool;
         }
         col += vec3(0.30, 0.52, 0.58) * min(shaft, 1.6) * max(0.0, ny) * uPulse * 0.085;
+        /* ★ 鰭は平面なので法線が真横を向く。逆行迷彩では体側がいちばん明るい
+           ので、そのままだと**胴より明るい淡いスラブ**として出た(実測。
+           正面から入ってくる場面でいちばん目立った)。鰭は薄くて胴の影に
+           入るものなので、暗いのが正しい。 */
+        col *= mix(1.0, 0.42, vFin);
         float d = length(vW - cameraPosition);
         vec3 V = normalize(vW - cameraPosition);
         /* 背の稜。上を向いていて、かつ視線から逃げていく面 ＝ 輪郭の上側。
@@ -3144,139 +3170,13 @@ let whaleUni = null, whaleMesh = null, WHALE_TRIS = 0;
   whaleUni = wmat.uniforms; whaleMesh = wm;
 }
 
-/* ---- 低ティア用。板1枚＋その場で焼いたシルエット ----
-   ★ 画像ファイルは足さない。canvas に描いて CanvasTexture にする。
-     形は上のジオメトリと同じ輪郭式から取るので、ティアで別の生き物に
-     ならない。 */
-let whaleSprite = null, whaleSprUni = null;
-if (TIER.name !== 'high'){
-  /* ★ 512幅だと画面で 2.5倍に拡大されて、頭の輪郭が階段状に見えた(実測)。
-     1024にして拡大率を 1.3倍まで落とす。 */
-  const W = 1024, H = 320;
-  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-  const g = cv.getContext('2d');
-  g.clearRect(0,0,W,H);
-  g.fillStyle = '#fff';
-  g.beginPath();
-  const rad = u => {
-    const head = Math.pow(Math.sin(Math.PI * Math.min(1, u / 0.34) * 0.5), 0.72);
-    const taper = 1.0 - Math.pow(Math.max(0, (u - 0.30) / 0.70), 1.85);
-    return Math.max(0.012, 0.098 * head * taper + 0.013 * (1 - u));
-  };
-  /* ★ 機首を右(＝ローカル +X)に置く。メッシュ側と向きを揃えないと、
-     ティアで前後が逆のクジラになる。 */
-  const X = u => (W - 14) - u * (W - 100), Y = r => H*0.5 - r * H * 2.6;
-  g.moveTo(X(0), H*0.5);
-  /* 背の輪郭。★ 途中で背びれのぶんだけ持ち上げる。メッシュ側と同じ
-     「背の直線が一度だけ折れる」を板でも作らないと、ティアで別の生き物になる。
-     大きさも同じ(u=0.70 で局所半径の半分ほど)。 */
-  const dors = u => 0.028 * Math.exp(-Math.pow((u - 0.70) / 0.105, 2));
-  /* ★ メッシュ側で入れた「深い下顎」「平らな吻」「細い尾柄」を板でも作る。
-     ここを揃えないと、ティアが切り替わった瞬間に頭の形が別物になる。 */
-  const pedu = u => 1 - 0.34 * Math.max(0, (u - 0.80) / 0.20);
-  const jaw  = u => 0.030 * Math.exp(-Math.pow((u - 0.13) / 0.115, 2));
-  const flat = u => 1 - 0.22 * Math.max(0, 1 - u / 0.26);
-  const topY = u => rad(u) * 0.90 * flat(u) * pedu(u) + dors(u);
-  const botY = u => rad(u) * 1.017 * pedu(u) + jaw(u);
-  for (let i = 0; i <= 90; i++){ const u = i/90; g.lineTo(X(u), Y(topY(u))); }
-  /* ★ 尾びれ。最初ここを縦に開く扇で描いたら、**魚の尾**になった(実測)。
-     クジラの尾は水平なので、真横からは「後ろへ伸びる細い刃」に見える。
-     先を少し上へ振るだけで、扇にはしない。メッシュ側と同じ思想。 */
-  /* ★ メッシュの尾びれは水平なので、真横からは**ほとんど厚みの無い刃**に
-     見える。板側でこれより厚く描くと、ティアを切り替えた瞬間に尾だけ
-     倍の大きさになる(実測: 板の尾が体高の7割まで開いて魚に戻っていた)。
-     メッシュの先端が軸から 0.042 しか上がらないのに合わせる。 */
-  g.lineTo(X(1.100), Y( 0.050));   // 上葉の先
-  g.lineTo(X(1.052), Y( 0.020));   // 後縁が凹む
-  g.lineTo(X(1.012), Y( 0.006));   // 中央の切れ込み
-  g.lineTo(X(1.052), Y(-0.008));
-  g.lineTo(X(1.100), Y(-0.022));   // 下葉の先
-  for (let i = 90; i >= 0; i--){ const u = i/90; g.lineTo(X(u), Y(-botY(u))); }
-  g.closePath(); g.fill();
-  /* 胸びれ */
-  g.beginPath();
-  g.moveTo(X(0.300), Y(0.018)); g.lineTo(X(0.243), Y(0.032));
-  g.lineTo(X(0.178), Y(-0.070)); g.lineTo(X(0.222), Y(-0.056));
-  g.closePath(); g.fill();
-  /* 縁を1〜2px溶かす。硬いまま拡大すると「切り抜きを貼った」に見える。 */
-  g.filter = 'blur(2.5px)';
-  g.drawImage(cv, 0, 0);
-  g.filter = 'none';
-  const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.NoColorSpace;      // 形(マスク)なので色空間は掛けない
-  tex.generateMipmaps = true;
-  tex.minFilter = THREE.LinearMipmapLinearFilter;
-  const smat = new THREE.ShaderMaterial({
-    transparent:true, depthWrite:false, side:THREE.DoubleSide,
-    uniforms:{ uTime:{value:0}, uAmt:{value:0}, uDepth:{value:0},
-               uSun:{value:SUN}, uFog:{value:fogCol}, uMask:{value:tex},
-               uShaft: sandUniforms.uShaft, uShaftN: sandUniforms.uShaftN,
-               uPulse: sandUniforms.uPulse },
-    vertexShader:`
-      uniform float uTime;
-      varying vec2 vUv; varying vec3 vW;
-      void main(){
-        vUv = uv;
-        vec3 p = position;
-        /* 板でも尾は振る。板の面内で曲げるだけなので追加コストは無い。
-           ★ マスクは機首が右なので、尾は uv.x=0 側。反転して渡す。 */
-        float uTail = 1.0 - uv.x;
-        float ph = uTail * 2.30 - uTime * 1.16;
-        p.y += sin(ph) * pow(clamp(uTail, 0.0, 1.0), 2.15) * 0.095;
-        vec4 wp = modelMatrix * vec4(p, 1.0);
-        vW = wp.xyz;
-        gl_Position = projectionMatrix * viewMatrix * wp;
-      }`,
-    fragmentShader:`
-      uniform float uAmt, uDepth, uPulse; uniform vec3 uSun; uniform sampler2D uMask;
-      uniform vec3 uShaft[12]; uniform int uShaftN;
-      varying vec2 vUv; varying vec3 vW;
-      ${G_WATER}
-      void main(){
-        float m = texture2D(uMask, vUv).r;
-        if (m < 0.03 || uAmt < 0.004) discard;
-        /* 逆行迷彩。板には法線が無いので、板の中の高さから代わりの ny を作る
-           (胴は vUv.y = 0.21〜0.67 のあたりに入る)。メッシュと同じ色素と光。 */
-        float ny = clamp((vUv.y - 0.44) / 0.24, -1.0, 1.0);
-        vec3 pig = mix(vec3(0.100,0.118,0.130), vec3(0.014,0.021,0.028),
-                       smoothstep(-0.75, 0.85, ny));
-        vec3 col = pig * (0.26 + 0.74 * clamp(0.5 + 0.5 * ny, 0.0, 1.0));
-        /* 光芒。メッシュと同じ uShaft を共有する。 */
-        float shaft = 0.0;
-        for (int i = 0; i < 12; i++){
-          if (i >= uShaftN) break;
-          vec3 sh = uShaft[i];
-          float rr = length(vW.xz - sh.xy) / max(sh.z, 0.001);
-          float pool = 1.0 - smoothstep(0.0, 1.0, rr);
-          shaft += pool * pool;
-        }
-        col += vec3(0.30, 0.52, 0.58) * min(shaft, 1.6) * max(0.0, ny) * uPulse * 0.085;
-        /* 背の稜。★ 板には法線が無いので、マスクを1回だけ上へずらして
-           引き算し「上の縁」を取る。テクスチャ読みが1回増えるだけ。
-           これが無いと低ティアだけ真っ黒の切り紙になる。 */
-        float mUp = texture2D(uMask, vUv + vec2(0.0, 0.010)).r;
-        float rim = clamp(m - mUp, 0.0, 1.0) * step(0.5, vUv.y);
-        col += vec3(0.050, 0.068, 0.076) * rim * 1.6;
-        /* 口の線。板には断面が無いので、マスクの中の「下から3割ほどの高さ」を
-           頭の範囲だけ暗くする。メッシュ側と同じ役割。 */
-        /* ★ マスクは機首が右なので、頭は vUv.x が 0.70〜0.96 のあたり。
-           顎の線は腹から3割ほど上＝ vUv.y ≈ 0.35。 */
-        float mouth = exp(-pow((vUv.y - 0.350) / 0.028, 2.0))
-                    * smoothstep(0.685, 0.720, vUv.x) * smoothstep(0.975, 0.945, vUv.x);
-        col *= 1.0 - 0.34 * mouth;
-        float d = length(vW - cameraPosition);
-        vec3 V = normalize(vW - cameraPosition);
-        col = waterFogV(col, d, uDepth, 0.34, vW.y, V, uSun);
-        col = mix(col, uFog, farFade(d));
-        gl_FragColor = vec4(col, m * uAmt * (1.0 - farFade(d) * 0.55));
-      }`,
-  });
-  /* 板の縦横は上の輪郭の描画枠と揃える(512x160 = 3.2:1)。 */
-  const sp = new THREE.Mesh(new THREE.PlaneGeometry(1, 1/3.2), smat);
-  sp.frustumCulled = false; sp.renderOrder = 3; sp.visible = false;
-  scene.add(sp);
-  whaleSprite = sp; whaleSprUni = smat.uniforms;
-}
+/* ★ 低ティア用に「板1枚＋その場で焼いたマスク」版を持っていたが、**外した。**
+   板は進路がカメラ側へ振れた瞬間に潰れて、入り際・出際が**ただの黒い楕円**に
+   なる(実測)。スマホはこちらを見るので、いちばん見せたい場面がいちばん
+   ひどかった。
+   そもそも 568三角形・ドローコール1本はスマホには何でもない量で、効くのは
+   塗り面積とフルスクリーンパスの方 —— それはメッシュでも板でも同じ。
+   ティアで分ける理由が無かった。計測せずに用心しただけだった。 */
 
 /* ================================================================
    5) 作品カード — 水中に浮くガラス板
@@ -5096,11 +4996,11 @@ window.__diag = {
   set whaleForce(v){ whaleForce = v; if (v != null && !whaleLen) whaleLen = whaleSize(); },
   set whaleSize(v){ whaleLen = v; },
   get whale(){
-    const b = (TIER.name === 'high' || !whaleSprite) ? whaleMesh : whaleSprite;
+    const b = whaleMesh;
     return { t:+whaleT.toFixed(2), done:whaleDone, dir:whaleDir, len:+whaleLen.toFixed(2),
-             kind: b === whaleMesh ? 'mesh' : 'sprite',
+             kind: 'mesh',
              vis: b ? b.visible : null,
-             amt: b ? +((b === whaleMesh ? whaleUni : whaleSprUni).uAmt.value).toFixed(3) : 0,
+             amt: b ? +whaleUni.uAmt.value.toFixed(3) : 0,
              pos: b ? [+b.position.x.toFixed(2), +b.position.y.toFixed(2), +b.position.z.toFixed(2)] : null,
              dist: b ? +b.position.distanceTo(camera.position).toFixed(2) : 0,
              sonar: sonarEl ? getComputedStyle(sonarEl).opacity : null,
@@ -5677,7 +5577,9 @@ function frame(mode){
      出ているのに接触表示だけ先に走る、を避ける。
      ★ 品質梯子が3段以上落ちた端末(＝既に重い)と reduced-motion では
        そもそも武装しない。「最低ティアでは無効」(仕様)。 */
-  if (!whaleDone && whaleT < 0 && !reduced && qStep < 3
+  /* ★ 門は qStep < 3 から < 5 へ。落とすべきなのはフルスクリーンパスの方で、
+     568三角形のメッシュ1体は梯子が3段落ちた程度の端末でも問題にならない。 */
+  if (!whaleDone && whaleT < 0 && !reduced && qStep < 5
       && depthShown >= WH_BAND[0] && depthShown <= WH_BAND[1]){
     whaleDone = true; whaleT = 0;
     whaleDir = (depthShown * 1000 | 0) % 2 ? 1 : -1;   // 来る向きは入った深度で決める
@@ -5890,10 +5792,8 @@ function frame(mode){
     const q = on ? T / WH_DUR : 0;
     const amt = on ? ss(0, WH_FADE[0], q) * (1 - ss(1 - WH_FADE[1], 1, q)) : 0;
     /* 高ティアはメッシュ、低ティアは板。両方同時には出さない。 */
-    const body = (TIER.name === 'high' || !whaleSprite) ? whaleMesh : whaleSprite;
-    const uni  = (TIER.name === 'high' || !whaleSprUni) ? whaleUni  : whaleSprUni;
-    const other = body === whaleMesh ? whaleSprite : whaleMesh;
-    if (other && other.visible) other.visible = false;
+    /* ★ ティアで別の体に差し替えない(板版は外した。上の 4.8 節の注記)。 */
+    const body = whaleMesh, uni = whaleUni;
     if (body.visible !== (amt > 0.004)) body.visible = amt > 0.004;
     if (amt <= 0.004){ whaleAvoid = 0; whaleU.r.value = 0; }
     if (amt > 0.004){
