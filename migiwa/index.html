@@ -342,9 +342,13 @@
      isolation で積み重ねの文脈を作らないと、z-index:-1 が #hud の裏へ落ちる。 */
   #counter::before{
     content:""; position:absolute; z-index:-1; pointer-events:none;
-    inset:-14px -20px -14px -30px;
-    background:radial-gradient(120% 135% at 74% 58%,
-      rgba(2,14,20,.66) 0%, rgba(2,14,20,.40) 50%, rgba(2,14,20,0) 86%);
+    /* ★ 箱を大きく取り、closest-side で「いちばん近い辺でちょうど0になる」
+       ようにする。これをやらないと、にじみが箱の縁で切られて**四角い板**
+       として見える(実機で発生)。半径をパーセントで指定すると、箱より
+       大きい楕円になって必ず縁で切れる。 */
+    inset:-34px -36px -30px -78px;
+    background:radial-gradient(closest-side at 62% 52%,
+      rgba(2,14,20,.60) 0%, rgba(2,14,20,.30) 52%, rgba(2,14,20,0) 100%);
   }
   #counter .n{font-family:var(--f-mono); font-size:13px; font-weight:500; letter-spacing:.14em; color:var(--hud-hi); font-variant-numeric:tabular-nums}
   #counter .n small{font-size:11px; color:var(--hud); font-weight:400}
