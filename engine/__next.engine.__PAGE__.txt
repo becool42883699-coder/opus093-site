@@ -3,5 +3,5 @@
 3:I[88829,["/opus093-site/_next/static/chunks/2tr14jbj9g2j1.js","/opus093-site/_next/static/chunks/14mrh2-p_w84d.js","/opus093-site/_next/static/chunks/356h-s71u772k.js"],"default"]
 4:I[97367,["/opus093-site/_next/static/chunks/2tr14jbj9g2j1.js","/opus093-site/_next/static/chunks/14mrh2-p_w84d.js"],"OutletBoundary"]
 5:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","main",null,{"className":"movedPage","children":[["$","p",null,{"children":"このページはトップへ移動しました。"}],["$","$L2",null,{"href":"/","children":"T-REX トップへ"}],["$","$L3",null,{}]]}],[["$","script","script-0",{"src":"/opus093-site/_next/static/chunks/356h-s71u772k.js","async":true}]],["$","$L4",null,{"children":["$","$5",null,{"name":"Next.MetadataOutlet","children":"$@6"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"lDBjE9WCZ9z96-u1TmpmU"}
+0:{"rsc":["$","$1","c",{"children":[["$","main",null,{"className":"movedPage","children":[["$","p",null,{"children":"このページはトップへ移動しました。"}],["$","$L2",null,{"href":"/","children":"T-REX トップへ"}],["$","$L3",null,{}]]}],[["$","script","script-0",{"src":"/opus093-site/_next/static/chunks/356h-s71u772k.js","async":true}]],["$","$L4",null,{"children":["$","$5",null,{"name":"Next.MetadataOutlet","children":"$@6"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"6UoGAJGbn25zz_PcSVn55"}
 6:null
