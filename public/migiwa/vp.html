@@ -27,9 +27,10 @@
   .safe{position:fixed; z-index:1; background:rgba(255,93,93,.30); pointer-events:none}
   #sT{top:0; left:0; right:0; height:env(safe-area-inset-top)}
   #sB{bottom:0; left:0; right:0; height:env(safe-area-inset-bottom)}
-  #panel{position:fixed; z-index:2; left:50%; top:50%; transform:translate(-50%,-50%);
-    width:min(92vw,360px); background:rgba(2,14,20,.92); border:1px solid rgba(143,212,222,.35);
-    border-radius:10px; padding:14px 15px}
+  #panel{position:fixed; z-index:2; left:50%; top:12px; transform:translateX(-50%);
+    width:min(94vw,380px); max-height:calc(100% - 24px); overflow:auto;
+    background:rgba(2,14,20,.94); border:1px solid rgba(143,212,222,.35);
+    border-radius:10px; padding:12px 13px; font-size:12px}
   h1{font-size:12px; letter-spacing:.18em; color:#8fd4de; margin-bottom:10px; font-weight:600}
   tr td{padding:2px 0; vertical-align:top}
   td.k{color:#8fd4de; padding-right:10px; white-space:nowrap}
@@ -91,7 +92,18 @@
       ['dpr',                px(devicePixelRatio)],
       ['standalone',         (navigator.standalone === true ||
                               matchMedia('(display-mode: standalone)').matches) ? 'はい' : 'いいえ'],
-      ['UA',                 navigator.userAgent.slice(0, 72)],
+      ['<b class="hit">UA(全文)</b>', '<span style="word-break:break-all">'
+                             + navigator.userAgent + '</span>'],
+      ['ブラウザ判定',       (() => {
+        const u = navigator.userAgent;
+        if (/CriOS/.test(u))  return 'Chrome for iOS';
+        if (/FxiOS/.test(u))  return 'Firefox for iOS';
+        if (/EdgiOS/.test(u)) return 'Edge for iOS';
+        /* Safari 本体は必ず "Version/x.y ... Safari/" を名乗る。
+           これが無い WebKit は アプリ内ブラウザ(WKWebView)。 */
+        if (/Version\/[\d.]+.*Safari/.test(u)) return 'Safari 本体';
+        return '<b class="hit">アプリ内ブラウザ(WKWebView)の可能性</b>';
+      })()],
     ];
     document.getElementById('t').innerHTML =
       rows.map(r => '<tr><td class="k">' + r[0] + '</td><td class="v">' + r[1] + '</td></tr>').join('');
