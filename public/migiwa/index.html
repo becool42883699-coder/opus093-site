@@ -509,11 +509,15 @@
      実測 1.14:1 まで落ちていた(左しか沈めていなかった)。
      下端はロケーションと章カウンタのため。深度で薄れるので水中では消える。 */
   #legibility{position:fixed; inset:0; z-index:5; pointer-events:none;
+    /* ★ ここは長らく上端 .84 / 下端 .44 の濃い帯だった。実機で見ると
+       「海が上下に伸びていない」——画面の端に黒い帯が貼ってあるように見える。
+       文字の可読性は、いまはヒーロー側のにじみと .shade の影で足りている
+       (実測で全項目 4.5:1 以上)ので、ここは絵を殺さない濃さまで下げる。 */
     background:
-      linear-gradient(to bottom, rgba(2,14,20,.84) 0, rgba(2,14,20,.66) 56px,
-                                 rgba(2,14,20,.20) 118px, transparent 190px),
-      linear-gradient(to top,    rgba(2,14,20,.44) 0, rgba(2,14,20,.16) 92px, transparent 172px),
-      linear-gradient(105deg, rgba(2,14,20,.5) 0%, rgba(2,14,20,.2) 34%, transparent 62%)}
+      linear-gradient(to bottom, rgba(2,14,20,.46) 0, rgba(2,14,20,.30) 46px,
+                                 rgba(2,14,20,.10) 100px, transparent 156px),
+      linear-gradient(to top,    rgba(2,14,20,.24) 0, rgba(2,14,20,.09) 76px, transparent 140px),
+      linear-gradient(105deg, rgba(2,14,20,.34) 0%, rgba(2,14,20,.13) 34%, transparent 62%)}
   #grain{position:fixed; inset:0; z-index:7; pointer-events:none; opacity:.038; mix-blend-mode:overlay;
     background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="220" height="220" filter="url(%23n)" opacity="0.6"/></svg>')}
   /* 水面を切る瞬間の一瞬の白。JSが 60ms だけ点ける */
@@ -973,10 +977,10 @@
     /* ★ ここで background ごと差し替わるので、上端の沈みも作り直す。
        前は .42 しかなく、明るい空にナビが重なる幅では読めなくなる。 */
     #legibility{background:
-      linear-gradient(to bottom, rgba(2,14,20,.80) 0, rgba(2,14,20,.60) 52px,
-                                 rgba(2,14,20,.18) 112px, transparent 176px),
-      linear-gradient(to top,    rgba(2,14,20,.50) 0, rgba(2,14,20,.18) 96px, transparent 184px),
-      linear-gradient(180deg, rgba(2,14,20,.10) 0%, transparent 42%)}
+      linear-gradient(to bottom, rgba(2,14,20,.44) 0, rgba(2,14,20,.30) 44px,
+                                 rgba(2,14,20,.10) 96px, transparent 150px),
+      linear-gradient(to top,    rgba(2,14,20,.26) 0, rgba(2,14,20,.10) 72px, transparent 132px),
+      linear-gradient(180deg, rgba(2,14,20,.07) 0%, transparent 42%)}
   }
   /* 背の低い縦画面(iPhone SE / 13 mini の Safari は 553〜629px しか無い)。
      ★ 文章は削らない —— 「デザインで選ばれるホームページをつくる。」は
