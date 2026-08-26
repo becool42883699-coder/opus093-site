@@ -516,7 +516,11 @@
     background:
       linear-gradient(to bottom, rgba(2,14,20,.46) 0, rgba(2,14,20,.30) 46px,
                                  rgba(2,14,20,.10) 100px, transparent 156px),
-      linear-gradient(to top,    rgba(2,14,20,.24) 0, rgba(2,14,20,.09) 76px, transparent 140px),
+      /* ★ 下端だけは薄くしすぎた(実測 カウンター 3.23、現在地ラベル 3.56)。
+         画面の下は夕日で光る水面で、上の夜空とは明るさが2桁ちがう。
+         濃さは戻すが、届く距離は短くする —— 計器のいる帯だけを沈める。 */
+      linear-gradient(to top,    rgba(2,14,20,.52) 0, rgba(2,14,20,.34) 48px,
+                                 rgba(2,14,20,.10) 88px, transparent 130px),
       linear-gradient(105deg, rgba(2,14,20,.34) 0%, rgba(2,14,20,.13) 34%, transparent 62%)}
   #grain{position:fixed; inset:0; z-index:7; pointer-events:none; opacity:.038; mix-blend-mode:overlay;
     background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="220" height="220" filter="url(%23n)" opacity="0.6"/></svg>')}
@@ -979,7 +983,8 @@
     #legibility{background:
       linear-gradient(to bottom, rgba(2,14,20,.44) 0, rgba(2,14,20,.30) 44px,
                                  rgba(2,14,20,.10) 96px, transparent 150px),
-      linear-gradient(to top,    rgba(2,14,20,.26) 0, rgba(2,14,20,.10) 72px, transparent 132px),
+      linear-gradient(to top,    rgba(2,14,20,.54) 0, rgba(2,14,20,.36) 46px,
+                                 rgba(2,14,20,.11) 84px, transparent 124px),
       linear-gradient(180deg, rgba(2,14,20,.07) 0%, transparent 42%)}
   }
   /* 背の低い縦画面(iPhone SE / 13 mini の Safari は 553〜629px しか無い)。
