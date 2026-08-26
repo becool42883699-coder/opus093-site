@@ -1571,6 +1571,9 @@ const QPIN = QS.get('q') || '';
 const TPIN = QS.get('tier') || '';
 
 const stageEl = document.getElementById('stage');
+/* バーの地色を海に追従させるための持ち物(更新は描画ループの中) */
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+let themeNow = '', themeAt = -9;
 
 /* ---- iOS Safari のバーに隠れている量を測って CSS へ流す ---------------
    下のURLバーは safe-area-inset-bottom に**入らない**。バーは visual
@@ -5882,6 +5885,24 @@ function frame(mode){
   const T = t*0.8; waveT = T;
   // 1つの Color を全マテリアルが共有しているので、ここ1箇所の更新で全部に効く
   actFog(depth01);   // 4幕の遠景の壁(旧: SHALLOW→DEEP の一次 lerp)
+
+  /* ブラウザのバーの色を、いま見えている海に追従させる。
+     ★ アプリ内ブラウザ(WKWebView)はページを自分の枠の中にしか描かせない。
+       実測で、ページが取れる最大の高さは 739pt / 画面は 844pt —— 105pt は
+       ブラウザの持ち物で、CSSでもJSでも1pxも描けない。
+       描けないなら「継ぎ目を消す」しかない。バーの地色を海と同じにすれば、
+       どこまでがページでどこからがバーか分からなくなる。
+     ★ 毎フレーム書くと、端末によってはバーが再描画で明滅する。
+       色が目に見えて動いた時(8bitで1段以上)だけ書く。 */
+  if (themeMeta && t - themeAt > 0.25){
+    themeAt = t;
+    /* 上端に見えているのは「遠景の壁」の色。露出とトーンマップの前なので、
+       ガンマだけ掛けて 8bit へ落とす(厳密な一致より、段差が出ないことが要)。 */
+    const g = v => Math.max(0, Math.min(255, Math.round(Math.pow(Math.max(0, v), 1/2.2) * 255)));
+    const c = '#' + [g(fogCol.r), g(fogCol.g), g(fogCol.b)]
+      .map(v => v.toString(16).padStart(2, '0')).join('');
+    if (c !== themeNow){ themeNow = c; themeMeta.setAttribute('content', c); }
+  }
   pulseU.value = reduced ? 1 : lightPulse(t);
   waterUniforms.uTime.value = T;  waterUniforms.uDepth.value = depth01;
   skyUniforms.uTime.value   = T;  skyUniforms.uDepth.value   = depth01;
