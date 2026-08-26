@@ -1813,6 +1813,15 @@ const scene  = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(56, innerWidth/innerHeight, 0.1, 2000);
 /* 基準画角。resize() だけが書き、frame() は速度ぶんを足して使う */
 let fovBase = 56;
+/* 上下へはみ出させている量(CSS px)。0 なら従来どおり。 */
+let BLEED = 0;
+/* 見えている枠の画角 → はみ出し込みの画角。1画素あたりの画角を保つので、
+   元の枠の中身は完全に同じ絵のまま、増えた行にだけ続きが写る。 */
+function bleedFov(f){
+  if (!BLEED) return f;
+  const h = innerHeight, H = h + BLEED * 2;
+  return Math.min(150, 2 * Math.atan(Math.tan(f * Math.PI / 360) * H / h) * 180 / Math.PI);
+}
 camera.position.set(0, 0.95, 0);
 
 /* 太陽。空・水面反射・シャフト・カードのスペキュラ・後処理の散乱、
@@ -5566,6 +5575,10 @@ window.__diag = {
   /* 潜航の進捗。進捗バーは transform で動かしているので style.width は
      常に空になる。外から収束を待つには、この値を見る。 */
   get dive(){ return sp; },
+  /* 端まで届かせるためのはみ出し量と、その時の画角 */
+  get bleed(){ return { px: BLEED, h: bleedH(), vh: innerHeight,
+    fovBase, fovOut: +camera.fov.toFixed(2), dpr: +DPR.toFixed(3),
+    stageTop: stageEl.style.top || '0px', stageH: stageEl.style.height || 'auto' }; },
   /* 汀線を外から機械的に測るための読み出し口 */
   /* 診断用。何が写っているかを切り分けるために、魚だけ消せるようにする。 */
   set hideFish(v){ fishMesh.visible = !v; },
@@ -5728,16 +5741,23 @@ const shaftSide = new THREE.Vector3();
 const shaftNrm  = new THREE.Vector3();
 const shaftBasis = new THREE.Matrix4();
 
+/* 描いている実際の高さ。上下へはみ出させている分を含む。
+   ★ ここを innerHeight のままにすると、適応DPRが走った瞬間に
+     はみ出しが打ち消されて帯が戻る。 */
+function bleedH(){ return innerHeight + BLEED * 2; }
 function applyDPR(next){
-  const v = Math.max(DPR_MIN, Math.min(DPR_MAX, next));
+  /* はみ出しているぶん、上限も同じ比率で下げる(総画素を据え置くため) */
+  const cap = DPR_MAX * (BLEED ? Math.sqrt(innerHeight / bleedH()) : 1);
+  const v = Math.max(DPR_MIN, Math.min(cap, next));
   if (Math.abs(v - DPR) < 0.01) return;
   DPR = v;
+  const H = bleedH();
   renderer.setPixelRatio(DPR);
   composer.setPixelRatio(DPR);
-  composer.setSize(innerWidth, innerHeight);
-  atmosPass.uniforms.uRes.value.set(innerWidth*DPR, innerHeight*DPR);
-  gradePass.uniforms.uRes.value.set(innerWidth*DPR, innerHeight*DPR);
-  refractRT.setSize(Math.max(2, (innerWidth*DPR*0.5)|0), Math.max(2, (innerHeight*DPR*0.5)|0));
+  composer.setSize(innerWidth, H);
+  atmosPass.uniforms.uRes.value.set(innerWidth*DPR, H*DPR);
+  gradePass.uniforms.uRes.value.set(innerWidth*DPR, H*DPR);
+  refractRT.setSize(Math.max(2, (innerWidth*DPR*0.5)|0), Math.max(2, (H*DPR*0.5)|0));
   for (const p of [motes, bubbles, fore]) p.userData.uni.uPix.value = DPR;
   document.getElementById('dprv').textContent = DPR.toFixed(1);
 }
@@ -5887,7 +5907,8 @@ function frame(mode){
   /* 急速潜航で画角を開く。仕様の +10〜15°(RAPID_FOV=12)。 */
   const fov = fovBase + calm * Math.max(-1.6, Math.min(2.6, scrollVel*7.0))
             + rapid * RAPID_FOV;
-  if (Math.abs(camera.fov - fov) > 0.01){ camera.fov = fov; camera.updateProjectionMatrix(); }
+  const fovOut = bleedFov(fov);
+  if (Math.abs(camera.fov - fovOut) > 0.01){ camera.fov = fovOut; camera.updateProjectionMatrix(); }
 
   /* --- 汀線の駆動 -------------------------------------------------
      幾何(シートの見かけの上端・明線の位置)は hpR、
@@ -7092,9 +7113,11 @@ function solvePortraitLift(){
   /* 仰角 lift のときの水平線の画面Y。透視投影では視線が水平の点は
      y = h/2 * (1 + tan(θ)/tan(fov/2)) に出る。lift を上げるほどカメラが
      上を向き、水平線は画面の下へ動く(= 単調増加)。 */
+  /* ★ camera.fov は「はみ出し込み」の広い画角。水平線が見えている枠の
+     どこに来るかは、**見えている枠の画角**(fovBase)で解かないと合わない。 */
   const topY = (lift) => {
     const th = -0.06 + lift;
-    const half = Math.tan(camera.fov * Math.PI / 360);
+    const half = Math.tan(fovBase * Math.PI / 360);
     return innerHeight * 0.5 * (1 + Math.tan(th) / half);
   };
 
@@ -7110,20 +7133,56 @@ function solvePortraitLift(){
   PORTRAIT_LIFT = hi;
 }
 
+/* ---- 画面の端まで海を届かせる ---------------------------------------
+   ★ iOS の WebView は **position:fixed の要素だけ**をバーに隠れない範囲へ
+     押し込む(流れる中身は画面いっぱいに塗られる —— 同じブラウザで
+     他社サイトがステータスバーの裏まで届いているのが反証)。
+     このサイトは海も HUD も全部 fixed なので、海だけが内側で止まり、
+     上下に帯が残っていた。
+   ★ 地色を海の色に追従させて誤魔化す手も入れたが、**色は1つしか流せない**。
+     上端(夜空)に合わせると下端(夕日の水面)が合わない。実機で下だけ黒い帯が
+     残ったのはこれ。色ではなく**絵そのもの**を伸ばすしかない。
+   ★ 逃げ場は「はみ出し」。fixed の要素は内側に配置されるが、負のオフセットで
+     枠の外へはみ出させることはできる。画面(screen)と枠(innerHeight)の差が
+     隠れている量なので、それだけ上下へ伸ばす。
+   ★ 画素数は増やさない。伸ばしたぶん DPR を下げて総画素を据え置く
+     (面積比の平方根)。増やすと重い端末で 60fps を割る。
+   ★ 見え方は1画素も変えない。縦に伸ばしたら、同じ「1画素あたりの画角」に
+     なるよう画角も広げる —— こうすると元の枠の中身は完全に同じ絵になり、
+     増えた行にだけ空と海底が続きを見せる。 */
+function edgeBleed(){
+  const zoom = (screen && screen.width) ? screen.width / Math.max(1, innerWidth) : 1;
+  if (!(zoom > 0.2 && zoom < 5)) return 0;              // 妙な値なら何もしない
+  const screenCss = (screen.height || 0) / zoom;
+  const deficit = screenCss - innerHeight;
+  if (!(deficit > 8)) return 0;                          // 隠れていないなら不要
+  /* 上下の内訳は取れないので、両側に同じだけ出す。上は余っても画面外なので害はない。
+     全部(deficit)を両側に出すと面積が 1.4 倍になるので、行き過ぎない範囲で 0.75。 */
+  return Math.min(220, Math.ceil(deficit * 0.75));
+}
+
 function resize(){
   const w = innerWidth, h = innerHeight;
-  camera.aspect = w/h;
-  /* 縦画面はそのままだと画角が狭く、カードが見切れる。
-     モバイルは"縮小版"にせず、画角そのものを組み替える。 */
   fovBase = h > w ? 64 : 56;
-  camera.fov = fovBase;
+  /* 上下へはみ出させる量。0 なら従来どおり。 */
+  const B = edgeBleed();
+  const H = h + B * 2;
+  BLEED = B;
+  stageEl.style.top = B ? (-B) + 'px' : '';
+  stageEl.style.height = B ? H + 'px' : '';
+  /* 伸ばしたぶん総画素が増えないよう DPR を下げる(面積比の平方根) */
+  DPR = Math.min(devicePixelRatio || 1, TIER.dpr) * (B ? Math.sqrt(h / H) : 1);
+  renderer.setPixelRatio(DPR);
+  composer.setPixelRatio(DPR);
+  camera.aspect = w/H;
+  camera.fov = bleedFov(fovBase);
   camera.updateProjectionMatrix();
-  renderer.setSize(w, h);
-  composer.setSize(w, h);
+  renderer.setSize(w, H);
+  composer.setSize(w, H);
   applyBloomSize();
-  atmosPass.uniforms.uRes.value.set(w*DPR, h*DPR);
-  gradePass.uniforms.uRes.value.set(w*DPR, h*DPR);
-  refractRT.setSize(Math.max(2, (w*DPR*0.5)|0), Math.max(2, (h*DPR*0.5)|0));
+  atmosPass.uniforms.uRes.value.set(w*DPR, H*DPR);
+  gradePass.uniforms.uRes.value.set(w*DPR, H*DPR);
+  refractRT.setSize(Math.max(2, (w*DPR*0.5)|0), Math.max(2, (H*DPR*0.5)|0));
   atmosPass.uniforms.uNear.value = camera.near;
   atmosPass.uniforms.uFar.value  = camera.far;
   solvePortraitLift();
