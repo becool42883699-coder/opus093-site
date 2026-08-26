@@ -1,2 +1,0 @@
-three 0.185.1
-addons: postprocessing/EffectComposer.js, postprocessing/MaskPass.js, postprocessing/OutputPass.js, postprocessing/Pass.js, postprocessing/RenderPass.js, postprocessing/SMAAPass.js, postprocessing/ShaderPass.js, postprocessing/UnrealBloomPass.js, shaders/CopyShader.js, shaders/LuminosityHighPassShader.js, shaders/OutputShader.js, shaders/SMAAShader.js

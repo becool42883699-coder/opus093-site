@@ -42,7 +42,6 @@ const SRC_ARG = (process.argv.slice(2).find(a => a.startsWith('--src=')) || '').
 if (!SRC_ARG) {
   console.error('--src= が要る。検証するページを明示すること。');
   console.error('  node scripts/verify.mjs --src=public/migiwa/index.html');
-  console.error('  node scripts/verify.mjs --src=public/lab/trexworks_umiatari_v6.html');
   process.exit(2);
 }
 const SRC  = path.resolve(ROOT, SRC_ARG);

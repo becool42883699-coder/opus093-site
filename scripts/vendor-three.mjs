@@ -1,4 +1,4 @@
-/* three とアドオンを public/lab/vendor/three/ へ複製する。
+/* three とアドオンを public/migiwa/vendor/three/ へ複製する。
    -----------------------------------------------------------------
    このページは CDN の importmap で three を読んでいたので、
    CDN が塞がれた回線・社内プロキシ・オフラインでは
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TM   = path.join(ROOT, 'node_modules/three');
-const OUT  = path.join(ROOT, 'public/lab/vendor/three');
+const OUT  = path.join(ROOT, 'public/migiwa/vendor/three');
 
 if (!fs.existsSync(TM)) { console.error('node_modules/three が無い'); process.exit(2); }
 const version = JSON.parse(fs.readFileSync(path.join(TM, 'package.json'), 'utf8')).version;
@@ -41,7 +41,11 @@ ENTRIES.forEach(walk);
 
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(path.join(OUT, 'build'), { recursive: true });
-for (const f of ['three.module.js', 'three.core.js']) {
+/* ★ min 版を配る。未圧縮ビルドは gzip 後でも 412KB あり、min ペアなら
+   187KB —— 利用者の回線に 225KB の差が出る。min 同士は
+   three.module.min.js が ./three.core.min.js を指すので自己完結。
+   @license ヘッダは min 版にも残るのでライセンス条件は変わらない。 */
+for (const f of ['three.module.min.js', 'three.core.min.js']) {
   fs.copyFileSync(path.join(TM, 'build', f), path.join(OUT, 'build', f));
 }
 let bytes = 0;
@@ -54,6 +58,6 @@ for (const rel of [...seen].sort()) {
 fs.copyFileSync(path.join(TM, 'LICENSE'), path.join(OUT, 'LICENSE'));
 fs.writeFileSync(path.join(OUT, 'VERSION'), `three ${version}\naddons: ${[...seen].sort().join(', ')}\n`);
 
-const core = ['three.module.js', 'three.core.js']
+const core = ['three.module.min.js', 'three.core.min.js']
   .reduce((n, f) => n + fs.statSync(path.join(OUT, 'build', f)).size, 0);
 console.log(`three ${version} を複製: build ${(core/1024|0)}KB + addons ${seen.size}ファイル ${(bytes/1024|0)}KB`);
