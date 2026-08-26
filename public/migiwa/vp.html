@@ -61,7 +61,22 @@
   function render(){
     const vv = visualViewport;
     const hiddenBottom = vv ? Math.max(0, innerHeight - (vv.height + vv.offsetTop)) : null;
+    /* ★ ここが本丸。
+       ズーム = 画面の実寸(pt) ÷ ページのCSS幅。1.00 でなければ縮小/拡大表示。
+       cover = ページが取れる最大の高さ(100lvh)を実寸に直して、画面の高さに
+               届いているか。届いていなければ viewport-fit=cover が効いておらず、
+               ページはバーの内側に切られている = CSSでは裏に描けない。 */
+    const zoom = screen.width / innerWidth;
+    const lvhPt = lvh() * zoom;
+    const reach = lvhPt / screen.height;
+    const coverOn = reach > 0.985;
     const rows = [
+      ['<b class="' + (Math.abs(zoom-1) < 0.02 ? '' : 'hit') + '">ズーム</b>',
+       '<b class="' + (Math.abs(zoom-1) < 0.02 ? '' : 'hit') + '">' + Math.round(zoom*100) + '%</b>'
+       + (Math.abs(zoom-1) < 0.02 ? '' : '  ← 100%ではない')],
+      ['<b class="' + (coverOn ? '' : 'hit') + '">cover 有効</b>',
+       '<b class="' + (coverOn ? '' : 'hit') + '">' + (coverOn ? 'はい' : 'いいえ') + '</b>'
+       + '  (' + Math.round(lvhPt) + 'pt / ' + screen.height + 'pt = ' + Math.round(reach*100) + '%)'],
       ['画面 screen',        screen.width + ' x ' + screen.height],
       ['inner',              innerWidth + ' x ' + innerHeight],
       ['visualViewport',     vv ? px(vv.width) + ' x ' + px(vv.height) : 'なし'],
