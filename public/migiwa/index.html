@@ -334,7 +334,18 @@
   #foot.isIndex .track i{opacity:1}
   #foot .loc,#locCap{transition:opacity .2s var(--ease)}
 
-  #counter{position:absolute; right:var(--gut); bottom:calc(30px + var(--safeB)); text-align:right}
+  #counter{position:absolute; right:var(--gut); bottom:calc(30px + var(--safeB)); text-align:right;
+           isolation:isolate}
+  /* ★ 右下は「太陽の道」が水面を走る位置で、画面でいちばん明るい。
+     下端の帯を全幅で濃くすると絵を殺すので、この文字の下だけ沈める
+     (ヒーローの軸と同じ考え方)。四方へ完全に消えるので輪郭は出ない。
+     isolation で積み重ねの文脈を作らないと、z-index:-1 が #hud の裏へ落ちる。 */
+  #counter::before{
+    content:""; position:absolute; z-index:-1; pointer-events:none;
+    inset:-14px -20px -14px -30px;
+    background:radial-gradient(120% 135% at 74% 58%,
+      rgba(2,14,20,.66) 0%, rgba(2,14,20,.40) 50%, rgba(2,14,20,0) 86%);
+  }
   #counter .n{font-family:var(--f-mono); font-size:13px; font-weight:500; letter-spacing:.14em; color:var(--hud-hi); font-variant-numeric:tabular-nums}
   #counter .n small{font-size:11px; color:var(--hud); font-weight:400}
   #counter .track{margin-top:11px; margin-left:auto; display:flex; gap:4px; justify-content:flex-end}
