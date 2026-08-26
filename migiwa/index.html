@@ -1571,6 +1571,44 @@ const QPIN = QS.get('q') || '';
 const TPIN = QS.get('tier') || '';
 
 const stageEl = document.getElementById('stage');
+/* ---- 端の帯を海と同じ色にする ------------------------------------
+   ★ iOS の WebView は **position:fixed の要素だけ**をバーに隠れない範囲へ
+     押し込む。流れる中身とページの地色は画面いっぱいに塗られる
+     (同じブラウザで他社サイトが端まで届いているのがその証拠)。
+     このサイトは海もHUDも全部 fixed なので、海だけが内側で止まり、
+     上下にページの地色(--abyss)が帯として残っていた。
+   ★ だから地色を「いま画面の上端に写っている色」に追従させる。
+     地色は fixed ではないのでバーの裏まで塗られ、継ぎ目が消える。
+   ★ 色は推定しない。fogCol(遠くの水の色)で代用したら水面で #3a6671 と
+     出て、実際の上端(暗いネイビー)と似ても似つかなかった。
+     **描いた後の画素を1つ読む**のが唯一正しい。 */
+const themeMeta = document.querySelector('meta[name="theme-color"]');
+let themeNow = '', themeFrame = 0;
+/* 上端の1画素を読んで、CSSの暗幕を掛けた後の色を返す。
+   ★ readPixels は同期なので毎フレームは踏めない。30フレームに1回。
+   ★ preserveDrawingBuffer を持たないので、**描いた直後の同じフレーム内**で
+     読むこと。次のフレームでは中身が保証されない。 */
+function syncEdgeTint(){
+  if (!themeMeta) return;
+  if ((themeFrame++ % 30) !== 0) return;
+  const gl = renderer.getContext();
+  const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+  if (!w || !h) return;
+  const px = new Uint8Array(4);
+  /* GL の y=0 は下端。画面の上端は h-1。 */
+  gl.readPixels((w >> 1), h - 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  /* 見えている上端には #legibility の暗幕が乗っている。帯には乗らないので、
+     同じ量だけ落としてから使う。落とさないと帯だけ明るく浮く。 */
+  const a = innerWidth <= 820 ? 0.44 : 0.46;
+  const mix = (v, d) => Math.round(v * (1 - a) + d * a);
+  const c = '#' + [mix(px[0], 2), mix(px[1], 14), mix(px[2], 20)]
+    .map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('');
+  if (c === themeNow) return;
+  themeNow = c;
+  themeMeta.setAttribute('content', c);
+  /* ページの地色。ここが「バーの裏まで塗られる層」。 */
+  document.documentElement.style.backgroundColor = c;
+}
 
 /* ---- iOS Safari のバーに隠れている量を測って CSS へ流す ---------------
    下のURLバーは safe-area-inset-bottom に**入らない**。バーは visual
@@ -4361,6 +4399,7 @@ function renderComposer(){
   composer.writeBuffer = composer.renderTarget1;
   composer.readBuffer  = composer.renderTarget2;
   composer.render();
+  syncEdgeTint();          // ★ 同じフレームの中で読む(上の注記)
 }
 
 /* ================================================================
@@ -5882,6 +5921,7 @@ function frame(mode){
   const T = t*0.8; waveT = T;
   // 1つの Color を全マテリアルが共有しているので、ここ1箇所の更新で全部に効く
   actFog(depth01);   // 4幕の遠景の壁(旧: SHALLOW→DEEP の一次 lerp)
+
   pulseU.value = reduced ? 1 : lightPulse(t);
   waterUniforms.uTime.value = T;  waterUniforms.uDepth.value = depth01;
   skyUniforms.uTime.value   = T;  skyUniforms.uDepth.value   = depth01;
