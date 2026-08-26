@@ -1549,6 +1549,38 @@ const QPIN = QS.get('q') || '';
 const TPIN = QS.get('tier') || '';
 
 const stageEl = document.getElementById('stage');
+/* ---- large viewport の実寸 ----------------------------------------
+   CSS の 100lvh と WebGL の描画バッファを同じ値にするためのプローブ。
+   innerHeight は Safari の URL バーが開いている間だけ可視領域へ縮むので、
+   これを背景キャンバスの高さに使ってはいけない。
+   absolute のプローブなら固定要素を可視領域へ押し込む実装の影響を受けず、
+   CSS が解決した 100lvh をそのまま読める。 */
+const lvhProbe = document.createElement('div');
+lvhProbe.setAttribute('aria-hidden', 'true');
+lvhProbe.style.cssText = 'position:absolute;top:0;left:0;width:1px;height:100lvh;visibility:hidden;pointer-events:none;contain:strict';
+document.documentElement.appendChild(lvhProbe);
+const lvhSupported = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('height:100lvh');
+const mobileLike = matchMedia('(pointer:coarse)').matches ||
+  (navigator.maxTouchPoints || 0) > 0 ||
+  Math.min(screen.width || 0, screen.height || 0) <= 820;
+function largeViewportHeight(){
+  const cssH = lvhSupported ? lvhProbe.getBoundingClientRect().height : 0;
+  let out = Math.max(innerHeight, Number.isFinite(cssH) ? cssH : 0);
+  /* 一部のSafari系WebViewは lvh を small viewport と同じ値で返す。
+     iPhoneのscreen.heightはCSS pxへ換算して、明らかに短い時だけ補う。
+     デスクトップではウィンドウ外のscreen.heightを使わない。 */
+  if (mobileLike && out <= innerHeight + 1){
+    const sw = screen.width || 0;
+    const zoom = sw ? sw / Math.max(1, innerWidth) : 1;
+    if (zoom > 0.2 && zoom < 5){
+      const screenH = (screen.height || 0) / zoom;
+      if (screenH > out + 8) out = screenH;
+    }
+  }
+  return Math.max(innerHeight, Math.ceil(out));
+}
+/* 実際に描いている高さ。resize/applyDPR/ポスト処理で共有する。 */
+let DRAW_H = innerHeight;
 /* ---- 端の帯を海と同じ色にする ------------------------------------
    ★ iOS の WebView は **position:fixed の要素だけ**をバーに隠れない範囲へ
      押し込む。流れる中身とページの地色は画面いっぱいに塗られる
@@ -1770,7 +1802,8 @@ const RENDER = {
 
 let DPR = Math.min(devicePixelRatio || 1, TIER.dpr);
 renderer.setPixelRatio(DPR);
-renderer.setSize(innerWidth, innerHeight);
+DRAW_H = largeViewportHeight();
+renderer.setSize(innerWidth, DRAW_H);
 /* トーンマップは OutputPass が担当する。ここで掛けると最終パスと二重になる */
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = RENDER.exposure;
@@ -1788,16 +1821,16 @@ renderer.domElement.addEventListener('webglcontextlost', (e) => {
 document.getElementById('dprv').textContent = DPR.toFixed(1);
 
 const scene  = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(56, innerWidth/innerHeight, 0.1, 2000);
+const camera = new THREE.PerspectiveCamera(56, innerWidth/DRAW_H, 0.1, 2000);
 /* 基準画角。resize() だけが書き、frame() は速度ぶんを足して使う */
 let fovBase = 56;
-/* 上下へはみ出させている量(CSS px)。0 なら従来どおり。 */
+/* 可視領域との差の半分(CSS px)。診断表示に使う。 */
 let BLEED = 0;
 /* 見えている枠の画角 → はみ出し込みの画角。1画素あたりの画角を保つので、
    元の枠の中身は完全に同じ絵のまま、増えた行にだけ続きが写る。 */
 function bleedFov(f){
-  if (!BLEED) return f;
-  const h = innerHeight, H = h + BLEED * 2;
+  const h = innerHeight, H = DRAW_H;
+  if (!(H > h + 1)) return f;
   return Math.min(150, 2 * Math.atan(Math.tan(f * Math.PI / 360) * H / h) * 180 / Math.PI);
 }
 camera.position.set(0, 0.95, 0);
@@ -4365,9 +4398,9 @@ function makeTarget(w,h){
   }
   return rt;
 }
-const composer = new EffectComposer(renderer, makeTarget(innerWidth*DPR|0, innerHeight*DPR|0));
+const composer = new EffectComposer(renderer, makeTarget(innerWidth*DPR|0, DRAW_H*DPR|0));
 composer.setPixelRatio(DPR);
-composer.setSize(innerWidth, innerHeight);
+composer.setSize(innerWidth, DRAW_H);
 /* ---- 深度テクスチャの所有権 -------------------------------------
    EffectComposer は renderTarget1/2 を入れ替えながら使い、RenderPass は
    **readBuffer 側**へ描く(needsSwap=false)。
@@ -4532,7 +4565,7 @@ composer.addPass(glassPass);
 
 /* 閾値を1.0まで上げ、太陽と水面のきらめきだけを滲ませる。
    下げると空全体が滲んで乳白色になる(実測) */
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), RENDER.bloomBase, 0.70, RENDER.bloomThreshold);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, DRAW_H), RENDER.bloomBase, 0.70, RENDER.bloomThreshold);
 if (TIER.bloom) composer.addPass(bloom);
 
 /* --- ATMOS: 光の散乱と被写界深度 --------------------------------
@@ -5413,6 +5446,7 @@ function renderDiag(){
     : '  計測中… (画面が数秒ちらつきます)';
   diagEl.innerHTML =
     `<h4>DEVICE</h4>  ${navigator.userAgent}\n  GPU: ${glInfo()}\n  画面 ${innerWidth}×${innerHeight} / devicePixelRatio ${(devicePixelRatio||1).toFixed(2)}` +
+    `<h4>VIEWPORT</h4>  inner ${innerWidth}×${innerHeight} / visual ${window.visualViewport ? Math.round(window.visualViewport.height) : 'n/a'} / large ${DRAW_H}` +
     `<h4>EXTENSIONS (申告)</h4>${ext}` +
     `<h4>PROBE (実際にRTを組めたか)</h4>` +
       `  half-float          … ${yn(CAPS.probe.halfFloat)}\n` +
@@ -5554,9 +5588,14 @@ window.__diag = {
      常に空になる。外から収束を待つには、この値を見る。 */
   get dive(){ return sp; },
   /* 端まで届かせるためのはみ出し量と、その時の画角 */
-  get bleed(){ return { px: BLEED, h: bleedH(), vh: innerHeight,
+  get bleed(){ return { px: BLEED, h: bleedH(), vh: innerHeight, lvh: DRAW_H,
     fovBase, fovOut: +camera.fov.toFixed(2), dpr: +DPR.toFixed(3),
     stageTop: stageEl.style.top || '0px', stageH: stageEl.style.height || 'auto' }; },
+  get viewport(){
+    const vv = window.visualViewport;
+    return { innerH:innerHeight, visualH:vv ? +vv.height.toFixed(1) : null,
+             lvh:DRAW_H, lvhSupported, mobileLike };
+  },
   /* 汀線を外から機械的に測るための読み出し口 */
   /* 診断用。何が写っているかを切り分けるために、魚だけ消せるようにする。 */
   set hideFish(v){ fishMesh.visible = !v; },
@@ -5664,7 +5703,7 @@ function setAtmosDefine(k, v){
   atmosPass.material.defines[k] = v;
   atmosPass.material.needsUpdate = true;   // 再コンパイル(一度きりの数ms)
 }
-function applyBloomSize(){ bloom.setSize(innerWidth * bloomScale, innerHeight * bloomScale); }
+function applyBloomSize(){ bloom.setSize(innerWidth * bloomScale, DRAW_H * bloomScale); }
 function setParticleFraction(f){
   for (const layer of [motes, bubbles, fore]){
     const n = Math.max(8, Math.floor(layer.userData.count * f));
@@ -5719,14 +5758,15 @@ const shaftSide = new THREE.Vector3();
 const shaftNrm  = new THREE.Vector3();
 const shaftBasis = new THREE.Matrix4();
 
-/* 描いている実際の高さ。上下へはみ出させている分を含む。
+/* 描いている実際の高さ。背景とWebGLの両方がlarge viewportを使う。
    ★ ここを innerHeight のままにすると、適応DPRが走った瞬間に
-     はみ出しが打ち消されて帯が戻る。 */
-function bleedH(){ return innerHeight + BLEED * 2; }
+   下端の描画が可視領域へ戻って帯が出る。 */
+function bleedH(){ return DRAW_H; }
 function applyDPR(next){
-  /* はみ出しているぶん、上限も同じ比率で下げる(総画素を据え置くため) */
-  const cap = DPR_MAX * (BLEED ? Math.sqrt(innerHeight / bleedH()) : 1);
-  const v = Math.max(DPR_MIN, Math.min(cap, next));
+  /* large viewportぶん、上限も同じ比率で下げる(総画素を据え置くため) */
+  const cap = DPR_MAX * (DRAW_H > innerHeight ? Math.sqrt(innerHeight / DRAW_H) : 1);
+  /* 大きいviewportではcapがDPR_MIN(1.0)を下回るので、下限もcapまで許す */
+  const v = Math.max(Math.min(DPR_MIN, cap), Math.min(cap, next));
   if (Math.abs(v - DPR) < 0.01) return;
   DPR = v;
   const H = bleedH();
@@ -7112,55 +7152,33 @@ function solvePortraitLift(){
 }
 
 /* ---- 画面の端まで海を届かせる ---------------------------------------
-   ★ iOS の WebView は **position:fixed の要素だけ**をバーに隠れない範囲へ
-     押し込む(流れる中身は画面いっぱいに塗られる —— 同じブラウザで
-     他社サイトがステータスバーの裏まで届いているのが反証)。
-     このサイトは海も HUD も全部 fixed なので、海だけが内側で止まり、
-     上下に帯が残っていた。
-   ★ 地色を海の色に追従させて誤魔化す手も入れたが、**色は1つしか流せない**。
-     上端(夜空)に合わせると下端(夕日の水面)が合わない。実機で下だけ黒い帯が
-     残ったのはこれ。色ではなく**絵そのもの**を伸ばすしかない。
-   ★ 逃げ場は「はみ出し」。fixed の要素は内側に配置されるが、負のオフセットで
-     枠の外へはみ出させることはできる。画面(screen)と枠(innerHeight)の差が
-     隠れている量なので、それだけ上下へ伸ばす。
-   ★ 画素数は増やさない。伸ばしたぶん DPR を下げて総画素を据え置く
-     (面積比の平方根)。増やすと重い端末で 60fps を割る。
-   ★ 見え方は1画素も変えない。縦に伸ばしたら、同じ「1画素あたりの画角」に
-     なるよう画角も広げる —— こうすると元の枠の中身は完全に同じ絵になり、
-     増えた行にだけ空と海底が続きを見せる。 */
-function edgeBleed(){
-  const zoom = (screen && screen.width) ? screen.width / Math.max(1, innerWidth) : 1;
-  if (!(zoom > 0.2 && zoom < 5)) return 0;              // 妙な値なら何もしない
-  const screenCss = (screen.height || 0) / zoom;
-  const deficit = screenCss - innerHeight;
-  if (!(deficit > 8)) return 0;                          // 隠れていないなら不要
-  /* 上下の内訳は取れないので、両側に同じだけ出す。上は余っても画面外なので害はない。
-     全部(deficit)を両側に出すと面積が 1.4 倍になるので、行き過ぎない範囲で 0.75。 */
-  return Math.min(220, Math.ceil(deficit * 0.75));
-}
-
+   CSSの100lvhを解決した高さを、固定ビジュアルとWebGLの全描画経路で共有する。
+   innerHeightへ戻す手動の負オフセットは、SafariのURLバー表示時に下端を
+   取り切れず、ページ地色の帯を残す原因になっていた。 */
 function resize(){
   const w = innerWidth, h = innerHeight;
   fovBase = h > w ? 64 : 56;
-  /* 上下へはみ出させる量。0 なら従来どおり。 */
-  const B = edgeBleed();
-  const H = h + B * 2;
-  BLEED = B;
-  stageEl.style.top = B ? (-B) + 'px' : '';
-  stageEl.style.height = B ? H + 'px' : '';
-  /* 伸ばしたぶん総画素が増えないよう DPR を下げる(面積比の平方根) */
-  DPR = Math.min(devicePixelRatio || 1, TIER.dpr) * (B ? Math.sqrt(h / H) : 1);
+  /* CSSの100lvhを解決した値で、固定ビジュアルと描画バッファを揃える。
+     top:-B の手動はみ出しは、画面下に不足分を残すことがあったので使わない。 */
+  const H = largeViewportHeight();
+  DRAW_H = Math.max(h, H);
+  BLEED = Math.max(0, (DRAW_H - h) * 0.5);
+  stageEl.style.top = '0px';
+  stageEl.style.height = DRAW_H + 'px';
+  stageEl.style.minHeight = DRAW_H + 'px';
+  /* large viewportぶん総画素が増えすぎないよう DPR を下げる */
+  DPR = Math.min(devicePixelRatio || 1, TIER.dpr) * (DRAW_H > h ? Math.sqrt(h / DRAW_H) : 1);
   renderer.setPixelRatio(DPR);
   composer.setPixelRatio(DPR);
-  camera.aspect = w/H;
+  camera.aspect = w/DRAW_H;
   camera.fov = bleedFov(fovBase);
   camera.updateProjectionMatrix();
-  renderer.setSize(w, H);
-  composer.setSize(w, H);
+  renderer.setSize(w, DRAW_H);
+  composer.setSize(w, DRAW_H);
   applyBloomSize();
-  atmosPass.uniforms.uRes.value.set(w*DPR, H*DPR);
-  gradePass.uniforms.uRes.value.set(w*DPR, H*DPR);
-  refractRT.setSize(Math.max(2, (w*DPR*0.5)|0), Math.max(2, (H*DPR*0.5)|0));
+  atmosPass.uniforms.uRes.value.set(w*DPR, DRAW_H*DPR);
+  gradePass.uniforms.uRes.value.set(w*DPR, DRAW_H*DPR);
+  refractRT.setSize(Math.max(2, (w*DPR*0.5)|0), Math.max(2, (DRAW_H*DPR*0.5)|0));
   atmosPass.uniforms.uNear.value = camera.near;
   atmosPass.uniforms.uFar.value  = camera.far;
   solvePortraitLift();
