@@ -4868,7 +4868,7 @@ addEventListener('resize', readScroll);
 readScroll();
 sp = targetP;
 
-/* ---- SERVICEのオレンジセル遷移 ---------------------------------------
+/* ---- SERVICEのセル遷移 -------------------------------------------------
    Aboutから「できること」へ入る区間だけ、HTML要素のGridで覆う。
    スクロールイベントではReact相当の状態更新をせず、rAF内でopacityだけを書く。
    セルはJSで生成するので、既存の本文HTMLとフォールバック経路は変えない。 */
@@ -4878,9 +4878,12 @@ const ORANGE_TRANSITION_SPAN = 0.92;
 const ORANGE_TRANSITION_ORDER_SCALE = 0.78;
 const ORANGE_TRANSITION_FADE_SPAN = 0.16;
 function orangeTransitionClamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
+function orangeTransitionRandom(index, salt){
+  const v = Math.sin((index + 1) * 12.9898 + salt * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+}
 function orangeTransitionDelay(index){
-  const v = Math.sin((index + 1) * 12.9898) * 43758.5453;
-  return (v - Math.floor(v)) * 0.055;
+  return orangeTransitionRandom(index, 1) * 0.11;
 }
 function setupOrangeTransition(){
   const target = document.getElementById('service');
@@ -4920,10 +4923,15 @@ function setupOrangeTransition(){
         element.style.opacity = '0';
         element.style.pointerEvents = 'none';
         layer.appendChild(element);
-        const bottomFirstOrder = (rows - 1 - row) * ORANGE_TRANSITION_COLUMNS + col;
+        /* 段の順番は下から固定し、同じ段の6枚だけを決定的な乱数で
+           並べ替える。隣の段を少しだけまたぐ余白も作らないので、
+           「下から上へ」の読みやすさは保ったまま機械的な列順を崩せる。 */
+        const bottomFirstRow = rows - 1 - row;
+        const randomInRow = orangeTransitionRandom(index, 2);
+        const randomOrder = (bottomFirstRow + randomInRow * 0.84) / rows;
         cells.push({
           element,
-          order: total > 1 ? bottomFirstOrder / (total - 1) : 0,
+          order: total > 1 ? randomOrder : 0,
           delay: orangeTransitionDelay(index),
         });
       }
