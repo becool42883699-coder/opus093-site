@@ -2168,6 +2168,12 @@ vec3 skyFn(vec3 dir){
   vec3 sky = mix(horizon, middle, smoothstep(0.0, 0.10, hs));
   sky = mix(sky, zenith, smoothstep(0.06, 0.55, hs));
 
+  /* 大気の薄い層。地平線だけを少し持ち上げて、単なる2色グラデーション
+     ではなく、遠くの空気が光を受けている奥行きを作る。 */
+  float air = pow(1.0 - smoothstep(0.0, 0.78, hs), 1.7);
+  vec3 airColor = mix(vec3(0.075,0.140,0.198), vec3(0.16,0.255,0.315), awT);
+  sky = mix(sky, airColor, air * 0.14);
+
   /* 雲。方位角(atan)で引くと ±π の折り返しが継ぎ目になるので、
      視線を「高さ一定の雲の板」へ投影した座標で引く。
      継ぎ目が無いうえ、雲が地平へ向かって収束して遠近が出る。 */
@@ -2175,11 +2181,25 @@ vec3 skyFn(vec3 dir){
   if (h > 0.006 && h < 0.62){
     vec2 cp = dir.xz / max(h, 0.055) * 0.42;
     float band = smoothstep(0.006, 0.05, h) * (1.0 - smoothstep(0.26, 0.58, h));
-    float cn = fbm(cp + vec2(uTime*0.010, uTime*0.004), SKY_OCT);
-    dens = smoothstep(0.40, 0.76, cn) * band;
-    vec3 lit = mix(vec3(0.013,0.024,0.044), vec3(0.62,0.34,0.18), awT*0.9);
-    lit = mix(lit, vec3(1.00,0.72,0.42), pow(s, 3.0)*0.65);
-    sky = mix(sky, lit, dens*0.88);
+    vec2 drift = vec2(uTime*0.010, uTime*0.004);
+    float warpX = vnoise(cp*0.55 + drift*0.31);
+    float warpY = vnoise(cp*0.55 - drift*0.23 + 19.0);
+    vec2 warped = cp + (vec2(warpX, warpY) - 0.5) * 0.30;
+    float broad = fbm(warped + drift, SKY_OCT);
+    float detail = vnoise(warped*3.1 - drift*0.35 + 7.0);
+    float cloudShape = smoothstep(0.38, 0.72, broad);
+    float cloudEdge = smoothstep(0.18, 0.72, detail);
+    dens = cloudShape * mix(0.56, 1.0, cloudEdge) * band;
+
+    /* 雲の底は青灰色、太陽側の上面だけを明るくする。雲全体を白く
+       飛ばさず、密度の違いと銀色の縁で立体感を出す。 */
+    float sunLit = smoothstep(0.02, 0.60, pow(s, 0.42));
+    vec3 cloudShadow = vec3(0.018,0.032,0.055);
+    vec3 cloudTop = mix(vec3(0.16,0.25,0.32), vec3(0.57,0.70,0.75), sunLit);
+    float silverEdge = smoothstep(0.60, 0.95, detail) * sunLit;
+    cloudTop = mix(cloudTop, vec3(0.74,0.83,0.85), silverEdge * 0.35);
+    vec3 cloudColor = mix(cloudShadow, cloudTop, smoothstep(0.32, 0.90, detail + sunLit*0.22));
+    sky = mix(sky, cloudColor, dens*0.76);
   }
 
   // 太陽。芯は鋭く、広い散乱は狭める(旧版はこれで空全体が乳白色になっていた)
