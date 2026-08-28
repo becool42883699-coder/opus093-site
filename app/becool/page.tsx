@@ -11,6 +11,7 @@ import PeelReveal from "./PeelReveal";
 import { CUBE_MARK_D, CUBE_GARAGE_D, CUBE_BECOOL_D, CUBE_SINCE_D, CUBE_GRADS, SCRIPT_D, SCRIPT_GRAD } from "./brandLogo";
 import { asset, LINE_URL, SITE_URL, BecoolHeader, BecoolFooter } from "./Chrome";
 import ScrollAnim from "./ScrollAnim";
+import OrangeBlockTransition from "./OrangeBlockTransition";
 
 /* ---- services (from the official business info) --------------------- */
 const SERVICES: {
@@ -582,6 +583,7 @@ export default function BecoolPage() {
 
         {/* ---------- SERVICES ---------- */}
         <section id="service" className={`${styles["bc-svc-section"]} ${styles.surfaceDark}`} aria-labelledby="svc-h">
+          <OrangeBlockTransition targetId="service" />
           <div className={`${styles.sectionHead} ${styles.jsReveal}`} data-reveal="line">
             <h2 id="svc-h">SERVICE</h2>
             <span>サービス</span>
