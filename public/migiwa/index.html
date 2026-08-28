@@ -5634,4 +5634,1934 @@ window.__diag = {
     loc: locWant }; },
   /* ★ dive は既存の getter(潜航の進捗 sp)が下にあり、同名は後勝ちで
      こちらが死ぬ(レビューで発覚)。儀式の口は別名にする。 */
-  get diveRitual(){ retur
+  get diveRitual(){ return { armed: diveArmed, done: diveDone,
+    veil: diveVeilEl ? diveVeilEl.classList.contains('on') : null }; },
+  get contact(){ return { name: snName, amt: snShown, card: cardContactI, dist: snDist }; },
+  get pingStat(){ return { n: pingN, startled: pingStartled }; },
+  firePing(x, y){ firePing(x, y); },
+  get resurfacing(){ return resurfacing; },
+  /* クジラを外から観測する口 */
+  set whaleForce(v){ whaleForce = v; if (v != null && !whaleLen) whaleLen = whaleSize(); },
+  /* 生物発光。setter は検証用(減衰が毎フレーム走るので、保持したい時は
+     インターバルで書き続ける)。gate は motes 層の uBio(=幕の立ち上がり)。 */
+  set bioStim(v){ bioStim = Math.max(0, Math.min(1, v)); },
+  get bioState(){ return { stim:+bioStim.toFixed(3),
+    gate:+motes.userData.uni.uBio.value.toFixed(3) }; },
+  set whaleSize(v){ whaleLen = v; },
+  get whale(){
+    const b = whaleMesh;
+    return { t:+whaleT.toFixed(2), done:whaleDone, dir:whaleDir, len:+whaleLen.toFixed(2),
+             kind: 'mesh',
+             vis: b ? b.visible : null,
+             amt: b ? +whaleUni.uAmt.value.toFixed(3) : 0,
+             pos: b ? [+b.position.x.toFixed(2), +b.position.y.toFixed(2), +b.position.z.toFixed(2)] : null,
+             dist: b ? +b.position.distanceTo(camera.position).toFixed(2) : 0,
+             sonar: sonarEl ? getComputedStyle(sonarEl).opacity : null,
+             sonarM: sonarDEl ? sonarDEl.textContent : null,
+             tris: WHALE_TRIS };
+  },
+  set dustCol(v){ dustUni.uCol.value.setRGB(v[0], v[1], v[2]); },
+  set dustGain(v){ dustUni.uGain.value = v; },
+  /* 着底を外から観測する口 */
+  get touchdown(){ return { t:+touchT.toFixed(2), n:touchN, armed:touchArmed,
+    dust: dustMesh ? dustMesh.visible : null, dustAmt:+dustUni.uAmt.value.toFixed(3),
+    light: lightMesh ? lightMesh.visible : null, lightAmt:+lightUni.uAmt.value.toFixed(3),
+    tag: touchdownEl ? getComputedStyle(touchdownEl).opacity : null,
+    head: landingEl ? landingEl.classList.contains('isIn') : null,
+    nDust: TIER.dust }; },
+  get rapid(){ return { on:rapidOn, v:+rapid.toFixed(3), dir:rapidDir,
+    vel:+scrollVel.toFixed(3), fov:+camera.fov.toFixed(2), fovBase,
+    ca:+gradePass.uniforms.uRapid.value.toFixed(3),
+    streaks: streakMesh ? streakMesh.visible : null, n: TIER.streak,
+    warn: simRate ? simRate.classList.contains('warn') : null,
+    banner: rapidEl ? getComputedStyle(rapidEl).opacity : null }; },
+  get heroFit(){
+    const box = s => { const e = document.querySelector(s); if (!e) return null;
+      if (getComputedStyle(e).display === 'none') return null;
+      const b = e.getBoundingClientRect(); return { t:b.top, b:b.bottom }; };
+    /* ★ 矩形は左右も見る。中央の軸(#hero h1)と DEPTH の計器は縦に重なるが
+       横は 200px 近く離れている —— 縦だけで見ると「被った」と嘘を言う。 */
+    const box2 = s => { const e = document.querySelector(s); if (!e) return null;
+      if (getComputedStyle(e).display === 'none') return null;
+      const b = e.getBoundingClientRect();
+      return { t:b.top, b:b.bottom, l:b.left, r:b.right }; };
+    const meter = box2('#meter'), h1 = box2('#hero h1'), cta = box('#place');
+    const c = cardScreenRects()[0];
+    let floor = innerHeight;
+    for (const sel of ['#diveBtn','#foot','#counter']){
+      const q = box(sel); if (q && q.t > 0 && q.t < floor) floor = q.t;
+    }
+    const over = (a, b) => Math.round(Math.max(0, a - b));
+    const xHit = (a, b) => a && b && a.l < b.r && b.l < a.r;
+    /* ★ 1枚目のカードを水面下へ沈めた(ヒーローの主役を1文字にしたため)。
+       水面は不透明なので、水面より下のカードは**画面に出ていない**。
+       幾何の矩形だけで見ると下のHUDに被っていることになるが、それは
+       「見えない板の位置」を測っているだけ。潜り始めるまで判定しない。 */
+    const cardShown = c && c.visible > 0.02 && sp > 0.03;
+    return {
+      portrait: innerHeight > innerWidth,
+      見出しがDEPTHに被る: (meter && h1 && xHit(meter, h1)) ? over(meter.b, h1.t) : 0,
+      カードが本文に被る:  (cardShown && cta) ? over(cta.b, c.y) : 0,
+      カードが下HUDに被る: cardShown ? over(c.y + c.h, floor)   : 0,
+      cardW: c ? Math.round(c.w / innerWidth * 1000) / 10 : 0,
+    };
+  },
+  get cardBase(){ return CARD_BASE_SCALE; },
+  get fps(){ return fpsStats(); },
+  get cost(){ return CAL && CAL.result; },
+  get quality(){ return { step: qStep, dropped: LADDER.slice(0, qStep).map(l => l.name) }; },
+  /* 潜航の進捗。進捗バーは transform で動かしているので style.width は
+     常に空になる。外から収束を待つには、この値を見る。 */
+  get dive(){ return sp; },
+  /* 端まで届かせるためのはみ出し量と、その時の画角 */
+  get bleed(){ return { px: BLEED, h: bleedH(), vh: innerHeight, lvh: DRAW_H,
+    fovBase, fovOut: +camera.fov.toFixed(2), dpr: +DPR.toFixed(3),
+    stageTop: stageEl.style.top || '0px', stageH: stageEl.style.height || 'auto' }; },
+  get viewport(){
+    const vv = window.visualViewport;
+    return { innerH:innerHeight, visualH:vv ? +vv.height.toFixed(1) : null,
+             lvh:DRAW_H, lvhSupported, mobileLike };
+  },
+  /* 汀線を外から機械的に測るための読み出し口 */
+  /* 診断用。何が写っているかを切り分けるために、魚だけ消せるようにする。 */
+  set hideFish(v){ fishMesh.visible = !v; },
+  get hideFish(){ return !fishMesh.visible; },
+  /* 魚を外から数える。姿が出ているか / 何匹が濃いかを目視でなく数で見る。 */
+  get fish(){
+    const A = fAttr, out = [];
+    for (let i=0;i<NF;i++){
+      const o=i*3;
+      _fp.set(fPos[o],fPos[o+1],fPos[o+2]);
+      const d = _fp.distanceTo(camera.position);
+      _fp.project(camera);
+      out.push({ i, a:+A.aAlpha.array[i].toFixed(3), d:+d.toFixed(2),
+                 x:+_fp.x.toFixed(2), y:+_fp.y.toFixed(2), z:+_fp.z.toFixed(2),
+                 turn:+A.aTurn.array[i].toFixed(2),
+                 /* 姿勢。度で出す(ラジアンだと目で異常が読めない) */
+                 roll:+(fRoll[i]*57.3).toFixed(1), pitch:+(fPitch[i]*57.3).toFixed(1),
+                 spd:+fSpd[i].toFixed(2), amp:+A.aAmp.array[i].toFixed(4),
+                 /* 体の向きと視線のなす角。90度=真横(板が正面を向く)、
+                    0/180度=正面か真後ろ(板が線になる)。 */
+                 view:+(Math.acos(Math.min(1, Math.abs(
+                   (fPos[o]-camera.position.x)*fDir[o] + (fPos[o+2]-camera.position.z)*fDir[o+2]
+                 ) / Math.max(1e-4, Math.hypot(fPos[o]-camera.position.x, fPos[o+2]-camera.position.z))
+                 ))*57.3).toFixed(0) });
+    }
+    return { n:NF, vis: out.filter(f => f.a > 0.12 && Math.abs(f.x)<1 && Math.abs(f.y)<1 && f.z<1).length,
+             wake:+wakeU.uWakeAny.value.toFixed(2),
+             /* 水面より上に出ている個体の数。0 でなければ空を飛んでいる。 */
+             sky: (() => { let n = 0, worst = -99;
+               for (let i=0;i<NF;i++){ const o=i*3;
+                 if (fAttr.aAlpha.array[i] < 0.02) continue;
+                 const over = fPos[o+1] - surfaceY(fPos[o], fPos[o+2], waveT);
+                 if (over > 0) n++;
+                 if (over > worst) worst = over; }
+               return { n, worst:+worst.toFixed(2) }; })(),
+             list: out };
+  },
+  get depth(){ return { m:+lastDepthM.toFixed(1), shown:+depthShown.toFixed(1), hpR:+hpR.toFixed(3),
+                        contentTopDoc, sp:+sp.toFixed(3) }; },
+  get seam(){ return {
+    hpR, hp, cEff: cEff(hpR), seamDelta,
+    seamPx: innerHeight * (1 - cEff(hpR)),
+    theta: camera.rotation.x, fov: camera.fov, timeScale,
+    uLand: gradePass.uniforms.uLand.value, uRim: gradePass.uniforms.uRim.value,
+    readP, rp, reading, settledDone, depthM: lastDepthM,
+    camY: camera.position.y,
+    contentTopDoc, contentSpan,
+    /* 水平線の画面上の位置(px)。ndc.y = -tan(θ)/tan(fov/2) */
+    horizonPx: innerHeight * 0.5 *
+      (1 + Math.tan(camera.rotation.x) / Math.tan(camera.fov * Math.PI/360)),
+  }; },
+  /* 水面の映り込みとガラスの屈折が「実際に効いているか」を外から読めるようにする。
+     絵を見て判断すると、シェーダが黙って落ちた時に気付けない。 */
+  get effects(){ return {
+    reflectAvailable: !!TIER.reflect,
+    reflectOn, reflectStrength: waterUniforms.uReflect.value,
+    reflectSize: reflectRT ? [reflectRT.width, reflectRT.height] : null,
+    glassOn, glassRefract: refractRT ? [refractRT.width, refractRT.height] : null,
+  }; },
+};
+
+/* ================================================================
+   自動品質調整
+   ----------------------------------------------------------------
+   「何fps出ているか」を人が読んで判断する設計をやめる。端末が自分で
+   測り、足りなければ重いものから順に落とし、余っていれば戻す。
+   落とす順は「実測でコストが大きく、失うものが小さい」順。
+   ATMOS(散乱+被写界深度)が最も重いことは実測で確認している。
+   ================================================================ */
+const LADDER = [
+  { name:'被写界深度',        down(){ setAtmosDefine('DOF', 0); },
+                              up(){   setAtmosDefine('DOF', (TIER.dof && RENDER.dof) ? 1 : 0); } },
+  { name:'散乱のサンプル半減', down(){ setAtmosDefine('RAY_SAMPLES', 8); },
+                              up(){   setAtmosDefine('RAY_SAMPLES', TIER.name==='high' ? 26 : 12); } },
+  { name:'ブルームの解像度',   down(){ bloomScale = 0.5; applyBloomSize(); },
+                              up(){   bloomScale = 1.0; applyBloomSize(); } },
+  { name:'粒子を半分',        down(){ setParticleFraction(0.5); },
+                              up(){   setParticleFraction(1.0); } },
+  { name:'光芒を半分',        down(){ setShaftFraction(0.5); },
+                              up(){   setShaftFraction(1.0); } },
+  { name:'水面の映り込み',    down(){ reflectOn = false; }, up(){ reflectOn = !!TIER.reflect; } },
+  { name:'ガラスの屈折',      down(){ glassOn = false; applyGlass(); }, up(){ glassOn = true; applyGlass(); } },
+  { name:'散乱を停止',        down(){ atmosPass.enabled = false; },
+                              up(){   atmosPass.enabled = true; } },
+];
+/* ★ 読書中の海を止めない。以前は本文へ渡った時点で描画を完全に切り、
+   「記録の1枚」を貼ったまま固定していた。FPSと電池のためだったが、
+   海が主役のサイトで、読んでいるあいだだけ海が死んでいた。
+   代わりに「凪」で回す —— 時間を 0.28 倍に落とし、描くのは 30fps(低ティアは24)、
+   被写界深度と水面の映り込みは切る(62%の地の裏では見えない)。
+   止めるのは reduced-motion と saveData だけ。
+   ★ 端末で差を付けない(デスクトップだけ動く、は禁止)。落とすのは
+     描画の頻度と重いパスであって、動きそのものではない。 */
+const READ_CALM = 0.28;
+const READ_FPS  = TIER.name === 'high' ? 30 : 24;
+const READ_ALIVE_OK = !reduced && !saveData;
+let readAlive = false, readAcc = 0, readQOn = false;
+
+let qStep = 0;            // 何段落としているか
+let bloomScale = 1.0;
+let slowFor = 0, fastFor = 0;
+
+function setAtmosDefine(k, v){
+  if (atmosPass.material.defines[k] === v) return;
+  atmosPass.material.defines[k] = v;
+  atmosPass.material.needsUpdate = true;   // 再コンパイル(一度きりの数ms)
+}
+function applyBloomSize(){ bloom.setSize(innerWidth * bloomScale, DRAW_H * bloomScale); }
+function setParticleFraction(f){
+  for (const layer of [motes, bubbles, fore]){
+    const n = Math.max(8, Math.floor(layer.userData.count * f));
+    layer.geometry.setDrawRange(0, n);
+  }
+}
+function setShaftFraction(f){
+  const keep = Math.max(2, Math.round(shafts.length * f));
+  shafts.forEach((sh, i) => { sh.visible = i < keep; });
+  /* 床の光だまりも一緒に減らす。残すと「光の柱が無いのに床だけ光る」 */
+  sandUniforms.uShaftN.value = Math.min(keep, sandUniforms.uShaft.value.length);
+}
+function setQuality(step){
+  const target = Math.max(0, Math.min(LADDER.length, step));
+  while (qStep < target) LADDER[qStep++].down();
+  while (qStep > target) LADDER[--qStep].up();
+  /* 魚は数も振る舞いも減らさない。落とすのは近寄る距離だけ。 */
+  fishQuality(qStep);
+}
+
+/* 読書中だけ落とすもの。品質の梯子(実測で降りるやつ)とは別系統で、
+   出るときに必ず元へ戻す。DPRは触らない —— 変えると canvas が張り直されて
+   記録の1枚が消え、resize 経路(measureLayout / resetFishState)まで走る。 */
+let readReflectWas = false;
+function setReadingQuality(on){
+  if (on === readQOn) return;
+  readQOn = on;
+  if (on){
+    readReflectWas = reflectOn;
+    reflectOn = false;                       // 600mでは水面は画角に入らない
+    setAtmosDefine('DOF', 0);                // 62%の地の裏でボケは見えない
+    setAtmosDefine('RAY_SAMPLES', 8);
+    bloomScale = 0.5; applyBloomSize();
+  } else {
+    reflectOn = readReflectWas;
+    setAtmosDefine('DOF', (TIER.dof && RENDER.dof && qStep < 1) ? 1 : 0);
+    setAtmosDefine('RAY_SAMPLES', qStep < 2 ? (TIER.name==='high' ? 26 : 12) : 8);
+    bloomScale = qStep < 3 ? 1.0 : 0.5; applyBloomSize();
+  }
+}
+
+/* 適応DPR。品質を落とすのは"実測で遅い時だけ" */
+let frameAcc = 0, frameN = 0, fpsShown = 0;
+const DPR_MIN = 1.0, DPR_MAX = Math.min(devicePixelRatio || 1, TIER.dpr);
+
+const camFwd = new THREE.Vector3();
+const sunPoint = new THREE.Vector3();
+const tmpV = new THREE.Vector3();
+/* 光芒の板を毎フレーム向け直すための作業用(確保はここで1回だけ) */
+const rayFrom   = new THREE.Vector3();
+const shaftSide = new THREE.Vector3();
+const shaftNrm  = new THREE.Vector3();
+const shaftBasis = new THREE.Matrix4();
+
+/* 描いている実際の高さ。背景とWebGLの両方がlarge viewportを使う。
+   ★ ここを innerHeight のままにすると、適応DPRが走った瞬間に
+   下端の描画が可視領域へ戻って帯が出る。 */
+function bleedH(){ return DRAW_H; }
+function applyDPR(next){
+  /* large viewportぶん、上限も同じ比率で下げる(総画素を据え置くため) */
+  const cap = DPR_MAX * (DRAW_H > innerHeight ? Math.sqrt(innerHeight / DRAW_H) : 1);
+  /* 大きいviewportではcapがDPR_MIN(1.0)を下回るので、下限もcapまで許す */
+  const v = Math.max(Math.min(DPR_MIN, cap), Math.min(cap, next));
+  if (Math.abs(v - DPR) < 0.01) return;
+  DPR = v;
+  const H = bleedH();
+  renderer.setPixelRatio(DPR);
+  composer.setPixelRatio(DPR);
+  composer.setSize(innerWidth, H);
+  atmosPass.uniforms.uRes.value.set(innerWidth*DPR, H*DPR);
+  gradePass.uniforms.uRes.value.set(innerWidth*DPR, H*DPR);
+  refractRT.setSize(Math.max(2, (innerWidth*DPR*0.5)|0), Math.max(2, (H*DPR*0.5)|0));
+  for (const p of [motes, bubbles, fore]) p.userData.uni.uPix.value = DPR;
+  document.getElementById('dprv').textContent = DPR.toFixed(1);
+}
+
+/* 記録の1枚を描くときの合図。rAF はコールバックに数値(時刻)を渡すので、
+   Symbol と比べれば通常のフレームと取り違えない。 */
+const SETTLED = Symbol('settled');
+let settledDone = false;
+
+function frame(mode){
+  const settled = (mode === SETTLED);
+  if (!settled){
+    if (!running) return;
+    requestAnimationFrame(frame);
+  }
+  /* ★ tick() は必ず先に呼ぶ(復帰時に巨大な dt を飛ばさない既存の構造)。 */
+  const dt = settled ? 0 : Math.min(tick(), 0.05);
+  if (!settled){
+    measureSeam();
+    /* 本文が画面の62%を覆ったら計器は退く。
+       IntersectionObserver は1〜2フレーム遅れ、最後のライブフレームと
+       凍結フレームの姿勢がずれるので、ここで同期的に決める。 */
+    const readingUI = hpR >= 0.62;
+    /* ★ ここで呼ぶ。writeReadingHud だけに置くと、第三幕(rp>0)は
+       本流の frame() を通るので見出しが前の節のまま居座る。 */
+    if (readingUI) updateSection();
+    if (readingUI !== reading){
+      reading = readingUI;
+      document.documentElement.dataset.reading = reading ? '1' : '0';
+      if (!reading){
+        resetFishState();                      // 本文から戻った直後の入力は捨てる
+        recallUp = 0; recallOn = false;
+        if (headerEl) headerEl.classList.remove('recall');
+      }
+    }
+    /* 第三幕(rp>0)に入っていれば描画は続ける。海だけが戻る。 */
+    if (readingUI && rp <= 0){
+      /* 記録の1枚は1回だけ描く。実績の3件目へ写すのがこの1枚。 */
+      if (!settledDone){ settledDone = true; renderSettledFrame(); }
+      if (!READ_ALIVE_OK){ writeReadingHud(); return; }
+      /* ここから下は「凪」。本流の frame() をそのまま通し、
+         最後に writeReadingHud() で読書中の表示に上書きする。 */
+      readAlive = true;
+    } else {
+      settledDone = false;
+      readAlive = false;
+    }
+    setReadingQuality(readAlive);
+  }
+  t += dt * timeScale;
+
+  /* --- 減衰。スクロールは"重い"、ポインタは"軽いが遅れる" --- */
+  /* ★ 読書中はカメラを据える。ポインタで視点が動くと、文字の裏の絵が
+     一緒に動いて読みにくい。動かすのは雪・光条・魚の側だけ。 */
+  if (readAlive){ pxT = pyT = 0; scrollVel = 0; }
+  sp = smoothDamp(sp, targetP, spV, lag1(0.42), dt);
+  px = smoothDamp(px, pxT, pxV, lag1(0.55), dt);
+  py = smoothDamp(py, pyT, pyV, lag1(0.55), dt);
+  /* 実フレーム時間で割る(丸めた dt で割ると低フレーム時に過大評価される)。
+     一次遅れではなく二次のばね: 行き過ぎ約10%・揺り戻し1回・収束0.7秒。
+     可変dtで積分すると低フレーム時に発散するので固定ステップで回す。 */
+  const rawVel = (sp - prevSp) / Math.max(rawDt, 5e-4);
+  prevSp = sp;
+  if (rawDt > 0.08){ velX = 0; velV = 0; }          // 大きく飛んだフレームは入力を捨てる
+  else {
+    let acc = rawDt;
+    for (let n = 0; n < 4 && acc > 0; n++){
+      const h = Math.min(1/120, acc); acc -= h;
+      velV += ((rawVel - velX) * 26 - velV * 6.1) * h;
+      velX += velV * h;
+    }
+  }
+  scrollVel = Math.max(-1, Math.min(1, velX));
+  updateRapid(dt);
+
+  /* 生物発光の刺激。水の動き(スクロール)で強まり、約1秒で減衰する。
+     ping は firePing() が 1 を立てる。reduced では常に 0(明滅を止める)。 */
+  bioStim = Math.max(bioStim * Math.exp(-dt * 1.1), Math.min(1, Math.abs(scrollVel) * 1.15));
+  bioStimU.value = reduced ? 0 : bioStim;
+
+  /* 潜る儀式。sp が動き出した最初の1回だけ。 */
+  if (diveArmed && !diveDone && sp > 0.012 && diveVeilEl){
+    diveDone = true;
+    diveVeilEl.classList.add('on');
+    /* ★ 1400ms だと遅延の大きい泡(delay .30s + 1.30s = 1.60s)が
+       フェードの途中でスナップして消える。全員が終わるまで待つ。 */
+    setTimeout(() => diveVeilEl.classList.remove('on'), 1700);
+  }
+
+  /* --- カメラの旅程 ------------------------------------------
+     単なる縦移動ではなく、俯角と画角も一緒に動かす。
+     水面直下で見上げ、海底へ近づくと見下ろす。 */
+  const ease = sp*sp*(3-2*sp);
+  /* ★ 計器はこの「潜航ぶんの高さ」だけを見る。着地の沈み込み(land)や
+     水面の揺れ(bob)を混ぜると、最深部で 701M まで回って計器が壊れる。 */
+  const camYBase = 0.95 - 9.55*ease;
+  /* 汀の受け渡し。
+     hPose … カメラの姿勢はここで凍る(記録の姿勢)。
+     calm  … 着地でノイズ(ポインタ追従・速度でののけぞり)を殺す。
+     land  … 海底へ 1.45m 沈む。目線が砂の 0.35m 上に来る。 */
+  const hPose = Math.min(hpR, 0.62);
+  const calm  = 1 - ss(0.06, 0.44, hp);
+  /* ★ reduced でも 1 に固定してはいけない。sp=0 の水面で
+     カメラが 1.45m 沈み、最初から水中で始まってしまう。 */
+  const land  = ss(0.00, 0.50, hp);
+  const camY  = camYBase - 1.45*land;
+  const bob   = reduced ? 0 : Math.sin(t*0.85)*0.045*(1-ease)*calm; // 水面の揺れ
+  const depth01 = Math.min(1, Math.max(0, -camYBase/8.6));
+
+  /* ごく弱い画面の揺れ。★ 振幅は数cm。これ以上やると「壊れている」に
+     読まれるし、汀線の幾何(水平線の位置)まで揺れてしまう。
+     rapid が 0 に落ちきるので、止まれば揺れも完全に止まる。 */
+  const shk = rapid * 0.022;
+  const shx = shk * Math.sin(t * 37.0);
+  const shy = shk * Math.sin(t * 43.7 + 1.7);
+  camera.position.set(px*0.30*(1-ease*0.55)*calm + shx, camY + bob + shy, py*0.10*calm);
+  camera.rotation.order = 'YXZ';
+  /* 縦画面は水面を見下ろす面積が大きく、近景の波ばかりになる。
+     水面に入るまでの間だけカメラを上へ振り、水平線を画面の下寄りへ送る
+     (＝空を多く見せ、1枚目のカードを本文の下に落とす)。 */
+  const portraitLift = PORTRAIT_LIFT * (1 - ss(0.02, 0.20, sp));
+  /* 陽光帯の見上げ。水に入って一拍おいてから機首を上げ、離れていく水面 ——
+     スネルの窓の縁と、そこに滲む太陽 —— を見送る。
+     窓の縁は水平から41.4°上にあり、素の振り付け(最大+2°)では画角の上端
+     (+28°/縦+32°)に一度も入らなかった。+0.30radで上端が43.6°/47.6°に届く。
+     ★ 最初は sp 0.05-0.34 に置いたら、着水が sp≈0.19 なので
+       山がまだ「水の上」だった(実測: DEPTH 000.0M で空を見上げていた)。
+       窓は水中からしか見えない。24〜38m の浅場に置き直し、最初の
+       カードへ寄る前(0.33)に返し終える。
+       ★ 45mで試したら暖色が吸収で死んでいた(赤は2単位で落ちる)。
+         窓の色が残るのは浅場だけ —— 深さも「幕」の言語で選ぶ。 */
+  /* 最後の項が汀線。潜航の終端でピッチは -0.170rad(-9.7°)。そこへ
+     +0.170 を足して hpR≥0.44 で厳密に 0 にする。θ=0 の透視投影では
+     床の消失線が必ず画面の垂直中央に出るので、水平線がそこへ「駐車」する。 */
+  camera.rotation.x = (-0.06 + portraitLift
+                    + 0.30*ss(0.195,0.235,sp)*(1 - ss(0.27,0.33,sp))
+                    + 0.21*ss(0.10,0.46,sp) - 0.32*ss(0.60,0.97,sp))
+                    + 0.170*ss(0.04, 0.44, hPose)
+                    + (py*-0.030
+                       + Math.max(-0.055, Math.min(0.055, scrollVel*0.20))) * calm;   // 速度でのけぞる
+  /* 同じ速度源からヨーとロールへも分配する。モバイルにも二軸目が入る */
+  camera.rotation.y = (-px*0.055 + Math.max(-0.030, Math.min(0.030, scrollVel*0.10))) * calm;
+  camera.rotation.z = (-px*0.014 + Math.max(-0.012, Math.min(0.012, scrollVel*0.040))) * calm;
+  /* ★ 基準画角は resize() が決める(縦画面 64 / 横画面 56)。
+     ここで 56 を直書きすると縦画面の画角指定が毎フレーム消され、
+     solvePortraitLift() は誰も使わない 64 に対して解くことになる。 */
+  /* 急速潜航で画角を開く。仕様の +10〜15°(RAPID_FOV=12)。 */
+  const fov = fovBase + calm * Math.max(-1.6, Math.min(2.6, scrollVel*7.0))
+            + rapid * RAPID_FOV;
+  const fovOut = bleedFov(fov);
+  if (Math.abs(camera.fov - fovOut) > 0.01){ camera.fov = fovOut; camera.updateProjectionMatrix(); }
+
+  /* --- 汀線の駆動 -------------------------------------------------
+     幾何(シートの見かけの上端・明線の位置)は hpR、
+     幾何でないもの(時間の倍率・接地影の濃さ)は hp。 */
+  hp = smoothDamp(hp, hpR, hpV, lag1(0.09), dt);
+  /* 海の時間。hp 0.34→0.56 で 0 へ。第三幕(rp)で 0→1 に戻る。 */
+  timeScale = reduced ? 0
+    : Math.max(readAlive ? READ_CALM : 0, 1 - ss(0.34, 0.56, hp), ss(0.10, 0.70, rp));
+  {
+    const cE = cEff(hpR);
+    /* シートの実オフセット。実スクロールは奪わず、見かけの位置だけずらす。
+       小数pxで書くと端末によって文字がにじむので必ず整数に丸める。 */
+    const want = reduced ? 0 : Math.round(innerHeight * (hpR - cE));
+    if (want !== seamDelta){
+      seamDelta = want;
+      contentEl.style.transform = want ? `translate3d(0,${want}px,0)` : '';
+      contentEl.style.willChange = want ? 'transform' : 'auto';
+    }
+    let uLand = ss(0.00,0.16,hp) * (1 - ss(0.46,0.60,hp));
+    let uRim  = ss(0.02,0.14,hp) * (1 - ss(0.50,0.60,hp));
+    /* ★ 構造的ガード。フリックで hp が遅れているあいだに hpR だけが
+       0.62 を越えて凍る経路が実在する。ss のカーブ任せにすると、
+       止まった位置に黒い帯が焼き付いた1枚が本文の裏に残り続ける。 */
+    if (settled || hpR >= 0.60){ uLand = 0; uRim = 0; }
+    gradePass.uniforms.uSeam.value = cE;
+    gradePass.uniforms.uLand.value = uLand;
+    gradePass.uniforms.uRim.value  = uRim;
+  }
+
+  /* --- 共有ユニフォーム --- */
+  const T = t*0.8; waveT = T;
+  // 1つの Color を全マテリアルが共有しているので、ここ1箇所の更新で全部に効く
+  actFog(depth01);   // 4幕の遠景の壁(旧: SHALLOW→DEEP の一次 lerp)
+
+  pulseU.value = reduced ? 1 : lightPulse(t);
+  waterUniforms.uTime.value = T;  waterUniforms.uDepth.value = depth01;
+  skyUniforms.uTime.value   = T;  skyUniforms.uDepth.value   = depth01;
+  // 水面をまたぐ 0.24 の区間だけで空→水の色へ切り替える
+  skyUniforms.uSub.value = ss(0.12, -0.12, camera.position.y);
+  sandUniforms.uTime.value  = T;  sandUniforms.uDepth.value  = depth01;
+  shaftUniforms.uTime.value = T;  shaftUniforms.uDepth.value = depth01;
+  fishUniforms.uTime.value  = T;  fishUniforms.uDepth.value  = depth01;
+  /* 海藻は水の時計(T)で揺れる。★ 別の時計にすると、水が凪いでいるのに
+     海藻だけ動く／その逆が起きる。「読書中の凪」もこれで一緒に効く。 */
+  if (kelpUni){ kelpUni.uTime.value = T; kelpUni.uDepth.value = depth01; }
+  if (rockUni){ rockUni.uDepth.value = depth01; }
+  skyDome.position.copy(camera.position);
+  water.position.x = camera.position.x; water.position.z = camera.position.z;
+  waterUniforms.uOrigin.value.set(water.position.x, water.position.z);
+
+  /* --- 光芒 -------------------------------------------------
+     板の軸を RAY_UP(屈折した太陽光の向き)に取り、その軸まわりだけ
+     カメラへ向けて"板"であることを消す。
+     ★ 以前は軸をY(鉛直)に固定し、画面上で太陽から放射状に開いて見える
+       よう z 回転を後付けしていた。これは水上のゴッドレイの見え方で、
+       水中の光条は屈折して**平行に**差す —— 画面上で開いて見えるのは
+       透視のせいなので、板をきちんと傾ければ勝手にそうなる。
+       鉛直のままだと、夕日の海なのに舞台のスポットライトに見える。 */
+  for (let i=0;i<shafts.length;i++){
+    const sh = shafts[i];
+    shaftSide.subVectors(camera.position, sh.position).cross(RAY_UP);
+    /* カメラが軸の真上/真下に来ると外積が潰れる。前フレームの向きを
+       使い回すより、決め打ちの横向きへ倒す方が破綻が短い。 */
+    if (shaftSide.lengthSq() < 1e-6) shaftSide.set(1, 0, 0); else shaftSide.normalize();
+    shaftNrm.crossVectors(shaftSide, RAY_UP);
+    shaftBasis.makeBasis(shaftSide, RAY_UP, shaftNrm);
+    sh.quaternion.setFromRotationMatrix(shaftBasis);
+    const u = sh.material.uniforms;
+    u.uTime.value = T; u.uDepth.value = depth01;
+  }
+
+  /* --- カード。個別のばね + 焦点 --- */
+  let focusI = -1, focusAmt = 0, focusDist = 7.0;
+  for (let i=0;i<cards.length;i++){
+    const c = cards[i], u = c.userData;
+    c.position.y = u.base.y + Math.sin(t*0.5 + u.sway)*0.055;
+    c.position.x = u.base.x + Math.cos(t*0.37 + u.sway)*0.035;
+    c.rotation.z = Math.sin(t*0.33 + u.sway)*0.016;
+    // ポインタに対して二次的に遅れて傾く(慣性)
+    c.rotation.y = u.baseRotY + px*0.045 + Math.sin(t*0.29 + u.sway)*0.012;
+    const near = 1 - Math.min(1, Math.abs(camera.position.y - u.base.y)/(isMobile ? 2.2 : 2.7));
+    const f = near*near;
+    u.uni.uFocus.value += (f - u.uni.uFocus.value) * ease1(3.2, dt);
+    /* ホバーは縁の強調と、ごく僅かに手前へ寄るだけ。大きく動かすと
+       板が飛んで「浮いている物」ではなくUI部品に見える。 */
+    const hv = (hovered === i && !reduced) ? 1 : 0;
+    u.uni.uHover.value += (hv - u.uni.uHover.value) * ease1(6.0, dt);
+    c.position.z = u.base.z + u.uni.uHover.value * 0.12;
+    /* 水面は不透明なので、水面より上のカードは潜った瞬間に見えなくなるのが
+       正しい。放っておくと波の稜線でカードが切り取られたように見える。 */
+    const vis = u.base.y > 0.4 ? 1 - ss(0.004, 0.050, depth01) : 1;
+    u.uni.uVis.value += (vis - u.uni.uVis.value) * ease1(4.0, dt);
+    u.uni.uDepth.value = depth01;
+    u.uni.uTime.value = T;
+    if (f > focusAmt){ focusAmt = f; focusI = i; focusDist = camera.position.distanceTo(c.position); }
+  }
+
+  /* ★ 魚の時計は2つ。位置と姿勢は timeScale(reduced-motion では0)で進め、
+     出入りの濃度だけ実時間で進める。位置まで実時間にすると、
+     reduced-motion で海が止まっているのに魚だけ泳ぎ続ける(実測で
+     3.5秒あけた2枚が一致しなかった)。逆に濃度まで止めると、
+     alpha が 0 のまま一匹も出てこない。 */
+  const fdtRaw = Math.min(dt, 1/30);
+  /* reduced-motion では濃度も「寄せる」のではなく即座に当てる(fdtA=1 で
+     一次遅れの係数が 1 になる)。ゆっくり現れるのも演出なので、
+     静止画として1フレーム目から完成していること。 */
+  updateFish(reduced ? 0 : fdtRaw, focusAmt, reduced ? 1 : fdtRaw);
+
+  /* --- 粒子。層ごとに違う遅れ・違う速度で流す ---
+     海流は Gerstner の主方向と揃え、深いほど弱める。 */
+  const current = (0.55 + 0.45*Math.sin(t*0.11)) * (1 - 0.75*depth01);
+
+  for (const layer of [motes, bubbles, fore]){
+    const { geo, count, opt, uni } = layer.userData;
+    const arr = geo.attributes.position.array;
+    const spd = geo.attributes.aSpeed.array;
+    /* 折り返しは「レイヤー原点からの局所座標」ではなく「カメラから見た高さ」で
+       判定する。層ごとに追従が違うので、原点基準だと片寄って空白ができる。 */
+    const spanY = opt.yMax - opt.yMin;
+    const spanX = opt.spread[0];
+    const flow  = current * (opt.drift || 0) * dt * timeScale * 60;
+    const originY = layer.position.y, originX = layer.position.x;
+    for (let i=0;i<count;i++){
+      arr[i*3+1] += spd[i]*dt*timeScale;
+      arr[i*3]   += flow;
+      const relY = originY + arr[i*3+1] - camY;
+      if (relY >  spanY*0.5) arr[i*3+1] -= spanY;
+      else if (relY < -spanY*0.5) arr[i*3+1] += spanY;
+      const relX = originX + arr[i*3] - camera.position.x;
+      if (relX >  spanX*0.5) arr[i*3] -= spanX;
+      else if (relX < -spanX*0.5) arr[i*3] += spanX;
+    }
+    geo.attributes.position.needsUpdate = true;
+    uni.uTime.value = t;
+    uni.uWaveT.value = T;                 // 水と同じ時計(t*0.8)を渡す
+    uni.uDepth.value = depth01;
+    /* 生物発光は薄暮帯(4幕の第3幕)から。幕と同じ曲線で立ち上げる。 */
+    uni.uBio.value = opt.bio ? ss(0.50, 0.85, depth01) : 0;
+
+    /* 層ごとに違う遅れでカメラを追う。旧実装は3層とも camY をそのまま
+       代入していたため、層間の縦方向の視差が数学的にゼロだった
+       (大きさとボケ方が違うだけだった)。遅れの差がそのまま視差になる。
+       ずれ量はレイヤーのスパンの15%で頭打ちにし、折り返しが視界に入るのを防ぐ。 */
+    const ud = layer.userData;
+    const span = opt.yMax - opt.yMin;
+    const lag = lag1(opt.lag);
+    ud.fy = lag ? smoothDamp(ud.fy, camY, ud.fyv, lag, dt) : camY;
+    ud.fx = lag ? smoothDamp(ud.fx, camera.position.x, ud.fxv, lag, dt) : camera.position.x;
+    const cap = span * 0.15;
+    layer.position.y = camY + Math.max(-cap, Math.min(cap, ud.fy - camY));
+    layer.position.x = camera.position.x + Math.max(-cap, Math.min(cap, ud.fx - camera.position.x));
+    /* 魚が押しのける計算はワールド座標で比べるので、層の原点を渡す。
+       ★ 位置を動かした「あと」に渡す(先に渡すと1フレーム古い値になる)。 */
+    uni.uOrigin.value.copy(layer.position);
+  }
+
+  /* --- ポストの駆動 ------------------------------------------ */
+  /* 散乱の中心の画面座標。視野の外に出たら散乱を切る。
+     ★ 水中では太陽そのものではなく、屈折して差し込む向き(RAY_UP)の
+       無限遠が中心になる。光芒の板を屈折の向きへ傾けたので、ここを
+       太陽のままにすると、画面の筋と板の向きが食い違う。
+       水面をまたぐ区間は uSub で連続に渡す(空の色の切替と同じ重み)。 */
+  rayFrom.copy(SUN).lerp(RAY_UP, skyUniforms.uSub.value).normalize();
+  sunPoint.copy(camera.position).addScaledVector(rayFrom, 400);
+  tmpV.copy(sunPoint).project(camera);
+  camera.getWorldDirection(camFwd);
+  const inFront = camFwd.dot(rayFrom) > 0.02;
+  atmosPass.uniforms.uSunUV.value.set(tmpV.x*0.5+0.5, tmpV.y*0.5+0.5);
+  // 水中でだけ強く出す(水上は空の描画そのものが眩しさを持っている)
+  const rayAmt = (inFront ? (0.10 + 0.62*ss(0.03,0.34,depth01)) * (1 - ss(0.55,0.92,depth01)) : 0)
+                 * (RENDER.godrayOcclusion ? 1 : 0.55);   // 遮蔽できないぶん控えめに
+  atmosPass.uniforms.uRay.value += (rayAmt - atmosPass.uniforms.uRay.value) * ease1(2.5, dt);
+  atmosPass.uniforms.uDepth01.value = depth01;
+  atmosPass.uniforms.uTime.value = t;
+  // 被写界深度。焦点は"いま見ている作品"、絞りは深いほど開く
+  /* 汀では、線の上を通る1匹へピントを送る。ここだけ背景ではなく生き物に
+     合わせる(奥はどのみち霧で柔らかいので、失うものが無い)。
+     被写界深度でにじんだままだと、せっかくの1匹が光の筋にしか見えない。 */
+  const targetFocus = (hpR > 0.26 && fishHeroDist > 0) ? fishHeroDist
+                    : (focusAmt > 0.12 ? focusDist : 8.5);
+  atmosPass.uniforms.uFocus.value += (targetFocus - atmosPass.uniforms.uFocus.value) * ease1(1.6, dt);
+  atmosPass.uniforms.uAperture.value = 0.16 + 0.42*depth01;
+  /* 潜水カメラの順応。深いほど僅かに開き、暗部の階調を残す
+     (黒潰れは禁止事項)。振れ幅は現行値の +10% まで、時定数0.45秒。 */
+  const expTarget = RENDER.exposure * (1 + 0.10 * ss(0.15, 0.90, depth01));
+  expShown = smoothDamp(expShown, expTarget, expVel, lag1(0.45), dt);
+  renderer.toneMappingExposure = expShown;
+
+  gradePass.uniforms.uDepth01.value = depth01;
+  gradePass.uniforms.uTime.value = t;
+  bloom.strength = RENDER.bloomBase + 0.24*ss(0.05,0.55,depth01);
+
+  /* --- HUD ---------------------------------------------------- */
+  /* ヒーローは画面外へ去った後も毎フレーム書き続けていた
+     (will-change 付きなので合成レイヤーも持ち続ける)。値が変わった時だけ書く。 */
+  const hop = 1 - ss(0.035, 0.17, sp);
+  if (Math.abs(hop - lastHop) > 0.002){
+    lastHop = hop;
+    heroEl.style.opacity = hop;
+    heroEl.style.transform = `translateY(${(-46*(1-hop)).toFixed(1)}px)`;
+    heroEl.style.pointerEvents = hop < 0.08 ? 'none' : '';
+    heroEl.style.willChange = (hop > 0.002 && hop < 0.998) ? 'opacity,transform' : 'auto';
+  }
+
+  /* ★ camera.position.y ではなく camYBase。着地の沈み込みと水面の揺れを
+     混ぜない。最下段の目盛り(600M)でクランプして、計器と目盛りが
+     最後に食い違わないようにする。 */
+  const depthM = Math.min(DEPTH_MAX, Math.max(0, -camYBase) * DEPTH_PER_UNIT);
+  lastDepthM = depthM;
+  /* ---- 着底の発火と時計 ---- */
+  /* ★ 判定は depthM(瞬間値)ではなく depthShown(表示されている値)。
+     計器は0.55秒の一次遅れで追うので、瞬間値で撃つと「DEPTH 594.0M」の
+     まま TOUCHDOWN が出る(実測でそうなった)。仕様は
+     「HUDのDEPTHが600.0Mに確定する瞬間」なので、表示側に合わせる。
+     599.95 以上＝小数1桁で "600.0" と出る境目。 */
+  /* ★ reduced-motion では時計そのものを回さない。砂煙と揺れを省いても、
+     帯のフェードとライトの立ち上がりが残るかぎり画面は動き続ける。
+     degrade.mjs は「reduced では24フレーム空けた2枚が1画素も違わない」を
+     合否にしていて、実測でここが 416画素(帯の1行ぶん)割れた。
+     見出しは data-anim が付かない経路で最初から出ているので、
+     何も足さないのが正しい落とし方。 */
+  if (touchArmed && !reduced && depthShown >= DEPTH_MAX - 0.05){
+    touchArmed = false; touchT = 0; touchN++;
+  } else if (!touchArmed && depthM < DEPTH_MAX - TD_REARM_M){
+    touchArmed = true;                       // 浮上したら次の到達に備える
+  }
+  if (touchT >= 0){
+    touchT += dt;
+    if (touchT > TD_LIGHT_OUT[1] + 0.5) touchT = -1;   // 演出が終わったら止める
+  }
+  /* ---- クジラの発火と時計 ---- */
+  /* ★ 着底と同じで、判定は表示している depthShown。計器が「310.4M」と
+     出ているのに接触表示だけ先に走る、を避ける。
+     ★ 品質梯子が3段以上落ちた端末(＝既に重い)と reduced-motion では
+       そもそも武装しない。「最低ティアでは無効」(仕様)。 */
+  /* ★ 門は qStep < 3 から < 5 へ。落とすべきなのはフルスクリーンパスの方で、
+     568三角形のメッシュ1体は梯子が3段落ちた程度の端末でも問題にならない。 */
+  if (!whaleDone && whaleT < 0 && !reduced && qStep < 5
+      && depthShown >= WH_BAND[0] && depthShown <= WH_BAND[1]){
+    whaleDone = true; whaleT = 0;
+    whaleDir = (depthShown * 1000 | 0) % 2 ? 1 : -1;   // 来る向きは入った深度で決める
+    whaleLen = whaleSize();
+  }
+  if (whaleT >= 0){
+    whaleT += dt;
+    if (whaleT > WH_DUR) whaleT = -1;                  // 通り過ぎたら止める
+  }
+  /* 計器の針は即応、数字は0.55秒の一次遅れ。数字が瞬間値だと桁が暴れて読めない */
+  depthShown = smoothDamp(depthShown, depthM, depthVel, lag1(0.55), dt);
+  const nowMs = performance.now();
+  if (nowMs - hudTextAt > 100){
+    hudTextAt = nowMs;
+    const dTxt = (depthShown<100 ? (depthShown<10?'00':'0') : '') + depthShown.toFixed(1);
+    if (dTxt !== lastDepth){ depthEl.innerHTML = dTxt + '<small>M</small>'; lastDepth = dTxt; }
+  }
+  /* 現在地の名前。潜航中は深度の帯、汀を過ぎたら店の名前。 */
+  locWant = hpR > 0.16 ? SITE_LOC
+    : (depthM < LOC_BLUE ? 'SURFACE'
+    : (depthM < LOC_TWILIGHT ? 'THE BLUE'
+    : (depthM < LOC_ABYSS ? 'THE TWILIGHT' : 'THE ABYSS')));
+  capWant = hp > 0.56 ? 'Reading' : 'Current location';
+  tickLabels();
+
+  /* ---- 計器の転生 --------------------------------------------------
+     測り終えた順に退く。位置は1pxも動かさない(不透明度だけ)。
+     #foot と #ruler だけは退役せず、測る対象を深度から読了へ替える。 */
+  const retire = (a,b) => 1 - ss(a,b,hp);
+  setOp(headerEl,  retire(0.20,0.42));        // 名前は #seamName が引き継ぐ
+  setOp(counterEl, retire(0.08,0.30));        // 章が終わったので最初に退く
+  setOp(simEl,     0.42*retire(0.16,0.36));
+  /* ★ 水面では出さない。ファーストビューは中央の軸だけに任せる
+     (右にもう1本の縦組みがあると、軸が2本に見えて主役が決まらない)。
+     潜り始めたら章の道しるべとして戻ってくる。 */
+  const surfaced = ss(0.02, 0.10, sp);
+  setOp(vertEl,    0.50*retire(0.08,0.30)*surfaced);
+  setOp(diveNavEl, retire(0.08,0.30)*surfaced);
+  setOp(meterEl,   retire(0.34,0.52));        // 600.0M を出したまま最後に消える
+  /* #ruler は画面幅で運命が変わる。1240px 以上は目次へ転生、
+     それ未満は場所を譲って退役する(本文カラムと重なるため)。 */
+  const wideIdx  = document.documentElement.hasAttribute('data-index');
+  /* ★ ヒーローが消えてから出す。前は sp>0.02 で出していたので、
+     目盛りの「300M / 450M」がヒーローの本文とCTAの上に重なっていた
+     (水面の1枚を撮って初めて見えた)。 */
+  setOp(rulerEl, ss(0.17, 0.26, sp) * (wideIdx ? 1 : retire(0.30,0.50)));
+  footEl.classList.toggle('isIndex', hp > 0.56);
+  writeSurvivors(wideIdx);
+
+  /* 名前を、いま出来たばかりの1本の上に置く。 */
+  if (seamNameEl){
+    const on = ss(0.40,0.48,hpR) * (1 - ss(0.58,0.66,hpR));
+    if (on > 0.002){
+      const ty = `translate3d(0,${Math.round(innerHeight*(1 - cEff(hpR)) - seamNameH - 20)}px,0)`;
+      if (seamNameEl.dataset.ty !== ty){ seamNameEl.dataset.ty = ty; seamNameEl.style.transform = ty; }
+    }
+    setOp(seamNameEl, on);
+  }
+
+  /* 進捗バーはスクロール量、ルーラーの針は「深度」。
+     深度は sp の非線形関数なので、針を sp で置くと目盛りと約112Mずれる。
+     汀を過ぎると、どちらも「読了」を測る物へ入れ替わる。 */
+  /* width/top はレイアウトを触る。transform なら合成だけで済む。 */
+  const wmix = ss(0.50, 0.62, hp);
+  fillEl.style.transform = `scaleX(${(sp*(1-wmix) + readP*wmix).toFixed(4)})`;
+  rdotEl.style.transform = `translate3d(0, ${
+    ((Math.min(1, depthM/DEPTH_MAX)*(1-wmix) + readHeadP()*wmix) * rulerH).toFixed(1)}px, 0)`;
+
+  const SECN = Math.max(1, cards.length);
+  /* ★ 水面ではまだ1枚も見ていないので 00。1枚目を水面下へ沈めた以上、
+     何も映っていない画面で「01」と出るのは計器の嘘になる。 */
+  const sec = sp < 0.05 ? -1 : Math.min(SECN - 1, Math.floor(sp * SECN));
+  if (sec !== lastSec){
+    lastSec = sec;
+    secNoEl.textContent = '0' + (sec+1);
+    idxEls.forEach((el,i)=> el.classList.toggle('on', i === sec));
+    segEls.forEach((el,i)=> el.classList.toggle('on', i <= sec));
+  }
+
+  // 作品名。カードに寄った時だけ出す
+  const showWork = focusAmt > 0.42 && sp > 0.05 && hpR < 0.05;
+  workEl.classList.toggle('on', showWork);
+  if (showWork && focusI !== lastWork){
+    lastWork = focusI;
+    const w = WORKS[focusI];
+    workKind.textContent = w.kind;
+    workTitle.textContent = w.title;
+    workMeta.textContent = w.year + (w.tag ? ' — LIVE' : '');
+    if (w.url){
+      workLink.href = w.url;
+      workLink.hidden = false;
+      workLink.setAttribute('aria-label', `${w.title} のサイトを見る`);
+    } else {
+      workLink.removeAttribute('href');   // href が無い <a> はフォーカスも受けない
+      workLink.hidden = true;
+    }
+  }
+  if (!showWork) lastWork = -1;
+
+  /* 文字の下地は明るい水上でだけ必要。深部に残すと斜めの段差として見える */
+  legibilityEl.style.opacity = (1 - depth01*0.85).toFixed(3);
+
+  const bop = Math.max(0, 1 - sp*2.0);
+  diveBtn.style.opacity = bop.toFixed(2);
+  diveBtn.style.pointerEvents = bop < 0.1 ? 'none' : 'auto';
+
+  /* 水面を切る瞬間。60msの一発ではなく、速度に応じた0.42秒の包絡線。
+     上下どちらの通過でも出す。1.2秒のクールダウンで連打を防ぐ。 */
+  splashCool = Math.max(0, splashCool - dt);
+  const crossed = (prevCamY > 0) !== (camera.position.y > 0);
+  if (crossed && splashCool <= 0 && !reduced){
+    splashT = SPLASH_DUR;
+    splashCool = 1.2;
+    splashPow = Math.min(1, 0.34 + Math.abs(scrollVel) * 0.9);
+  }
+  prevCamY = camera.position.y;
+  if (splashT > 0){
+    splashT = Math.max(0, splashT - dt);
+    const e = splashT / SPLASH_DUR;                       // 1 → 0
+    const env = Math.pow(e, 0.55) * (1 - Math.pow(1 - e, 7));   // 立ち上がり速く、引きは緩く
+    splashEl.style.opacity = (env * 0.55 * splashPow).toFixed(3);
+  } else if (splashEl.style.opacity !== '0'){
+    splashEl.style.opacity = '0';
+  }
+
+  /* ★ 間引くのは「描く回数」だけ。t は毎フレーム進めるので、
+     30fps に落としても水と雪の速さは実時間どおりになる。 */
+  let skipDraw = false;
+  if (readAlive && !settled){
+    readAcc += dt;
+    if (readAcc < 1 / READ_FPS) skipDraw = true; else readAcc = 0;
+  }
+  if (!settled && CAL && CAL.step < 5) calibrate(rawDt);
+  else if (!skipDraw) renderComposer();
+
+  /* 記録の1枚は「1フレーム」として数えない(FPSも品質の梯子も汚さない) */
+  if (settled) return;
+
+  if (readAlive) writeReadingHud();
+
+  pushFrame(performance.now(), rawDt);
+
+  /* 計器の更新。★ 最初これを「45フレームごと」(FPS表示と同じ場所)に
+     置いたら、1fps の端末では45秒に1回しか更新されず、深度が361Mでも
+     水温が112M地点の値のまま止まった。フレーム数ではなく実時間で刻む。 */
+  hudAcc += dt;
+  if (hudAcc >= 0.20){ hudAcc = 0; updateInstruments(); }
+
+  /* ---- 急速潜航の効果を配る ---- */
+  if (streakUni){
+    const on = rapid > 0.004;
+    if (streakMesh.visible !== on) streakMesh.visible = on;
+    if (on){
+      streakUni.uTime.value  = t;
+      streakUni.uRapid.value = rapid;
+      streakUni.uDir.value   = rapidDir;
+      streakUni.uCam.value.copy(camera.position);
+    }
+  }
+  /* ---- 着底の効果を配る ---- */
+  if (dustMesh){
+    const T = touchForce == null ? touchT : touchForce;
+    /* 砂煙。★ 梯子が下がっている端末(＝既に重い)では出さない。
+       reduced-motion でも出さない(仕様: 砂煙と揺れを省きフェードのみ)。 */
+    /* ★ 砂煙が薄れきったらメッシュごと降ろす。シェーダ側で alpha が 0 に
+       なっても、visible のままだと透明な板を十数枚塗り続ける。 */
+    const dustOK = T >= 0 && T <= TD_DUST_END + 0.4 && !reduced && qStep <= 2 && TIER.dust > 0;
+    /* 2回目以降は弱める(仕様: 簡易版) */
+    const dAmt = dustOK ? (touchN <= 1 ? 1.0 : 0.42) : 0;
+    if (dustMesh.visible !== (dAmt > 0.004)) dustMesh.visible = dAmt > 0.004;
+    if (dAmt > 0.004){
+      dustUni.uT.value = T;
+      dustUni.uAmt.value = dAmt;
+      dustUni.uDepth.value = depth01;
+      /* 舞い上がるのは「着底した場所」。ただし真下だとレンズに貼り付くので、
+         視線方向へ 3.2m 送って、画面の下半分(＝砂が見えている所)で立たせる。 */
+      const fy = camera.rotation.y;
+      dustUni.uOrigin.value.set(camera.position.x - Math.sin(fy) * 3.2, 0,
+                                camera.position.z - Math.cos(fy) * 3.2);
+    }
+    /* サーチライト。立ち上がり→保持→落ちる。 */
+    let lAmt = 0;
+    if (T >= 0){
+      lAmt = ss(TD_LIGHT_IN[0], TD_LIGHT_IN[1], T) * (1 - ss(TD_LIGHT_OUT[0], TD_LIGHT_OUT[1], T));
+    }
+    if (lightMesh.visible !== (lAmt > 0.004)) lightMesh.visible = lAmt > 0.004;
+    if (lAmt > 0.004){
+      lightUni.uAmt.value = lAmt;
+      lightUni.uT.value = t;
+      /* 少し揺れる。★ reduced-motion では揺らさない(仕様)。 */
+      const sw = reduced ? 0 : 1;
+      /* ★ カメラの真上に置くと筒の中に入ってしまう。前方へ出して、
+         画面を横切る1本の筋として見せる。 */
+      lightMesh.position.set(camera.position.x + 2.30 + Math.sin(t*0.55)*0.26*sw,
+                             camera.position.y + 4.2,
+                             camera.position.z - 6.2);
+      lightMesh.rotation.set(Math.sin(t*0.43)*0.05*sw, 0, -0.26 + Math.sin(t*0.37)*0.035*sw);
+    }
+    /* 見出しはライトに同期してフェードイン。
+       ★ 既存の IntersectionObserver は残す —— JS無効・reduced-motion・
+         演出が発火しない経路でも見出しが必ず出るのはそちら側の役目。
+         ここは「先に出す」だけで、出さない方向には一切働かない。 */
+    if (T >= TD_HEAD_AT && landingEl && !landingEl.classList.contains('isIn')){
+      landingEl.classList.add('isIn');
+    }
+    if (touchdownEl){
+      const tag = T < 0 ? 0 : ss(0.0, 0.18, T) * (1 - ss(TD_TAG_OUT[0], TD_TAG_OUT[1], T));
+      const v = tag.toFixed(3);
+      if (v !== tdShown){ tdShown = v; touchdownEl.style.setProperty('--td', v); }
+    }
+  }
+
+  /* ---- クジラを配る ---- */
+  {
+    const T = whaleForce == null ? whaleT : whaleForce;
+    const on = T >= 0 && T <= WH_DUR;
+    /* 進捗 0..1。フェードは出入りの端だけ(仕様: 輪郭は霧に溶かす)。 */
+    const q = on ? T / WH_DUR : 0;
+    const amt = on ? ss(0, WH_FADE[0], q) * (1 - ss(1 - WH_FADE[1], 1, q)) : 0;
+    /* 高ティアはメッシュ、低ティアは板。両方同時には出さない。 */
+    /* ★ ティアで別の体に差し替えない(板版は外した。上の 4.8 節の注記)。 */
+    const body = whaleMesh, uni = whaleUni;
+    if (body.visible !== (amt > 0.004)) body.visible = amt > 0.004;
+    if (amt <= 0.004){ whaleAvoid = 0; whaleU.r.value = 0; }
+    if (amt > 0.004){
+      /* ★ 世界のy基準で置いてはいけない。この帯(280〜380m)ではカメラが
+         +8.6° 上を向いていて、camera.y+1.15 に置くと画面の下の外に落ちる
+         (実測でそうなった)。**カメラの基底(ピッチ込み)で置く。** */
+      whaleAt(q, _wp);
+      body.position.copy(_wp);
+      /* 進む向きへ機首を向ける。奥行きも変わるので、少し先の位置との差を
+         そのまま向きにする(斜めの分だけ自然に首が振れる)。 */
+      whaleAt(Math.min(1, q + 0.012), _wp2);
+      _wx.subVectors(_wp2, _wp);
+      if (_wx.lengthSq() < 1e-8) _wx.set(1, 0, 0);
+      _wx.normalize();
+      _wz.crossVectors(_wx, _wup).normalize();
+      _wy.crossVectors(_wz, _wx).normalize();
+      _wm.makeBasis(_wx, _wy, _wz);
+      body.quaternion.setFromRotationMatrix(_wm);
+      /* バンク。★ 進路は奥行き方向へ弧を描いているので、真っ直ぐ立てたままだと
+         「レールの上の模型」に見える。旋回の内側へ倒す。前半と後半で逆向き。 */
+      /* ★ 0.15rad(8.6°)は倒しすぎで「旋回する潜水艦」になった。
+         実物のロールは3〜5° —— 0.07rad(4.0°)。 */
+      _wq.setFromAxisAngle(_wx, 0.07 * Math.sin(q * 6.2831853) * whaleDir);
+      body.quaternion.premultiply(_wq);
+      body.scale.setScalar(whaleLen);
+      /* 魚と浮遊物に居場所を知らせる(魚は回避、粒子は押しのけに使う)。 */
+      whaleAvoid = amt; _wAt.copy(body.position);
+      whaleU.pos.value.copy(body.position);
+      whaleU.r.value = whaleLen * 0.42 * amt;
+      uni.uTime.value = t;
+      uni.uAmt.value = amt;
+      uni.uDepth.value = depth01;
+    }
+    /* ソナー。距離は世界単位を専用の尺で読む(深度の 69.8m/単位 で出すと
+       画面いっぱいのクジラに 600M 超と出て計器が嘘になる)。
+       ★ 接触の対象は1人。クジラが最優先(珍しい方が勝つ)、いなければ
+         近くの作品カード —— 「計器で海を読む」の言語を作品閲覧まで通す。 */
+    if (sonarEl){
+      let cName = null, cDist = 0, cAmt = 0;
+      if (amt > 0.004){
+        cName = 'UNKNOWN';
+        cDist = body.position.distanceTo(camera.position);
+        cAmt  = Math.min(1, amt * 1.8);
+        cardContactI = -1;   // ヒステリシスを持ち越さない
+      } else if (sp > 0.03 && sp < 0.92 && hpR < 0.30){
+        /* ★ 上限 0.92。着底間際まで許すと TOUCHDOWN の一拍に
+           CONTACT が重なって、いちばん静かであるべき瞬間が騒がしくなる。 */
+        /* カードの接近。入り 7.0 / 出 8.2 のヒステリシス(境目でチラつかせない) */
+        let best = -1, bd = 1e9;
+        for (let i = 0; i < cards.length; i++){
+          if (!cards[i].visible) continue;
+          const d = cards[i].position.distanceTo(camera.position);
+          const lim = cardContactI === i ? 8.2 : 7.0;
+          if (d < lim && d < bd){
+            _fs.copy(cards[i].position).sub(camera.position).normalize();
+            if (_fs.dot(camFwd) > 0.10){ best = i; bd = d; }
+          }
+        }
+        cardContactI = best;
+        if (best >= 0){ cName = WORKS[best].title.toUpperCase(); cDist = bd; cAmt = 0.85; }
+      }
+      /* ★ 毎フレーム数字が変わると、ソナーではなく「速度計」に見える。
+         0.45秒ごとに1回だけ読み直し、読み直した直後がいちばん明るい。
+         計器は連続値ではなく「掃引のたびに更新される」もの。
+         掃引の時計は「接触が続いている秒数」——対象が替わったら仕切り直す。 */
+      if (cName){
+        if (cName !== snName){ snName = cName; snClock = 0; snTick = -1; sonarNEl.textContent = cName; }
+        else snClock += dt;
+        const tick = Math.floor(snClock / SN_TICK);
+        const frac = (snClock / SN_TICK) - tick;
+        const sn = (cAmt * (0.78 + 0.22 * (1 - frac))).toFixed(3);
+        if (sn !== snShown){ snShown = sn; sonarEl.style.setProperty('--sn', sn); }
+        if (tick !== snTick){
+          snTick = tick;
+          const dm = String(Math.round(cDist * WH_SONAR_M)).padStart(3, '0');
+          if (dm !== snDist){ snDist = dm; sonarDEl.textContent = dm; }
+        }
+      } else {
+        snName = ''; snClock = -1; cardContactI = -1;
+        if (snShown !== '0'){ snShown = '0'; sonarEl.style.setProperty('--sn', '0'); }
+      }
+    }
+  }
+
+  /* 色収差は低ティアでは出さない(仕様) */
+  gradePass.uniforms.uRapid.value = TIER.name === 'high' ? rapid : 0;
+  if (rapidEl){
+    /* ★ 上向きの急行で「RAPID DESCENT」と出たら計器が嘘になる。
+       文言は向きで替える(浮上の導線ができたので上向きが実在する)。 */
+    const rTxt = rapidDir < 0 ? 'RAPID ASCENT' : 'RAPID DESCENT';
+    if (rapidEl.textContent !== rTxt) rapidEl.textContent = rTxt;
+    rapidEl.style.setProperty('--rap', (rapid > 0.05 ? Math.min(1, rapid*1.6) : 0).toFixed(3));
+    const warn = rapid > 0.25;
+    if (warn !== rapidWarnWas){
+      rapidWarnWas = warn;
+      if (simRate) simRate.classList.toggle('warn', warn);
+    }
+  }
+
+  /* レティクル。ロールは実際のカメラの傾きをそのまま渡す(人工水平儀)。
+     ★ 濃さは「潜っている間だけ」。水面と本文では邪魔になるだけ。 */
+  if (reticleEl){
+    const want = reduced ? 0 : ss(0.06, 0.22, sp) * (1 - ss(0.86, 0.99, sp)) * 0.85;
+    reticleEl.style.setProperty('--ret', want.toFixed(3));
+    reticleEl.style.setProperty('--roll', (-camera.rotation.z).toFixed(4) + 'rad');
+  }
+
+  /* --- 実測にもとづく適応 --- */
+  frameAcc += dt; frameN++;
+  if (frameN >= 45){
+    const avg = frameAcc / frameN;
+    const st = fpsStats();
+    const fps = Math.round(st.avg);
+    if (fps !== fpsShown){
+      fpsShown = fps;
+      fpsEl.textContent = Math.min(fps, 120);
+      fpsMinEl.textContent = Math.min(Math.round(st.min), 120);
+    }
+    renderDiag();
+    /* まず解像度、それでも足りなければ品質の梯子を降りる。
+       戻す側は降りる側より鈍くする(境界で往復させないため)。 */
+    /* ★ 読書中は梯子を触らない。描く回数を間引いているので1フレームの
+       平均が実力より速く出て、梯子が勝手に登ってくる。登ると
+       setReadingQuality() が落としたパスを LADDER.up() が戻してしまい、
+       2つの仕組みが同じ設定を取り合う。 */
+    if (readAlive){ /* 凪のあいだは据え置き */ }
+    else if (QPIN === 'full'){ /* 固定。何も落とさない */ }
+    else if (avg > 0.024){
+      slowFor++; fastFor = 0;
+      if (DPR > DPR_MIN + 0.01) applyDPR(DPR - 0.25);
+      else if (slowFor >= 2){ setQuality(qStep + 1); slowFor = 0; }
+    } else if (avg < 0.0135){
+      fastFor++; slowFor = 0;
+      if (fastFor >= 6){
+        if (qStep > 0) setQuality(qStep - 1);
+        else applyDPR(DPR + 0.25);
+        fastFor = 0;
+      }
+    } else { slowFor = 0; fastFor = 0; }
+    frameAcc = 0; frameN = 0;
+  }
+}
+
+/* ================================================================
+   11.5) 魚 — 「間合い」
+   ----------------------------------------------------------------
+   状態はすべて素の配列に持ち、毎フレーム1回だけ書き出す。
+   落としてよいのは「距離」だけで、振る舞い(横へ避ける / 中央で薄れる /
+   止まると寄る / 深いと無視する)と、雪を押しのける文法は最下段でも残す。
+   ================================================================ */
+const _fp = new THREE.Vector3(), _fq = new THREE.Vector3(), _fr = new THREE.Vector3();
+const _fs = new THREE.Vector3(), _fm = new THREE.Matrix4(), _fquat = new THREE.Quaternion();
+const _fscale = new THREE.Vector3();
+const F_UP = new THREE.Vector3(0,1,0);
+let fishReady = false;          // 助走を済ませたか
+let fishIdleT = 0, fishVSm = 0, fishPrevCamY = 0.95, fishT = 0;
+let heroFlashCool = 0, hero1Fired = false, hero1T = -1;
+let fishHeroDist = 0;           // 汀の魚までの距離。ピントを送るのに使う
+/* 濃く出せる匹数。★ ここは元々 3 で、画面に居ても濃く描けるのは
+   2〜4匹だけだった ——「描くのは姿ではなく間合い」という前の設計。
+   水槽は逆で、魚が見えないと水槽ではない。匹数を全部出す。
+   梯子で落とす時も、切るのは「距離」であって「数」ではない。 */
+let fishBudget = 999;
+/* 品質の梯子は「距離」だけを落とす。数も振る舞いも1つも減らさない。
+   重い端末では魚が近寄ってこない ＝ 塗る面積を自動的に払わない。
+   降格が「粗くなる」ではなく「今日は警戒が強い」に見える。 */
+const F_APPROACH = [2.3, 2.3, 3.1, 3.1, 3.9, 3.9, 4.6];
+let fApproach = 2.3, fApproachT = 2.3;
+
+function fishQuality(step){
+  fApproachT = F_APPROACH[Math.min(step, F_APPROACH.length-1)];
+  /* 梯子の下の方でだけ、遠い個体から間引く(塗る面積を返すため)。
+     上の方では1匹も減らさない。 */
+  fishBudget = step <= 3 ? 999 : step <= 5 ? 26 : 14;
+}
+
+/* 洗ってよいのは「入力の履歴」だけ。
+   ★ 位置・向き・もち場・種・不透明度は絶対に触らない。洗うと本文から
+   戻ったときに世界がやり直されたと判り、「読んでいた間もそこに居た」
+   という無料で手に入る証拠が嘘になる。 */
+function resetFishState(){
+  fishVSm = 0; fishIdleT = 0; heroFlashCool = 0;
+  fishPrevCamY = camera.position.y;
+  for (let i=0;i<NF;i++){ fPrevD[i] = 9; fStart[i] = 0; fPause[i] = 0;
+    fEsc[i*3] = fEsc[i*3+1] = fEsc[i*3+2] = 0; }
+}
+
+function updateFish(fdt, focusAmt, fdtA = fdt){
+  const A = fAttr;
+  /* 深いほどこちらを認識しなくなる。600m先で最も近くを通る生き物が
+     こちらを見ない ―― それが「汀 = どちらの側とも言えない境目」の実演。 */
+  /* 水面からこれだけは下に居させる。0 にすると波の谷で背が出る。 */
+  const FISH_SUB = 0.42;
+  const flee = 1 - ss(0.30, 0.92, sp);
+  const alive = timeScale > 0.001 && !reduced;
+
+  camera.getWorldDirection(camFwd);
+  const cam = camera.position;
+  fishT += fdt * (alive ? 1 : 0);
+
+  /* カメラの速さ。0.15秒の移動平均。止まっているかの判定に使う。 */
+  const dY = cam.y - fishPrevCamY;
+  const big = Math.abs(dY) > 1.5;                 // アンカー移動・bfcache復帰など
+  fishPrevCamY = cam.y;
+  if (rawDt > 0.08 || big) fishVSm = 0;
+  else fishVSm += (Math.abs(dY)/Math.max(fdt,1e-3) - fishVSm) * Math.min(1, fdt/0.15);
+
+  /* 止まると寄ってくる。スクロールを1pxも奪わずに双方向性を作る唯一の手。
+     ★ ゲート3つは全部必須。1つでも欠けると、実績カードを読むために手を
+     止めた人の周辺視で魚が動き続け、読字が確実に遅くなる。 */
+  if (alive && fishVSm < 0.15 && focusAmt <= 0.35 && hpR <= 0.05) fishIdleT += fdt;
+  else fishIdleT = Math.max(0, fishIdleT - fdt*2.2);
+  const idle = ss(1.8, 4.2, fishIdleT);
+
+  fApproach += (fApproachT - fApproach) * Math.min(1, fdt/2.5);   // 段をまたいでも引っぱらない
+
+  heroFlashCool = Math.max(0, heroFlashCool - fdt);
+  /* 出来事1「差す」。光芒を横切って体側が翻る。決まった深さで1回だけ。
+     ★ 時間で起こす。sp で駆動するとフリックで一瞬に通過して見えない。 */
+  if (!hero1Fired && !reduced && hpR === 0 && sp >= 0.355){ hero1Fired = true; hero1T = 0; }
+  if (sp < 0.30) hero1Fired = false;               // 上へ戻れば、もう一度だけ起きる
+  if (hero1T >= 0){ hero1T += fdt; if (hero1T > 1.60) hero1T = -1; }
+
+  /* 出来事2「汀」。水平線の上を横切る1匹。
+     ★ hpR の純関数。時間で駆動すると巻き戻したとき違う場所に出る。 */
+  const heroSeam = hpR > 0.24 && hpR < 0.99;
+  if (!heroSeam) fishHeroDist = 0;
+  /* ★ 汀の一匹だけは「実寸」ではなく「距離」を固定する。
+     この水は濃く、実測で 3.45m でも光の約96%を吸う。遠くに置くと
+     真っ黒の中の真っ黒になり、体験の受け渡しに誰も気付かない。
+     発光を足して誤魔化さない —— 間にある水を減らす。
+     ★ 実寸を固定して placeNdc に距離を解かせると、縦画面では
+     狙う画面幅が広い(0.30)ぶん距離が倍以上になり、スマホだけ
+     魚が消える。距離を固定して実寸の方を解くと、どの端末でも
+     間にある水の厚みが同じになる。 */
+  const HERO2_DIST = 2.05;
+
+  const tanH = Math.tan(camera.fov * Math.PI/360);
+  const aspect = camera.aspect;
+  /* NDC の狙った場所へ、狙った画面幅で置く(端末と画角に依存しない)。
+     ★ 実寸は板の 0.42 ではなく「板 × その個体の倍率」。倍率を忘れると
+     狙った幅の倍以上に大きく写る(実測 3.98m のところ 8.1m が正しい)。 */
+  /* wantW は NDC の幅。画面に占める割合はその半分になる(NDCは -1..1)。 */
+  const placeNdcAt = (out, nx, ny, dist) => {
+    _fs.copy(camFwd).cross(F_UP).normalize();                    // 右
+    out.copy(cam).addScaledVector(camFwd, dist)
+       .addScaledVector(_fs, nx * dist * tanH * aspect)
+       .addScaledVector(F_UP, ny * dist * tanH);
+  };
+  const placeNdc = (out, nx, ny, wantW, len) =>
+    placeNdcAt(out, nx, ny, len / Math.max(1e-4, wantW * tanH * aspect));
+  /* 距離を決めた時、狙った画面幅になる板の倍率 */
+  const sizeForNdc = (wantW, dist) => (dist * wantW * tanH * aspect) / 0.42;
+
+  /* 濃く出せる数に硬い天井を置く。空白を作らないと、その次の1匹が
+     「出来事」にならない。 */
+  /* ★ 以前は Math.round(4 - 2*ss(0.30,0.62,sp)) で、潜るほど 4→2 匹まで
+     絞っていた(深いほどこちらを無視する、という前の設計)。水槽なので
+     絞らない。梯子が下がった時だけ fishBudget が効く。 */
+  const budget = fishBudget;
+  const cand = [];
+
+  for (let i=0;i<NF;i++){
+    const o = i*3;
+
+    if (i === 0 && heroSeam){
+      /* 右端から入り、汀のところで画面の中ほどへ寄り、そこで凍る。
+         ワールドYをカメラの目線に厳密に合わせる ―― 目線と同じ高さの物は
+         距離に関係なく必ず水平線の上に投影される。
+         0.56 で止めるのは、海の時間が止まるのと同じ場所で止めないと
+         尾を振らないまま滑る「硬い魚」になるから。 */
+      /* ★ 縦画面は名前が画面の中央に来るので、そのままだと魚が名前の裏に
+         重なる(実機幅の1枚で重なっていた)。重ならない位置まで左へ送る。 */
+      const nxEnd = aspect < 1 ? -0.70 : -0.42;
+      const nx = 0.82 + (nxEnd - 0.82)*ss(0.28, 0.50, hpR) - 0.12*ss(0.50, 0.56, hpR);
+      /* ★ 目線とぴったり同じ高さに置くと、汀の線とシートの上端が同じ場所に
+         来るので体の下半分が紙の裏へ回り、光の滲みにしか見えない。
+         線のすぐ上（画面高の 5.5%）を泳がせて、腹が線をかすめる形にする。
+         画角に対する比で置くので、端末が変わっても同じ絵になる。 */
+      const heroW = aspect < 1 ? 0.30 : 0.18;
+      const heroSize = sizeForNdc(heroW, HERO2_DIST);
+      placeNdcAt(_fp, nx, 0.055, HERO2_DIST);
+      fishHeroDist = HERO2_DIST;
+      fPos[o] = _fp.x; fPos[o+1] = _fp.y; fPos[o+2] = _fp.z;
+      _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(-1);   // 真横(左向き)
+      fDir[o] = _fs.x; fDir[o+2] = _fs.z;
+      A.aSquash.array[i] = 1; A.aTurn.array[i] = 0;
+      /* ★ 汀の一匹は必ず水平。前のフレームのバンク/ピッチが残っていると
+         体が傾き、腹が線をかすめる形にならない。 */
+      fRoll[i] = fPitch[i] = 0; fYaw[i] = Math.atan2(fDir[o], fDir[o+2]);
+      A.aAlpha.array[i] += (0.92*ss(0.24,0.31,hpR) - A.aAlpha.array[i]) * Math.min(1, fdtA/0.35);
+      A.aPhase.array[i] += fBeat[i]*0.62*fdt*timeScale;
+      writeFish(i, heroSize);
+      continue;
+    }
+
+    /* 居場所はワールドに置く。カメラが降りて「通り抜ける」ので、
+       潜っているあいだ何度でも間合いが起きる。
+       ★ 群れをカメラの周りに置くと、常に5m以上離れたまま一度も
+       警戒の半径に入らない(最初そう書いて、反応が一度も出なかった)。 */
+    _fr.set(fPos[o]-cam.x, fPos[o+1]-cam.y, fPos[o+2]-cam.z);
+    let dist = Math.max(0.05, _fr.length());
+    /* 置き直すのは「見えていない」かつ「画角の外か遠い」フレームだけ。
+       ★ 画角に入る範囲へ置くこと。前は 6〜13m 真下へ置いていたので
+       画角(縦±28°)の外にあり続け、1匹も見えないまま終わっていた。 */
+    const gone = fScr[i*2] > 1.25 || fScr[i*2+1] > 1 || dist > 15;
+    if (!fishReady || (gone && A.aAlpha.array[i] < 0.06)){
+      const down = targetP >= sp ? -1 : 1;                  // 潜っている向き
+      const zd = 3.5 + frnd()*6.0;                          // 前方の距離
+      fPos[o]   = cam.x + (frnd()-0.5)*0.88*zd;
+      /* ★ 以前は「潜っている向きの側」にだけ、カメラから 0.3〜3.6m の
+         範囲で湧かせていた。魚が「すれ違うもの」だった頃は正しかったが、
+         水槽では上にも下にも居てほしい。とくに底(cam.y -9.4)では
+         down=-1 のせいで砂の中へ湧いており、最深部に魚がほとんど
+         居なかった(実測: 画面に2匹)。カメラの高さを中心に上下へ散らす。
+         進行方向へわずかに寄せるのだけ残す —— 潜っていく先に魚が
+         見えてこないと、降りている感じが消えるため。 */
+      fPos[o+1] = cam.y + (frnd() - 0.5 + down*0.14) * (1.8 + 0.62*zd);
+      fPos[o+2] = cam.z - zd;
+      /* 砂の中と、水面の上には出さない。 */
+      fPos[o+1] = Math.max(SEABED_Y + 0.55, fPos[o+1]);
+      fPos[o+1] = Math.min(fPos[o+1], surfaceY(fPos[o], fPos[o+2], waveT) - FISH_SUB);
+      const a0 = frnd()*6.2831;
+      fDir[o] = Math.cos(a0); fDir[o+2] = Math.sin(a0);
+      fEsc[o] = fEsc[o+1] = fEsc[o+2] = 0;
+      /* ★ 姿勢も戻す。戻さないと、前に居た個体の傾きを引き継いだまま
+         新しい場所に現れる。 */
+      fRoll[i] = fPitch[i] = fSpd[i] = 0;
+      fYaw[i] = Math.atan2(fDir[o], fDir[o+2]);
+      A.aAlpha.array[i] = 0;
+      fScr[i*2] = 0; fScr[i*2+1] = 0;
+      _fr.set(fPos[o]-cam.x, fPos[o+1]-cam.y, fPos[o+2]-cam.z);
+      dist = Math.max(0.05, _fr.length());
+    }
+
+    /* 自分の泳ぎ。ゆっくり向きを変えながら進む。 */
+    const swim = 0.30 + 0.22*fSize[i];
+    /* ★ 上下に泳ぐ意志。以前は振幅0.05の小刻みな揺れだけで、深さを
+       変える個体が1匹もいなかった。周期の違う2つの波を重ねて
+       「いま降りている魚」と「いま昇っている魚」が混ざるようにする。 */
+    const vWander = Math.sin(fishT*0.23 + fOff[o]*4.1) * 0.62
+                  + Math.sin(fishT*0.11 + fOff[o+2]*2.3) * 0.38;
+    let tx = fPos[o]   + fDir[o]  *swim*1.25;
+    let ty = fPos[o+1] + vWander*0.22 + Math.sin(fishT*1.55 + fOff[o+1]*3.1)*0.05;
+    let tz = fPos[o+2] + fDir[o+2]*swim*1.25;
+
+    if (hero1T >= 0 && i === 1){
+      /* 1.60秒。NDC を決め打ちして端末に依らず同じ画面位置に出す */
+      const u = hero1T/1.60, e = u*u*(3-2*u);
+      placeNdc(_fs, 0.74 - 0.44*e, 0.30 - 0.18*e, aspect < 1 ? 0.24 : 0.115, 0.42*fSize[i]);
+      /* ★ NDC で置くので、カメラが水面近くだと画面の上側は空になる。 */
+      tx = _fs.x; tz = _fs.z;
+      ty = Math.min(_fs.y, surfaceY(_fs.x, _fs.z, waveT) - FISH_SUB);
+    }
+
+    /* 間合い。近づかれ方(速さ・正対)で警戒の半径が変わる。
+       同じ深さへ2回行っても、ゆっくり降りたときは散らない。 */
+    const rush = Math.min(1, Math.max(0, (fPrevD[i]-dist)/Math.max(fdt,1e-3) / 1.6));
+    fPrevD[i] = dist;
+    const look = Math.max(0, (_fr.x*camFwd.x + _fr.y*camFwd.y + _fr.z*camFwd.z) / dist);
+    const rad = fApproach * (0.60 + 0.40*flee) * (1 + 0.55*rush) * (1 + 0.35*look) * (1 - 0.43*idle);
+    const isHero1 = (hero1T >= 0 && i === 1);
+
+    if (alive && dist < rad && !isHero1){
+      if (fPause[i] <= 0 && fStart[i] < 0.2){ fPause[i] = 0.22; fStart[i] = 1; }   // 逃げる前に一拍
+      /* 横へ抜ける。半径方向に逃がすと画面の真ん中で小さくなって消えるだけで、
+         「避けられた」と読めない。必ず画面の端から出す。 */
+      const dot = _fr.x*camFwd.x + _fr.y*camFwd.y + _fr.z*camFwd.z;
+      _fs.set(_fr.x - camFwd.x*dot, _fr.y - camFwd.y*dot, _fr.z - camFwd.z*dot);
+      if (_fs.lengthSq() < 0.0025){
+        /* 真正面。符号が毎フレーム暴れるので、個体の偶奇で決定的に割る */
+        _fs.copy(camFwd).cross(F_UP).normalize().multiplyScalar(i % 2 ? 1 : -1);
+      } else _fs.normalize();
+      const push = (1 - dist/rad) * (1.1 + 1.4*fStart[i]);
+      tx += _fs.x * rad * push; ty += _fs.y * rad * push * 0.45; tz += _fs.z * rad * push;
+    }
+    /* クジラからも逃げる。★ カメラの間合い(速さ・正対で半径が変わる)とは
+       別扱いにする —— 相手が大きすぎて、寄られたら無条件に退くのが正しい。
+       半径は体長の 0.55倍。逃げ方はカメラと同じ「必ず横へ抜ける」ではなく、
+       体から遠ざかる向き(巨体なので横も縦も無い)。 */
+    if (whaleAvoid > 0.004 && alive && !isHero1){
+      const wx = fPos[o] - _wAt.x, wy = fPos[o+1] - _wAt.y, wz = fPos[o+2] - _wAt.z;
+      const wd = Math.hypot(wx, wy, wz);
+      const wrad = whaleLen * 0.55;
+      if (wd < wrad){
+        const inv = 1 / Math.max(wd, 1e-3);
+        const push = (1 - wd / wrad) * whaleAvoid;
+        tx += wx * inv * wrad * push * 1.25;
+        ty += wy * inv * wrad * push * 0.50;
+        tz += wz * inv * wrad * push * 1.25;
+        if (fPause[i] <= 0 && fStart[i] < 0.2){ fPause[i] = 0.18; fStart[i] = 1; }
+      }
+    }
+    if (alive && !isHero1 && idle > 0.02 && dist > rad*1.7){
+      /* 止まっていると近づく。ただし警戒の半径の 1.7倍までで止める
+         (そこから内側は上の逃避が受け持つので、寄っては離れる間合いになる)。 */
+      tx += (cam.x - fPos[o])   * 0.22 * idle;
+      ty += (cam.y - fPos[o+1]) * 0.10 * idle;
+      tz += (cam.z - fPos[o+2]) * 0.22 * idle;
+    }
+    /* 驚きは近くへ伝わる。0.1〜0.25秒の着火間隔が「生き物」に読ませる。 */
+    if (alive && fStart[i] > 0.55){
+      for (let j=0;j<NF;j++){
+        if (j === i) continue;
+        const q = j*3;
+        const dx = fPos[q]-fPos[o], dy = fPos[q+1]-fPos[o+1], dz = fPos[q+2]-fPos[o+2];
+        if (dx*dx + dy*dy + dz*dz < 3.2) fStart[j] = Math.max(fStart[j], fStart[i]*0.78);
+      }
+    }
+    fStart[i] = Math.max(0, fStart[i] - fdt*0.9);
+    fPause[i] = Math.max(0, fPause[i] - fdt);
+
+    /* ガラス板の裏だけを通る。手前を通ると、あとから別のシーンで上描きされる
+       板に食われて縁でポップする。 */
+    for (const c of cards){
+      const b = c.userData.base;
+      const dx = fPos[o]-b.x, dy = fPos[o+1]-b.y;
+      if (dx*dx + dy*dy > 6.8 || Math.abs(fPos[o+2]-b.z) > 1.3) continue;
+      const side = (cam.z - b.z) >= 0 ? 1 : -1;
+      if (((fPos[o+2]-b.z) >= 0 ? 1 : -1) === side) tz = b.z - side*1.4;
+    }
+
+    /* ★ 目標の高さも水面より下に抑える。抑えないと、上下の徘徊と
+       逃避の縦成分で水面を突き抜ける。 */
+    ty = Math.min(ty, surfaceY(fPos[o], fPos[o+2], waveT) - FISH_SUB);
+
+    /* 追随。速度に一次遅れを掛けるので行き過ぎない・揺り戻さない。 */
+    const k = alive ? (fPause[i] > 0 ? 1.0 : 2.6) : 0;
+    for (let a=0;a<3;a++){
+      const tgt = a === 0 ? tx : a === 1 ? ty : tz;
+      fEsc[o+a] += ((tgt - fPos[o+a])*k - fEsc[o+a]) * Math.min(1, fdt*6.0);
+      fPos[o+a] += fEsc[o+a] * fdt;
+    }
+    /* 最後の関門。速度で行き過ぎた分もここで止める。上向きの速度は殺す
+       (残すと水面に貼り付いたまま押し続ける)。 */
+    {
+      const capY = surfaceY(fPos[o], fPos[o+2], waveT) - FISH_SUB;
+      if (fPos[o+1] > capY){ fPos[o+1] = capY; if (fEsc[o+1] > 0) fEsc[o+1] = 0; }
+    }
+
+    /* 向きは速度から取る。こちらを向く / 背を向ける瞬間を作らない。 */
+    const vl = Math.hypot(fEsc[o], fEsc[o+2]);
+    if (vl > 0.02){
+      const bl = Math.min(1, fdt*3.0);
+      fDir[o]   += (fEsc[o]  /vl - fDir[o])   * bl;
+      fDir[o+2] += (fEsc[o+2]/vl - fDir[o+2]) * bl;
+    } else {
+      /* ゆっくりした徘徊。個体ごとに違う周期で向きを変える。 */
+      const rot = Math.sin(fishT*0.31 + fOff[o]*2.7) * 0.30 * fdt;
+      const cx = Math.cos(rot), sn = Math.sin(rot);
+      const nx = fDir[o]*cx - fDir[o+2]*sn, nz = fDir[o]*sn + fDir[o+2]*cx;
+      fDir[o] = nx; fDir[o+2] = nz;
+    }
+    const dl = Math.hypot(fDir[o], fDir[o+2]) || 1;
+    fDir[o] /= dl; fDir[o+2] /= dl;
+
+    /* ---- 姿勢 ---------------------------------------------------------
+       ★ 旋回してもバンクしない生き物はいない。曲がる側へ倒れる。
+       ヨーの変化率から傾ける。角度の差は必ず ±π へ畳むこと ――
+       畳まないと -179°→179° の1フレームで「358°回った」ことになり、
+       体が一瞬で裏返る。 */
+    const yawNow = Math.atan2(fDir[o], fDir[o+2]);
+    let dYaw = yawNow - fYaw[i];
+    while (dYaw >  Math.PI) dYaw -= 2*Math.PI;
+    while (dYaw < -Math.PI) dYaw += 2*Math.PI;
+    fYaw[i] = yawNow;
+    const spd3 = Math.hypot(fEsc[o], fEsc[o+1], fEsc[o+2]);
+    fSpd[i] += (spd3 - fSpd[i]) * Math.min(1, fdt*4.0);
+    /* 速いほど深く倒れる(止まって向きを変えるときは倒れない)。上限45度。 */
+    /* ★ 上限24度。板は平面なので、これ以上倒すと「バンクする魚」ではなく
+       「回転する切り抜き」に見える。倒れているのが分かる最小で止める。 */
+    const rollWant = Math.max(-0.42, Math.min(0.42,
+      -(dYaw / Math.max(fdt, 1e-3)) * 0.26 * Math.min(1, fSpd[i]*0.7)));
+    fRoll[i]  += (rollWant  - fRoll[i])  * Math.min(1, fdt*3.4);
+    /* 頭は進む向きへ向く。垂直の速度 ÷ 水平の速さ。 */
+    const pitchWant = Math.max(-0.62, Math.min(0.62,
+      Math.atan2(fEsc[o+1], Math.max(0.05, Math.hypot(fEsc[o], fEsc[o+2])))));
+    fPitch[i] += (pitchWant - fPitch[i]) * Math.min(1, fdt*3.0);
+    /* 振り幅も速さに従う。★ 周期(fBeat)は前から速度連動だったが、
+       振り幅は固定だったので、滑空している魚が全開で尾を振っていた。 */
+    /* ★ 上限は fAmp0 を超えさせない。速度で「増やす」と、元の上限 0.028 を
+       25%超えて 0.035 まで振れ、体が折れて見えた(実測)。
+       速さが効くのは「遅いときに振らない」方向だけ。 */
+    A.aAmp.array[i] = fAmp0[i] * (0.40 + 0.60*Math.min(1, fSpd[i]*0.6));
+
+    /* ★ 元は「中央へ来るほど薄れる(周辺視)」で、床が 0.34 だった。
+       水槽では見せるのが目的なので、ほぼ均一に濃く出す。端をわずかに
+       濃くするのだけ残す —— 画面の隅で唐突に現れるのを和らげるため。
+       0.6秒の鈍りは交渉不可(速いと演出ではなくバグに読まれる)。 */
+    _fp.set(fPos[o], fPos[o+1], fPos[o+2]).project(camera);
+    const r = Math.hypot(_fp.x, _fp.y);
+    fScr[i*2] = r; fScr[i*2+1] = _fp.z;
+    /* 画面の外に居る個体は 0。★ ここを半径だけで切ると、画面の横外
+       (x=1.2, y=0 → r=1.2)が「端＝濃く出す」と判定され、見えない魚に
+       可視予算を全部使ってしまう。 */
+    const onScreen = _fp.z <= 1 && Math.abs(_fp.x) <= 1.12 && Math.abs(_fp.y) <= 1.12;
+    let want = onScreen ? 0.90 + 0.10*ss(0.18, 0.55, r) : 0;
+    /* ★ 板は平面なので、体の軸が視線と重なると幾何学的に線になる。
+       実測では可視の魚の 8.3% が真正面±15度に入る。
+       完全に直すには体の断面を向いた3枚目の面が要る(体の軸を含む2枚を
+       十字に組んでも、正面から見れば両方とも線になるので効かない)。
+       そこまでの改造に見合う頻度ではないので、線になる手前で薄れさせて
+       「向こうを向いた魚が見えにくくなる」に読み替える。 */
+    {
+      const hx = fPos[o]-cam.x, hz = fPos[o+2]-cam.z;
+      const hl = Math.max(1e-4, Math.hypot(hx, hz));
+      const cosPhi = Math.abs((hx*fDir[o] + hz*fDir[o+2]) / hl);
+      const sinPhi = Math.sqrt(Math.max(0, 1 - cosPhi*cosPhi));
+      want *= 0.42 + 0.58*ss(0.05, 0.42, sinPhi);
+    }
+    cand.push([i, want, isHero1 ? 99 : (onScreen ? r : -1)]);
+
+    /* 尾。位相は CPU で進める。★ timeScale を掛け忘れると、凍った海の中で
+       尾だけが振れ続ける —— その瞬間「止まっている＝記録」が全部無効になる。 */
+    const beat = fBeat[i] * (fPause[i] > 0 ? 0 : (0.5 + Math.min(1.3, vl*0.9)));
+    A.aPhase.array[i] += beat * fdt * timeScale;
+
+    /* 身を翻す。加算の発光は使わない。明暗の反転と横幅の潰れで読ませる。 */
+    let turn = 0;
+    if (isHero1){
+      const u = Math.min(1, Math.max(0, (hero1T - 0.62)/0.38));
+      turn = u <= 0 ? 0 : Math.sin(u*Math.PI);
+    } else if (alive && fStart[i] > 0.6 && heroFlashCool <= 0){
+      heroFlashCool = qStep >= 4 ? 5.0 : 2.5;      // 同時に2匹が翻るのを構造的に禁じる
+      fTurnT[i] = 0.38;
+    }
+    if (fTurnT[i] > 0){
+      fTurnT[i] = Math.max(0, fTurnT[i] - fdt);
+      turn = Math.max(turn, Math.sin((1 - fTurnT[i]/0.38) * Math.PI));
+    }
+    A.aTurn.array[i]   += (turn - A.aTurn.array[i]) * Math.min(1, fdt/0.10);
+    A.aSquash.array[i] += ((1 - 0.65*A.aTurn.array[i]) - A.aSquash.array[i]) * Math.min(1, fdt/0.12);
+  }
+
+  /* 濃く出せるのは budget 匹まで。中央から遠い順に選ぶ(出来事の個体は別枠)。 */
+  cand.sort((a,b) => b[2] - a[2]);
+  for (let n=0;n<cand.length;n++){
+    const i = cand[n][0];
+    const cap = n < budget ? cand[n][1] : Math.min(cand[n][1], 0.04);
+    const a = A.aAlpha.array;
+    a[i] += (cap - a[i]) * Math.min(1, fdtA/0.6);
+    writeFish(i, fSize[i]);
+  }
+
+  /* 雪を押しのけるのは、カメラに最も近い3匹。見えない魚ほど強く押す。 */
+  {
+    const near = [];
+    for (let i=0;i<NF;i++){
+      const o=i*3, dx=fPos[o]-cam.x, dy=fPos[o+1]-cam.y, dz=fPos[o+2]-cam.z;
+      near.push([i, dx*dx+dy*dy+dz*dz]);
+    }
+    near.sort((a,b)=>a[1]-b[1]);
+    let mx = 0;
+    for (let k=0;k<3;k++){
+      const i = near[k] ? near[k][0] : 0, o = i*3;
+      const w = alive ? (0.55 + 0.75*(1 - Math.min(1, A.aAlpha.array[i]/0.30))) : 0;
+      wakeU.uFishPos.value[k].set(fPos[o], fPos[o+1], fPos[o+2]);
+      wakeU.uFishDir.value[k].set(fDir[o], 0, fDir[o+2]);
+      wakeU.uFishSide.value[k].copy(wakeU.uFishDir.value[k]).cross(F_UP).normalize();
+      wakeU.uFishWake.value[k] = w;
+      if (w > mx) mx = w;
+    }
+    wakeU.uWakeAny.value = mx;
+  }
+
+  for (const k in fAttr) fAttr[k].needsUpdate = true;
+  fishMesh.instanceMatrix.needsUpdate = true;
+  fishReady = true;
+}
+
+const _fq2 = new THREE.Quaternion();
+const F_FWD  = new THREE.Vector3(1,0,0);   // 板の長辺＝体の前後
+const F_SIDE = new THREE.Vector3(0,0,1);   // 板の法線＝体の左右
+function writeFish(i, scale){
+  const o = i*3;
+  _fp.set(fPos[o], fPos[o+1], fPos[o+2]);
+  const yaw = Math.atan2(fDir[o], fDir[o+2]) + Math.PI/2;
+  _fquat.setFromAxisAngle(F_UP, yaw);
+  /* ★ ロールは「体の前後の軸」まわり、ピッチは「体の左右の軸」まわり。
+     ワールドのXYZで回すと、ヨーが90度のときに上下と左右が入れ替わる。
+     ヨーのあとに掛ける＝ローカル軸で回るので、向きに依らず正しい。 */
+  _fq2.setFromAxisAngle(F_SIDE, fPitch[i]); _fquat.multiply(_fq2);
+  _fq2.setFromAxisAngle(F_FWD,  fRoll[i]);  _fquat.multiply(_fq2);
+  _fscale.setScalar(scale);
+  _fm.compose(_fp, _fquat, _fscale);
+  fishMesh.setMatrixAt(i, _fm);
+}
+
+/* ---- 記録の1枚 -----------------------------------------------------
+   本文へ渡ったフレームで1回だけ描く「canonical frame」。
+   フリックで一気に飛んだ人も、ゆっくり降りた人も、本文の裏に残る海は
+   まったく同じ1枚になる(camY=-10.05 / ピッチ0 / 水平線は画面中央)。
+   呼ぶのは3箇所だけ: 凍った瞬間 / 本文中のリサイズ / 本文中の復帰。 */
+function renderSettledFrame(){
+  if (!contentEl) return;
+  hpR = 0.62; hp = 0.62; hpV.v = 0;
+  /* フリックで飛ぶと sp がまだ 0 近くのまま凍る経路がある。
+     hpR≥0.62 の位置では targetP は必ず 1 なので、ここで合わせる。 */
+  sp = 1; spV.v = 0; prevSp = 1;
+  px = py = pxT = pyT = 0; pxV.v = 0; pyV.v = 0;
+  scrollVel = 0; velX = 0; velV = 0;
+  frame(SETTLED);
+  captureLiveShot();
+}
+
+/* 記録の1枚を、実績の3件目のタイルへ写す。
+   ★ 描いた直後の同じ処理の中で写すこと。WebGLの描画バッファは
+   合成が終わると消えることがあり、あとから写すと白紙になる。
+   preserveDrawingBuffer は使わない(常に2枚分のメモリを持つので
+   モバイルで効いてくる)。失敗しても静止画のままにする。 */
+function captureLiveShot(){
+  const fig = document.querySelector('#content .shot-live');
+  if (!fig || fig.dataset.live === '1') return;
+  const dst = fig.querySelector('canvas'), src = renderer && renderer.domElement;
+  if (!dst || !src || !src.width || !src.height) return;
+  try {
+    const w = 720, h = Math.round(w * 10 / 16);
+    dst.width = w; dst.height = h;
+    /* 上端から 16:10 で切る。実績の他の2枚と同じ切り方に揃える。 */
+    const sh = Math.min(src.height, Math.round(src.width * 10 / 16));
+    const g = dst.getContext('2d');
+    g.drawImage(src, 0, 0, src.width, sh, 0, 0, w, h);
+    /* 真っ黒しか写らなかったときは主張が嘘になるので静止画へ戻す */
+    const px = g.getImageData(0, 0, Math.min(w, 64), Math.min(h, 40)).data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += px[i] + px[i+1] + px[i+2];
+    if (sum / (px.length / 4) < 6) return;
+    fig.dataset.live = '1';
+  } catch (e){ /* 写せなければ静止画のまま */ }
+}
+
+/* 本文を読んでいるあいだに書いてよいのは transform と opacity と
+   textContent だけ。レイアウトを触る書き込みを1つでも混ぜると
+   毎フレーム強制リフローが走る。 */
+/* 本文の途中で「上へ戻ろうとした」ことを検出して、名前と行き先を返す。
+   常時出す帯にはしない。下向きに動き出したらすぐ引っ込める。 */
+let recallY = 0, recallUp = 0, recallOn = false;
+function tickRecall(){
+  const y = scrollY;
+  const d = recallY - y;                   // 正 = 上へ戻っている
+  recallY = y;
+  if (Math.abs(d) > 400){ recallUp = 0; }  // アンカー移動などの大跳びは捨てる
+  else if (d > 0) recallUp = Math.min(260, recallUp + d);
+  else recallUp = Math.max(0, recallUp + d*3);
+  const want = recallUp > 140 && y > innerHeight * 0.6;
+  if (want !== recallOn){
+    recallOn = want;
+    if (headerEl) headerEl.classList.toggle('recall', want);
+  }
+}
+
+/* 潜航のあとも生きている計器の見え方。frame() からも、描画を止めたあとの
+   writeReadingHud() からも同じ式で書く。
+   ★ 本文中は frame() が止まるので、ここで書かないと 0.62 の手前の
+   中途半端な値のまま凍る。 */
+function writeSurvivors(wideIdx){
+  /* ★ 「本文に渡ったか」は呼び出し元ではなく hpR から決める。
+     第三幕(rp>0)では frame() が動き直すので、引数で渡していると
+     計器が「潜航中の値」で書かれて消える(実際、海が戻ると同時に
+     読了の計器まで消えていた)。 */
+  const reading = hpR >= 0.62;
+  /* 汀の一枚では下端の計器を引く。画面に残すのは 線・名前・紙 の3つだけ。
+     幅で条件を変えない ―― 1280px の画面でも本文の左端は 140px しかなく、
+     計器と見出しが必ず当たる。 */
+  const fo = reading ? 1 : 1 - ss(0.18, 0.30, hpR);
+  setOp(footEl, fo);
+  /* 本文が下端を通るあいだだけ敷く。計器が引いている間は敷きも要らない。
+     第三幕では引く(戻ってきた海を汚さない)。 */
+  setOp(footScrimEl, fo * ss(0.04, 0.14, hpR) * (1 - ss(0.15, 0.55, rp)));
+  const tOn = reading ? 0 : 1 - ss(0.30, 0.50, hpR);
+  const iOn = wideIdx ? (reading ? 1 : ss(0.52, 0.62, hpR)) : 0;
+  for (const el of tickEls) setOp(el, wideIdx ? tOn : 1);
+  for (const el of rIdxEls) setOp(el, iOn);
+}
+
+function writeReadingHud(){
+  /* 保険。窓は hpR=0.60 で閉じ切るので通常ここは 0 のままだが、
+     万一ずれたまま凍ると本文が数pxずれた位置で固まって戻らない。 */
+  if (seamDelta){
+    seamDelta = 0;
+    contentEl.style.transform = '';
+    contentEl.style.willChange = 'auto';
+  }
+  /* 書いてよいのは transform と opacity と textContent だけ。
+     レイアウトを触る書き込みを1つでも混ぜると毎フレーム強制リフローが走る。 */
+  const q = readP.toFixed(4);
+  if (footEl.dataset.rp !== q){
+    footEl.dataset.rp = q;
+    fillEl.style.transform = `scaleX(${q})`;
+    /* 針は目次の行と同じ物差しで置く。バーはスクロール量のまま
+       (読み取り点で置くと、下端に着く前に 100% になってしまう)。 */
+    rdotEl.style.transform = `translate3d(0, ${(readHeadP()*rulerH).toFixed(1)}px, 0)`;
+  }
+  writeSurvivors(document.documentElement.hasAttribute('data-index'));
+  locWant = curSecName;
+  capWant = 'Reading';
+  tickLabels();
+  tickRecall();
+}
+
+/* ================================================================
+   12) リサイズ・可視性
+   ================================================================ */
+
+/* ---- 縦画面のフレーミング解 ----------------------------------------
+   ヒーローの本文とCTAはDOM、カードは3D。別々の座標系なので固定値で
+   合わせると、表示領域の高さが変わった瞬間に重なる。実機Safariは
+   ブラウザUIぶん表示領域が低く、CTAへ 57.8% 食い込んでいた。
+   レイアウト確定後にCTAの下端を実測し、1枚目のカードがその下へ来る
+   カメラの仰角を二分法で解く。カードのワールド座標は動かさない
+   (下げると波の下に潜り、不透明な水面に隠れてしまうため)。 */
+const depthVel = { v: 0 }, expVel = { v: 0 };
+let expShown = _expInit;
+let rulerH = 220;
+let PORTRAIT_LIFT = 0.22;
+/* 下のHUD(Dive ボタン / CURRENT LOCATION / 01 02)の上端。
+   カードはここへ潜り込んではいけない。 */
+function hudFloorY(){
+  let y = innerHeight;
+  for (const sel of ['#diveBtn', '#foot', '#counter']){
+    const el = document.querySelector(sel);
+    if (!el || !el.offsetParent && getComputedStyle(el).display === 'none') continue;
+    const t = el.getBoundingClientRect().top;
+    if (t > 0 && t < y) y = t;
+  }
+  return y;
+}
+
+function solvePortraitLift(){
+  /* ★ 以前はここで「1枚目のカードの上端が本文より下」を、しかも縦画面でだけ
+     解いていた。ファーストビューからカードを外した(水面下へ沈めた)ので、
+     いま押し下げるべき対象は**水平線**であり、それは横画面でも同じ問題になる
+     —— 実測(1600×900)で水平線が画面の45%に来て、MIGIWA STUDIO の縦組みが
+     水面のギラつきの上に落ちて読めなかった。横でも解く。
+     基準は軸(線→汀→縦組み→線)の下端。惹句と所在地まで空へ上げようとすると
+     仰角が上限に張り付き、海がほとんど映らなくなる(「海と夕日は十分に見せる」)。 */
+  const h1 = document.querySelector('#hero h1');
+  if (!h1) return;
+  /* HUDの床(DIVEボタン等)より上へも出しておく。下の帯まで海で埋めない。 */
+  const target = Math.min(h1.getBoundingClientRect().bottom + 24, hudFloorY() - 20);
+
+  /* 仰角 lift のときの水平線の画面Y。透視投影では視線が水平の点は
+     y = h/2 * (1 + tan(θ)/tan(fov/2)) に出る。lift を上げるほどカメラが
+     上を向き、水平線は画面の下へ動く(= 単調増加)。 */
+  /* ★ camera.fov は「はみ出し込み」の広い画角。水平線が見えている枠の
+     どこに来るかは、**見えている枠の画角**(fovBase)で解かないと合わない。 */
+  const topY = (lift) => {
+    const th = -0.06 + lift;
+    const half = Math.tan(fovBase * Math.PI / 360);
+    return innerHeight * 0.5 * (1 + Math.tan(th) / half);
+  };
+
+  /* 横画面は上限を低くする。縦ほど画角が縦に広くないので、同じ仰角でも
+     水平線がずっと大きく動く(＝空だけの絵になりやすい)。 */
+  let lo = 0.02, hi = camera.aspect >= 1 ? 0.30 : 0.52;
+  if (topY(hi) < target){ PORTRAIT_LIFT = hi; return; }   // 上限でも届かない
+  if (topY(lo) >= target){ PORTRAIT_LIFT = lo; return; }  // 下限で足りている
+  for (let k = 0; k < 20; k++){
+    const mid = (lo + hi) / 2;
+    if (topY(mid) < target) lo = mid; else hi = mid;
+  }
+  PORTRAIT_LIFT = hi;
+}
+
+/* ---- 画面の端まで海を届かせる ---------------------------------------
+   CSSの100lvhを解決した高さを、固定ビジュアルとWebGLの全描画経路で共有する。
+   innerHeightへ戻す手動の負オフセットは、SafariのURLバー表示時に下端を
+   取り切れず、ページ地色の帯を残す原因になっていた。 */
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  fovBase = h > w ? 64 : 56;
+  /* CSSの100lvhを解決した値で、固定ビジュアルと描画バッファを揃える。
+     top:-B の手動はみ出しは、画面下に不足分を残すことがあったので使わない。 */
+  const H = largeViewportHeight();
+  DRAW_H = Math.max(h, H);
+  BLEED = Math.max(0, (DRAW_H - h) * 0.5);
+  stageEl.style.top = '0px';
+  stageEl.style.height = DRAW_H + 'px';
+  stageEl.style.minHeight = DRAW_H + 'px';
+  /* large viewportぶん総画素が増えすぎないよう DPR を下げる */
+  DPR = Math.min(devicePixelRatio || 1, TIER.dpr) * (DRAW_H > h ? Math.sqrt(h / DRAW_H) : 1);
+  renderer.setPixelRatio(DPR);
+  composer.setPixelRatio(DPR);
+  camera.aspect = w/DRAW_H;
+  camera.fov = bleedFov(fovBase);
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, DRAW_H);
+  composer.setSize(w, DRAW_H);
+  applyBloomSize();
+  atmosPass.uniforms.uRes.value.set(w*DPR, DRAW_H*DPR);
+  gradePass.uniforms.uRes.value.set(w*DPR, DRAW_H*DPR);
+  refractRT.setSize(Math.max(2, (w*DPR*0.5)|0), Math.max(2, (DRAW_H*DPR*0.5)|0));
+  atmosPass.uniforms.uNear.value = camera.near;
+  atmosPass.uniforms.uFar.value  = camera.far;
+  solvePortraitLift();
+  measureLayout();
+  resetFishState();
+  /* 本文中のリサイズはキャンバスが張り直されて中身が消える。
+     記録の1枚を描き直す。 */
+  if (reading) settledDone = false;
+  /* 針の移動量は目盛りの実高から取る(CSSのvh指定なので画面ごとに変わる) */
+  const rl = document.getElementById('ruler');
+  if (rl) rulerH = rl.getBoundingClientRect().height || 220;
+  readScroll();
+}
+/* フォントの入れ替わりでCTAの位置が動くので、確定後にもう一度解く */
+if (document.fonts && document.fonts.ready){
+  document.fonts.ready.then(() => { solvePortraitLift(); measureLayout(); });
+}
+addEventListener('resize', resize);
+
+/* 本文セクションが画面の大半を占めている間は、潜航の描画を完全に止める。
+   絵が動かない区間なので体感は変わらず、そのぶん最低FPSに余裕が出る。
+   ★ 判定は frame() の中で hpR から同期的に決める(IntersectionObserver は
+   1〜2フレーム遅れ、最後のライブフレームと凍結フレームの姿勢がずれる)。 */
+let reading = false;
+
+document.addEventListener('visibilitychange', ()=>{
+  visible = !document.hidden;
+  if (!visible){ running = false; }
+  else if (!running){
+    running = true; tick(); resetFishState();
+    /* 本文中に戻ってきた場合、キャンバスの中身は失われている。
+       記録の1枚を描き直す(でないと本文の裏の海が白紙になる)。 */
+    settledDone = false;
+    frame();
+  }
+});
+
+/* ================================================================
+   13) 起動
+   ================================================================ */
+resize();
+// カードのテクスチャ生成が終わるまでの体感を、細いバー1本で見せる
+let bootP = 0;
+const bootTick = setInterval(()=>{
+  bootP = Math.min(1, bootP + 0.18);
+  bootFill.style.width = (bootP*100) + '%';
+  if (bootP >= 1) clearInterval(bootTick);
+}, 90);
+
+/* ================================================================
+   実機計測 ?bench=1
+   ----------------------------------------------------------------
+   ここは開発者がこの環境で iOS Safari を再現できないことへの回答。
+   端末に自分で走らせて、貼れる形の数字を出す。
+
+   ・ページ全体を実時間で一定に自動スクロールする(遅い端末でも
+     最後まで通るよう、フレーム数ではなく壁時計で位置を決める)
+   ・区間ごと(水面 / 潜航浅 / 潜航深 / 本文の凪)にフレーム時間を貯める
+   ・平均ではなく中央値と下位5%も出す。平均だけだと「時々刺さるカクつき」
+     が見えない —— 実機で効くのはそっち
+   ・開始は必ずボタン。iOS はユーザー操作の無いクリップボード/共有を拒む
+   ================================================================ */
+/* 潜航(ピン区間)と本文で時間を分ける。文書の高さで按分すると、本文が
+   全体の大半を占めるせいで**潜航がほんの数秒で通り過ぎる**。実測では
+   「潜航(深)」の標本が0枚になった。重いのは潜航なので、そこへ厚く配る。 */
+const BENCH_SECONDS = 34;
+const BENCH_DIVE_SHARE = 0.62;
+/* 起動直後はシェーダのコンパイルとテクスチャのアップロードが混ざる。
+   ★ ここを「1秒捨てる」で書いていたら、遅い端末では1秒＝1枚しか進まず、
+     コンパイルの19秒のフレームがそのまま「最悪1枚」に出た。
+     捨てる単位は時間ではなく**枚数**。ただし遅すぎる端末で暖機だけで
+     終わらないよう、実時間の上限も持たせる。 */
+const BENCH_WARM_FRAMES = 20, BENCH_WARM_MAX_MS = 4000;
+const bench = { on:false, warm:true, tw:0, t0:0, n:0,
+                phases:new Map(), done:false, endY:0, splitY:0 };
+
+/* ★ 区間の判定に潜航の進捗 sp を使ってはいけない。sp はスクロールへ
+   一次遅れで追うので、フレームレートが低い端末では追いつく前に本文へ
+   入ってしまい、「潜航(深)」の標本が0枚になる(実測でそうなった)。
+   スクロール位置は遅れが無く、そのフレームで実際に描いた場所そのもの。 */
+function benchPhase(){
+  /* ★ 急速潜航は「その時いくつだったか」で分ける。仕様の
+     「60fps維持を確認」は開発環境では測れない(SwiftShader で約0.6fps)
+     ので、端末に測らせる口をここに用意する。 */
+  if (rapid > 0.05) return '急速潜航';
+  const y = scrollY, sp2 = bench.splitY || 1;
+  if (y > sp2) return '本文(凪)';
+  if (y < sp2 * 0.02) return '水面';
+  return y < sp2 * 0.50 ? '潜航(浅)' : '潜航(深)';
+}
+
+function benchSample(now, dt){
+  if (!bench.on) return;
+  /* --- 暖機。位置は動かさず、記録もしない --- */
+  if (bench.warm){
+    if (++bench.n >= BENCH_WARM_FRAMES || now - bench.tw >= BENCH_WARM_MAX_MS){
+      bench.warm = false; bench.t0 = now;
+    }
+    return;
+  }
+  const el = (now - bench.t0) / 1000;
+  const k = benchPhase();
+  let a = bench.phases.get(k);
+  if (!a){ a = []; bench.phases.set(k, a); }
+  a.push(dt);
+
+  /* 潜航と本文で時間を分けて送る */
+  /* 途中に急速潜航の区間を1つ挟んで、その間のフレーム時間も採る。
+     ★ 実際に速く巻かせるのではなく強度を注入する。巻き速度で起こすと
+       端末の速さによって発動したりしなかったりして、比較にならない。 */
+  const u = Math.min(1, el / BENCH_SECONDS);
+  rapidForce = (u > 0.60 && u < 0.72) ? 0.95 : null;
+  let y;
+  if (u <= BENCH_DIVE_SHARE){
+    y = bench.splitY * (u / BENCH_DIVE_SHARE);
+  } else {
+    const v = (u - BENCH_DIVE_SHARE) / (1 - BENCH_DIVE_SHARE);
+    y = bench.splitY + (bench.endY - bench.splitY) * v;
+  }
+  scrollTo(0, Math.round(y));
+  if (el >= BENCH_SECONDS){
+    scrollTo(0, bench.endY);
+    rapidForce = null;                 // ★ 注入を必ず外す
+    bench.on = false; bench.done = true; benchReport();
+  }
+}
+
+function benchQ(arr, q){
+  if (!arr.length) return 0;
+  const a = arr.slice().sort((x,y) => x-y);
+  return a[Math.min(a.length-1, Math.max(0, Math.floor(a.length*q)))];
+}
+
+function benchReport(){
+  const L = [];
+  const nav = navigator;
+  L.push('汀ノ庭 実機計測');
+  L.push('UA: ' + nav.userAgent);
+  L.push(`画面 ${innerWidth}×${innerHeight} @${devicePixelRatio} / コア ${nav.hardwareConcurrency || '?'}` +
+         ` / メモリ ${nav.deviceMemory || '?'}GB / saveData ${!!(nav.connection && nav.connection.saveData)}`);
+  L.push(`ティア ${TIER.name} / 実DPR ${DPR.toFixed(2)} / 粒子 ${TIER.motes}+${TIER.bubbles}+${TIER.fore}` +
+         ` / 魚 ${TIER.fish} / 光芒 ${TIER.shafts}`);
+  const dropped = LADDER.slice(0, qStep).map(l => l.name);
+  L.push(`品質の梯子 ${qStep}段` + (dropped.length ? '（' + dropped.join(' / ') + '）' : '（落とさず）'));
+  L.push(`コンテキスト喪失 ${window.__ctxLost || 0} 回 / 総フレーム ${framesTotal}`);
+  L.push('');
+  L.push('区間        枚数   平均fps  中央fps  下位5%  最悪1枚');
+  for (const k of ['水面','潜航(浅)','潜航(深)','急速潜航','本文(凪)']){
+    const a = bench.phases.get(k);
+    if (!a || !a.length){ L.push(k.padEnd(10) + '  —'); continue; }
+    let sum = 0; for (const d of a) sum += d;
+    const avg = a.length / sum;
+    const med = 1 / benchQ(a, 0.50);
+    const p95 = 1 / benchQ(a, 0.95);        // 遅い側の5%
+    const worst = benchQ(a, 1.0) * 1000;
+    L.push(k.padEnd(10) + String(a.length).padStart(5) +
+           avg.toFixed(1).padStart(9) + med.toFixed(1).padStart(9) +
+           p95.toFixed(1).padStart(8) + (worst.toFixed(0) + 'ms').padStart(9));
+  }
+  /* パス別コストは「構成を切り替えながら実測して差分を取る」方式なので、
+     フレームが不安定な端末では差が符号ごと壊れる(実測で Bloom が合計の
+     13倍という値が出た)。整合しない時は数字を出さない —— 嘘の数字を
+     渡す方が、無いより悪い。 */
+  const c = CAL && CAL.result;
+  const sane = c && c.total > 0 && c.scene >= 0 && c.bloom >= 0 && c.atmos >= 0 &&
+               c.post >= 0 && (c.scene + c.bloom + c.atmos + c.post) <= c.total * 1.35;
+  if (sane) L.push('', `パス別 合計 ${c.total}ms（シーン ${c.scene} / ATMOS ${c.atmos}` +
+                       ` / Bloom ${c.bloom} / その他post ${c.post}）`);
+  else if (c) L.push('', 'パス別 測定不能（フレームが不安定でした）');
+  const txt = L.join('\n');
+  const box = document.getElementById('benchOut');
+  box.value = txt;
+  document.getElementById('benchPanel').dataset.state = 'done';
+}
+
+if (BENCH){
+  const p = document.createElement('div');
+  p.id = 'benchPanel';
+  p.dataset.state = 'idle';
+  p.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#061016;color:#dfe9ec;' +
+    'font:13px/1.7 ui-monospace,Menlo,monospace;padding:18px;overflow:auto;' +
+    '-webkit-text-size-adjust:100%';
+  p.innerHTML =
+    '<h1 style="font:600 15px/1.6 system-ui;margin:0 0 10px">実機計測</h1>' +
+    '<p id="benchMsg" style="margin:0 0 14px;opacity:.8">' +
+      '「はじめる」を押すと、約' + BENCH_SECONDS + '秒かけてページを自動でスクロールしながら計測します。' +
+      '<br>そのあいだ<b>画面に触らないでください</b>（触ると数字が変わります）。' +
+      '<br>終わったら結果をコピーして貼り付けてください。</p>' +
+    '<button id="benchGo" style="font:600 15px/1 system-ui;padding:14px 22px;border:0;' +
+      'border-radius:8px;background:#2ea9c4;color:#04121a">はじめる</button>' +
+    '<div id="benchDone" style="display:none">' +
+      '<textarea id="benchOut" readonly style="width:100%;height:46vh;background:#02090d;' +
+        'color:#cfe3e8;border:1px solid #16313c;border-radius:8px;padding:10px;' +
+        'font:12px/1.6 ui-monospace,Menlo,monospace"></textarea>' +
+      '<div style="display:flex;gap:10px;margin-top:10px">' +
+        '<button id="benchCopy" style="font:600 15px/1 system-ui;padding:13px 18px;border:0;' +
+          'border-radius:8px;background:#2ea9c4;color:#04121a">コピー</button>' +
+        '<button id="benchShare" style="font:600 15px/1 system-ui;padding:13px 18px;border:0;' +
+          'border-radius:8px;background:#20404c;color:#dfe9ec">共有</button>' +
+      '</div></div>';
+  document.body.appendChild(p);
+
+  const go = p.querySelector('#benchGo');
+  go.addEventListener('click', () => {
+    go.style.display = 'none';
+    p.querySelector('#benchMsg').textContent = '計測中… 画面に触らないでください。';
+    /* 計測のあいだはパネルを完全に消す。被せたままだと、その合成ぶんが
+       そのまま数字に乗る(測りたいのはページ本体の絵)。
+       進捗は小さな札1枚だけ —— これも pointer-events は切っておく。 */
+    p.style.display = 'none';
+    const tag = document.createElement('div');
+    tag.id = 'benchTag';
+    tag.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);' +
+      'z-index:99999;pointer-events:none;background:rgba(4,18,26,.72);color:#cfe3e8;' +
+      'font:600 12px/1 system-ui;padding:8px 12px;border-radius:99px';
+    tag.textContent = '計測中 …';
+    document.body.appendChild(tag);
+    bench.endY = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    /* 潜航と本文の境目。__diag は常に生えているのでそこから取る。 */
+    const ct = (window.__diag && window.__diag.seam && window.__diag.seam.contentTopDoc) || 0;
+    bench.splitY = Math.min(bench.endY, Math.max(1, Math.round(ct)));
+    bench.tw = performance.now();
+    bench.warm = true; bench.n = 0;
+    bench.on = true;
+  });
+  p.querySelector('#benchCopy').addEventListener('click', async () => {
+    const t = p.querySelector('#benchOut');
+    try { await navigator.clipboard.writeText(t.value); }
+    catch { t.select(); document.execCommand('copy'); }
+    p.querySelector('#benchCopy').textContent = 'コピーした';
+  });
+  p.querySelector('#benchShare').addEventListener('click', () => {
+    const t = p.querySelector('#benchOut').value;
+    if (navigator.share) navigator.share({ text: t }).catch(()=>{});
+  });
+  /* 結果が出たらパネルを戻す */
+  new MutationObserver(() => {
+    if (p.dataset.state !== 'done') return;
+    const tag = document.getElementById('benchTag');
+    if (tag) tag.remove();
+    p.style.display = '';
+    p.querySelector('#benchMsg').textContent = '計測が終わりました。下のテキストをコピーして貼り付けてください。';
+    p.querySelector('#benchDone').style.display = 'block';
+  }).observe(p, { attributes:true, attributeFilter:['data-state'] });
+}
+
+requestAnimationFrame(()=>{
+  // 最初の1フレームをシェーダのコンパイルに使い、そのあとで見せる
+  renderComposer();
+  requestAnimationFrame(()=>{
+    document.body.classList.add('ready');
+    if (DIAG) renderDiag();
+    bootEl.classList.add('gone');
+    setTimeout(()=> bootEl.remove(), 1000);
+    frame();
+  });
+});
+</script>
+</body>
+</html>

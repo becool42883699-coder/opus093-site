@@ -838,4 +838,313 @@
 
 /* できること */
 .lineCanGrid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; gap: clamp(0.9rem, 2vw, 1.4rem); grid-template-columns: repeat(4, 1fr); }
-@media (max-width: 960px) { .lineCanGrid { grid-template-columns: repea
+@media (max-width: 960px) { .lineCanGrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .lineCanGrid { grid-template-columns: 1fr; } }
+.lineCan { position: relative; display: grid; align-content: start; gap: 0.6rem; padding: clamp(1.7rem, 3vw, 2.3rem) clamp(1.2rem, 2vw, 1.6rem); background: var(--bc-white); border: 1px solid var(--bc-line); box-shadow: var(--bc-shadow-card); transition: transform 0.45s var(--bc-ease), box-shadow 0.45s var(--bc-ease); }
+.lineCan::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: var(--bc-rule); }
+@media (hover: hover) { .lineCan:hover { transform: translateY(-4px); box-shadow: var(--bc-shadow-hover); } }
+.lineCanIcon { display: grid; place-items: center; width: 46px; height: 46px; }
+.lineCanIcon svg { width: 38px; height: 38px; fill: none; stroke: var(--bc-blue); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.lineCan h3 { font-size: var(--bc-fs-card-title); font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
+.lineCan p { font-size: var(--bc-fs-card-body); line-height: var(--bc-lh-card); color: var(--bc-muted); }
+
+/* 追加から相談までの流れ */
+.lineSteps { list-style: none; margin: clamp(2.4rem, 5vw, 3.6rem) auto 0; padding: 0; max-width: var(--bc-maxw); display: grid; gap: clamp(0.9rem, 2vw, 1.4rem); grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 760px) { .lineSteps { grid-template-columns: 1fr; } }
+.lineStep { position: relative; display: grid; align-content: start; gap: 0.45rem; padding: clamp(1.5rem, 3vw, 2.1rem) clamp(1.2rem, 2vw, 1.6rem); background: transparent; border: 1px dashed var(--bc-line); }
+.lineStepNo { font-family: var(--bc-font-display); font-size: var(--bc-fs-label); font-weight: var(--bc-fw-bold); letter-spacing: var(--bc-ls-label); color: var(--bc-line-green); }
+.lineStep h3 { font-size: var(--bc-fs-card-title); font-weight: var(--bc-fw-bold); color: var(--bc-ink); }
+.lineStep p { font-size: var(--bc-fs-card-body); line-height: var(--bc-lh-card); color: var(--bc-muted); }
+
+/* 友だち追加CTA */
+.lineCta { display: grid; justify-items: center; gap: 1rem; margin-top: clamp(2.4rem, 5vw, 3.6rem); text-align: center; }
+.lineAddBtn { position: relative; overflow: hidden; isolation: isolate; display: inline-flex; align-items: center; gap: 0.8rem; padding: 1.05rem 2.6rem 1.05rem 1.1rem; font-family: var(--bc-font-display); font-weight: var(--bc-fw-bold); font-size: 1.02rem; letter-spacing: 0.06em; color: var(--bc-white); background: var(--bc-line-green); border-radius: var(--bc-radius-pill); transition: background 0.28s var(--bc-ease), box-shadow 0.35s var(--bc-ease), transform 0.35s var(--bc-ease); }
+.lineAddBtn:hover { background: var(--bc-line-green-dark); box-shadow: 0 14px 34px rgba(var(--bc-line-green-rgb), 0.3); transform: translateY(-2px); }
+.lineAddMark { padding: 0.34em 0.75em; font-size: 0.7rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.14em; color: var(--bc-line-green); background: var(--bc-white); border-radius: var(--bc-radius-pill); }
+.lineCtaNote { max-width: 620px; font-size: var(--bc-fs-card-body); line-height: var(--bc-lh-body); color: var(--bc-muted); }
+.lineCtaNote a { color: var(--bc-blue); font-weight: var(--bc-fw-medium); text-decoration: underline; text-underline-offset: 3px; }
+
+/* =====================================================================
+   SERVICE — カード型UI (bc-svc-*)
+   写真とテキストを重ねない: 上=画像ブロック(3:2) / 下=テキストブロック。
+   背景画像に文字を載せる実装はしない。
+   ===================================================================== */
+
+.bc-svc-section { padding: var(--bc-section-y) var(--bc-gutter); }
+
+/* --- 画像ブロック(両案共通) --- */
+.bc-svc-media { position: relative; aspect-ratio: 3 / 2; overflow: hidden; background: var(--bc-panel-gray); }
+.bc-svc-media img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.06); transition: transform 1.2s var(--bc-ease); }
+/* CUSTOM だけ、従来どおり極薄の製図グリッドを重ねる(静止・CSSのみ) */
+.bc-svc-media[data-service="CUSTOM"]::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(184, 208, 232, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(184, 208, 232, 0.06) 1px, transparent 1px);
+  background-size: 46px 46px;
+}
+
+/* --- カード外殻(両案共通) --- */
+.bc-svc-card { position: relative; display: flex; flex-direction: column; overflow: hidden; border-radius: var(--bc-radius-sm); box-shadow: var(--bc-shadow-card); transition: transform 0.5s var(--bc-ease), box-shadow 0.5s var(--bc-ease); }
+/* 上辺を走るプラチナ調の極細罫(ホバーで左から伸びる) */
+.bc-svc-card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; z-index: 2; background: var(--bc-rule); transform: scaleX(0); transform-origin: left; transition: transform 0.7s var(--bc-ease); }
+@media (hover: hover) {
+  .bc-svc-card:hover { transform: translateY(-6px); box-shadow: var(--bc-shadow-hover); }
+  .bc-svc-card:hover::before { transform: scaleX(1); }
+  .bc-svc-card:hover .bc-svc-media img { transform: scale(1.0); }
+  .bc-svc-card:hover .bc-svc-title { letter-spacing: 0.18em; }
+}
+
+/* --- テキストブロック --- */
+.bc-svc-body { display: grid; justify-items: center; gap: 0.75rem; flex: 1; padding: clamp(1.6rem, 3.4vw, 2.6rem) clamp(1.2rem, 2.6vw, 2rem) clamp(1.8rem, 3.4vw, 2.6rem); text-align: center; }
+.bc-svc-icon { display: grid; place-items: center; }
+/* アイコンは既存の指定をそのまま(色・線幅を変えない) */
+.bc-svc-icon svg { width: 72px; height: 72px; fill: none; stroke: var(--bc-on-dark); stroke-width: 4; }
+.bc-svc-icon img { width: 92px; height: 92px; object-fit: contain; }
+.bc-svc-title { font-family: var(--bc-font-display); font-weight: var(--bc-fw-black); font-size: var(--bc-fs-h3); letter-spacing: 0.14em; transition: letter-spacing 0.5s var(--bc-ease); }
+.bc-svc-jp { font-size: 0.95rem; font-weight: var(--bc-fw-medium); letter-spacing: var(--bc-ls-jp); margin-top: -0.35rem; }
+.bc-svc-text { font-size: var(--bc-fs-body); line-height: var(--bc-lh-body); text-align: left; }
+.bc-svc-link { position: relative; overflow: hidden; isolation: isolate; display: inline-block; margin-top: 0.5rem; padding: 0.8rem 2rem; font-family: var(--bc-font-display); font-size: 0.82rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.1em; border-radius: var(--bc-radius-sm); transition: background 0.28s var(--bc-ease), color 0.28s var(--bc-ease), border-color 0.28s var(--bc-ease); }
+
+/* =============== 案A: ダークサーフェスのカードを並べる =============== */
+.bc-svc-grid { list-style: none; margin: 0 auto; padding: 0; max-width: var(--bc-maxw); display: grid; gap: clamp(1rem, 2.4vw, 1.8rem); grid-template-columns: repeat(2, 1fr); }
+@media (max-width: 820px) { .bc-svc-grid { grid-template-columns: 1fr; } }
+.bc-svc-card-dark .bc-svc-body { background: var(--bc-panel-black); color: var(--bc-on-dark); }
+.bc-svc-card-dark .bc-svc-title { color: var(--bc-on-dark); }
+/* 暗地なので日本語サブは従来どおり --bc-blue-light のまま(コントラスト確保済み) */
+.bc-svc-card-dark .bc-svc-jp { color: var(--bc-blue-light); }
+.bc-svc-card-dark .bc-svc-text { color: var(--bc-on-dark-mut); }
+.bc-svc-card-dark .bc-svc-link { color: var(--bc-on-dark); border: 1px solid rgba(var(--bc-on-dark-rgb), 0.55); }
+.bc-svc-card-dark .bc-svc-link:hover { background: var(--bc-on-dark); border-color: var(--bc-on-dark); color: var(--bc-ink); }
+/* 案Aのカードは統一演出の stagger を .bc-svc-grid に当てて出す
+   (旧 RevealController 用の個別規則は撤去済み)。
+   ※ 案Bのカードは「タブで1枚だけ表示」を opacity で制御しているため、
+   カード単位の reveal を当ててはいけない → ブロック単位の up を使う。 */
+
+/* =============== 案B: 明るいカード + タブ / 横スワイプ =============== */
+.bc-svc-tabs { max-width: var(--bc-maxw); margin: 0 auto; }
+/* 案Bはカード個別ではなくブロックごと静かにせり上がる(タブの表示制御と衝突させない)。
+   → ページ側で .bc-svc-tabs に data-reveal="up" を付ける。 */
+.bc-svc-radio { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.bc-svc-tablist { display: none; }
+.bc-svc-panels { list-style: none; margin: 0; padding: 0; }
+.bc-svc-card-light .bc-svc-body { background: var(--bc-white); color: var(--bc-ink); }
+.bc-svc-card-light .bc-svc-title { color: var(--bc-ink); }
+/* 明地では --bc-blue-light(var(--bc-blue-light)) は 2.89:1 で不足するため既存の --bc-blue(var(--bc-blue) / 5.97:1) を使う */
+.bc-svc-card-light .bc-svc-jp { color: var(--bc-blue); }
+.bc-svc-card-light .bc-svc-text { color: var(--bc-muted); }
+.bc-svc-card-light .bc-svc-link { color: var(--bc-white); background: var(--bc-blue); border: 1px solid var(--bc-blue); }
+.bc-svc-card-light .bc-svc-link:hover { background: var(--bc-blue-mid); border-color: var(--bc-blue-mid); }
+/* 白カードでも白線画アイコンを保てるよう、画像ブロック下端にネイビーの帯を敷いてその上に置く */
+/* 写真が暗いとネイビーの円が背景に溶けてアイコンが切れて見えるため、白いリングで縁を立てる */
+/* position:relative の画像ブロックが後ろの非配置要素より上に描画されるため、
+   円バッジ側も配置要素にして重なり順を明示する(でないと上半分が写真に隠れる)。 */
+.bc-svc-card-light .bc-svc-icon { position: relative; z-index: 1; width: 108px; height: 108px; margin-top: calc(-54px - clamp(1.6rem, 3.4vw, 2.6rem)); margin-bottom: 0.2rem; border-radius: 50%; background: var(--bc-panel-black); box-shadow: 0 0 0 6px var(--bc-white), 0 12px 26px rgba(var(--bc-shadow-rgb), 0.3); }
+.bc-svc-card-light .bc-svc-icon img { width: 64px; height: 64px; }
+.bc-svc-card-light .bc-svc-icon svg { width: 54px; height: 54px; }
+
+/* モバイル: 横スワイプ(全カードが読める。JS不要) */
+@media (max-width: 860px) {
+  .bc-svc-panels { display: grid; grid-auto-flow: column; grid-auto-columns: min(84%, 420px); gap: clamp(0.8rem, 3vw, 1.2rem); overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; padding-bottom: 0.6rem; }
+  .bc-svc-panels .bc-svc-card { scroll-snap-align: center; }
+}
+/* PC: タブ切替(ラジオ+CSSのみ。JS無効でも動く) */
+@media (min-width: 861px) {
+  .bc-svc-tablist { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: clamp(1.6rem, 3vw, 2.4rem); border-bottom: 1px solid var(--bc-line); }
+  .bc-svc-tab { position: relative; display: grid; gap: 0.25rem; padding: 1rem 0.6rem 1.1rem; text-align: center; cursor: pointer; }
+  .bc-svc-tab-en { font-family: var(--bc-font-display); font-size: 0.9rem; font-weight: var(--bc-fw-bold); letter-spacing: 0.12em; color: var(--bc-muted); transition: color 0.3s var(--bc-ease); }
+  .bc-svc-tab-jp { font-size: 0.76rem; letter-spacing: 0.1em; color: var(--bc-muted); transition: color 0.3s var(--bc-ease); }
+  .bc-svc-tab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--bc-blue); transform: scaleX(0); transition: transform 0.45s var(--bc-ease); }
+  /* 1件表示なので、幅を絞らないと3:2の画像が縦に伸びすぎる */
+  .bc-svc-panels { position: relative; display: grid; max-width: 760px; margin: 0 auto; }
+  .bc-svc-panels .bc-svc-card { grid-area: 1 / 1; }
+  /* 既定では全カードを重ね、選択中のみ表示(JS無効でもCSSだけで切り替わる) */
+  .bc-svc-panels .bc-svc-card { opacity: 0; visibility: hidden; transform: translateY(14px); transition: opacity 0.5s var(--bc-ease), transform 0.6s var(--bc-ease), visibility 0s linear 0.5s; }
+  .bc-svc-radio:nth-of-type(1):checked ~ .bc-svc-tablist .bc-svc-tab:nth-child(1)::after,
+  .bc-svc-radio:nth-of-type(2):checked ~ .bc-svc-tablist .bc-svc-tab:nth-child(2)::after,
+  .bc-svc-radio:nth-of-type(3):checked ~ .bc-svc-tablist .bc-svc-tab:nth-child(3)::after,
+  .bc-svc-radio:nth-of-type(4):checked ~ .bc-svc-tablist .bc-svc-tab:nth-child(4)::after { transform: scaleX(1); }
+  .bc-svc-radio:nth-of-type(1):checked ~ .bc-svc-tablist .bc-svc-tab:nth-child(1) .bc-svc-tab-en,
+  .bc-svc-radio:nth-of-type(2):checked ~ .bc-svc-tablist .bc-svc-tab:nth-child(2) .bc-svc-tab-en,
+  .bc-svc-radio:nth-of-type(3):checked ~ .bc-svc-tablist .bc-svc-tab:nth-child(3) .bc-svc-tab-en,
+  .bc-svc-radio:nth-of-type(4):checked ~ .bc-svc-tablist .bc-svc-tab:nth-child(4) .bc-svc-tab-en { color: var(--bc-blue); }
+  .bc-svc-radio:nth-of-type(1):checked ~ .bc-svc-panels .bc-svc-card:nth-child(1),
+  .bc-svc-radio:nth-of-type(2):checked ~ .bc-svc-panels .bc-svc-card:nth-child(2),
+  .bc-svc-radio:nth-of-type(3):checked ~ .bc-svc-panels .bc-svc-card:nth-child(3),
+  .bc-svc-radio:nth-of-type(4):checked ~ .bc-svc-panels .bc-svc-card:nth-child(4) { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+  /* キーボード操作でも選択中タブが分かるように */
+  .bc-svc-radio:focus-visible ~ .bc-svc-tablist .bc-svc-tab { outline: 2px solid var(--bc-blue); outline-offset: 2px; }
+}
+
+/* 動きを抑える設定では、拡大・浮き・せり上がりを止める */
+@media (prefers-reduced-motion: reduce) {
+  .bc-svc-media img { transform: none; transition: none; }
+  .bc-svc-card, .bc-svc-card::before, .bc-svc-title { transition: none; }
+  .bc-svc-card::before { transform: scaleX(1); }
+  .bc-svc-panels .bc-svc-card { transition: none; }
+}
+
+/* =====================================================================
+   統一スクロール演出 (CONTACT系ページ)
+   ---------------------------------------------------------------------
+   duration / easing / stagger / 移動量は必ず --anim-* トークン経由で書く。
+   演出の種類ごとに値を変えないことが「統一感」の核。
+
+   no-JS安全: 「アニメ前(=非表示)」の指定は全て
+   :global([data-anim-ready]) …:not(.isInview) でゲートしてある。
+   JS無効・初期化失敗・reduced-motion では ScrollAnim が属性を付けないので
+   opacity:0 が残らず、全コンテンツがそのまま表示される。
+   ===================================================================== */
+
+/* --- スクロール進捗バー(rAFスロットルで scaleX のみ更新) --- */
+.scrollProgress {
+  position: fixed; top: 0; left: 0; right: 0; height: 2px;
+  z-index: calc(var(--bc-z-header) + 10);
+  background: var(--bc-blue);
+  transform: scaleX(0); transform-origin: 0 50%;
+  pointer-events: none;
+  will-change: transform; /* 常時アニメ対象なので固定で持たせてよい */
+}
+
+/* --- ヒーローの SCROLL ラベル(既存の縦線 .scrollCue と組で使う) --- */
+.scrollCueLabel {
+  position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+  writing-mode: vertical-rl;
+  font-family: var(--bc-font-display); font-size: 0.62rem; font-weight: var(--bc-fw-bold);
+  letter-spacing: 0.34em; color: var(--bc-on-dark-mut);
+  pointer-events: none;
+}
+
+/* --- up: 下から静かにフェードアップ --- */
+:global([data-anim-ready]) .jsReveal[data-reveal="up"] {
+  transition: opacity var(--anim-duration) var(--anim-ease), transform var(--anim-duration) var(--anim-ease);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="up"]:not(.isInview) {
+  opacity: 0; transform: translateY(var(--anim-distance));
+}
+
+/* --- line: セクション見出し(EN → 下線 → 和文サブ) ---
+   下線は和文サブの ::before なので、和文が出るのと同時に伸び始める。 */
+:global([data-anim-ready]) .jsReveal[data-reveal="line"] h2 {
+  transition: opacity var(--anim-duration) var(--anim-ease),
+              transform var(--anim-duration) var(--anim-ease),
+              letter-spacing var(--anim-duration) var(--anim-ease);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="line"]:not(.isInview) h2 {
+  opacity: 0; transform: translateY(var(--anim-distance));
+  letter-spacing: calc(var(--bc-ls-head) + 0.06em);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="line"] span {
+  transition: opacity var(--anim-duration) var(--anim-ease);
+  transition-delay: var(--anim-stagger);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="line"]:not(.isInview) span { opacity: 0; }
+:global([data-anim-ready]) .jsReveal[data-reveal="line"] span::before {
+  transition: transform var(--anim-duration-slow) var(--anim-ease);
+  transition-delay: var(--anim-stagger);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="line"]:not(.isInview) span::before {
+  transform: translateX(-50%) scaleX(0);
+}
+
+/* --- stagger: 同一セクション内のカードを --anim-stagger ずつ遅らせる ---
+   --i は子の並び順。アイコンや行にも継承させて遅延の基準に使う。 */
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] > * {
+  transition: opacity var(--anim-duration) var(--anim-ease),
+              transform var(--anim-duration) var(--anim-ease),
+              box-shadow var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-stagger) * var(--i, 0));
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) > * {
+  opacity: 0; transform: translateY(var(--anim-distance)); box-shadow: var(--bc-shadow-none);
+}
+.jsReveal[data-reveal="stagger"] > *:nth-child(1) { --i: 0; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(2) { --i: 1; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(3) { --i: 2; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(4) { --i: 3; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(5) { --i: 4; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(6) { --i: 5; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(7) { --i: 6; }
+.jsReveal[data-reveal="stagger"] > *:nth-child(8) { --i: 7; }
+
+/* カード内の線画アイコンはカード出現の 0.2s 後に立ち上がる */
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] .channelIcon,
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] .lineCanIcon {
+  transition: opacity var(--anim-duration) var(--anim-ease), transform var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-stagger) * var(--i, 0) + 0.2s);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) .channelIcon,
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) .lineCanIcon {
+  opacity: 0; transform: scale(0.8);
+}
+
+/* ステップ: 番号 → 見出し → 本文 の順。番号だけ左からスライドイン */
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] .lineStepNo {
+  transition: opacity var(--anim-duration) var(--anim-ease), transform var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-stagger) * var(--i, 0));
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) .lineStepNo {
+  opacity: 0; transform: translateX(calc(var(--anim-distance) * -0.5));
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] .lineStep h3 {
+  transition: transform var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-stagger) * var(--i, 0) + var(--anim-stagger));
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"] .lineStep p {
+  transition: transform var(--anim-duration) var(--anim-ease);
+  transition-delay: calc(var(--anim-stagger) * var(--i, 0) + var(--anim-stagger) * 2);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) .lineStep h3,
+:global([data-anim-ready]) .jsReveal[data-reveal="stagger"]:not(.isInview) .lineStep p {
+  transform: translateY(calc(var(--anim-distance) * 0.4));
+}
+
+/* --- zoom: 写真がゆっくり引きながら現れる --- */
+.jsReveal[data-reveal="zoom"] { overflow: hidden; }
+:global([data-anim-ready]) .jsReveal[data-reveal="zoom"] img {
+  transition: opacity var(--anim-duration-slow) var(--anim-ease), transform var(--anim-duration-slow) var(--anim-ease);
+}
+:global([data-anim-ready]) .jsReveal[data-reveal="zoom"]:not(.isInview) img {
+  opacity: 0; transform: scale(1.08);
+}
+
+/* --- ボタンのタップ/ホバー反応(CONTACTページ限定) --- */
+.contactPage .channelAction,
+.contactPage .lineAddBtn,
+.contactPage .telBtn,
+.contactPage .lineBtn,
+.contactPage .mapBtn {
+  transition: background var(--anim-duration) var(--anim-ease),
+              color var(--anim-duration) var(--anim-ease),
+              transform var(--anim-duration) var(--anim-ease),
+              box-shadow var(--anim-duration) var(--anim-ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .contactPage .channelAction:hover,
+  .contactPage .lineAddBtn:hover,
+  .contactPage .telBtn:hover,
+  .contactPage .lineBtn:hover,
+  .contactPage .mapBtn:hover { transform: translateY(-2px); box-shadow: var(--bc-shadow-hover); }
+}
+.contactPage .channelAction:active,
+.contactPage .lineAddBtn:active,
+.contactPage .telBtn:active,
+.contactPage .lineBtn:active,
+.contactPage .mapBtn:active { transform: scale(0.98); }
+
+/* --- 動きを抑える設定: 演出は一切かけず即時表示 --- */
+@media (prefers-reduced-motion: reduce) {
+  .scrollProgress { display: none; }
+  .scrollCue::after { animation: none; }
+  .jsReveal,
+  .jsReveal h2, .jsReveal span, .jsReveal img,
+  .jsReveal > *, .jsReveal .channelIcon, .jsReveal .lineCanIcon,
+  .jsReveal .lineStepNo, .jsReveal .lineStep h3, .jsReveal .lineStep p {
+    opacity: 1 !important; transform: none !important; transition: none !important;
+  }
+  .contactPage .channelAction,
+  .contactPage .lineAddBtn,
+  .contactPage .telBtn,
+  .contactPage .lineBtn,
+  .contactPage .mapBtn { transition: none; }
+}
