@@ -9,8 +9,71 @@
  */
 import { existsSync, readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
+const postcss = require("postcss");
+const cssnanoSimple = require("next/dist/compiled/cssnano-simple");
+const nextSwc = require("next/dist/build/swc");
 
 const OUT = "out";
+
+/* public/migiwa/*.html は Next のコンパイル対象外なので、インラインCSS/JSが
+   制作用のコメント・空白・長い識別子を含んだまま out/ へコピーされる。
+   元ファイルは調整と検証のため読みやすい状態を保ち、配信物だけを Next が
+   既に持つSWC/cssnanoで縮める。新しい依存は追加しない。 */
+async function minifyMigiwaHtml(file, { moduleScript = false } = {}) {
+  if (!existsSync(file)) return null;
+
+  const before = readFileSync(file, "utf8");
+  let after = before;
+  const style = after.match(/<style>([\s\S]*?)<\/style>/);
+  if (style) {
+    const result = await postcss([
+      cssnanoSimple({ colormin: false }, postcss),
+    ]).process(style[1], { from: undefined });
+    after = after.replace(style[0], () => `<style>${result.css}</style>`);
+  }
+
+  if (moduleScript) {
+    const script = after.match(/<script type="module">([\s\S]*?)<\/script>/);
+    if (script) {
+      await nextSwc.loadBindings();
+      const result = await nextSwc.minify(script[1], {
+        compress: true,
+        mangle: true,
+        module: true,
+      });
+      after = after.replace(script[0], () => `<script type="module">${result.code}</script>`);
+    }
+  }
+
+  const saved = Buffer.byteLength(before) - Buffer.byteLength(after);
+  /* SWCは既に圧縮済みの入力を再圧縮すると、末尾の改行差などで数byteだけ
+     増えることがある。その場合は現状を保つ。大きく増えた時だけ異常とする。 */
+  if (saved < -64) {
+    throw new Error(`圧縮後のHTMLが増加しました: ${file} (${saved} bytes)`);
+  }
+  if (saved < 0) return 0;
+  writeFileSync(file, after);
+  return saved;
+}
+
+{
+  const files = [
+    [join(OUT, "migiwa", "index.html"), { moduleScript: true }],
+    [join(OUT, "migiwa", "works", "index.html"), {}],
+  ];
+  let saved = 0;
+  let count = 0;
+  for (const [file, options] of files) {
+    const bytes = await minifyMigiwaHtml(file, options);
+    if (bytes === null) continue;
+    saved += bytes;
+    count++;
+  }
+  console.log(`汀ノ庭の配信HTMLを圧縮: ${count}件 / ${saved.toLocaleString()} bytes削減`);
+}
 
 /* ★ public/ に置いたものは Next が out/ へ丸ごう写すので、制作用のファイルも
    そのまま公開される。実際、公開URLで次が誰でも読める状態になっていた:

@@ -27,10 +27,23 @@
 | `site.config.js` | 変わりうる値を集めた1ファイル。未確定は `PENDING` |
 | `公開前チェック.md` | 仮の記述52件。公開前に本人が確認する項目 |
 | `NOTES.md` | 査読で採らなかった指摘と、その理由 |
+| `sky-kloppenheim-06-{2k,4k}.webp` | 水上・水面反射・スネルの窓で共有する実写の空（上半球） |
 | `vendor/three/` | three 0.185.1 の自前配布。`scripts/vendor-three.mjs` が生成 |
 
 `index.html` は `public/lab/trexworks_umiatari_v6.html` を土台にしている。
 水中の演出・降格経路・自動品質調整の作りはそちらと共通。
+
+空素材は Poly Haven の [Kloppenheim 06 (Pure Sky)](https://polyhaven.com/a/kloppenheim_06_puresky)
+（Greg Zaal / Jarod Guest、CC0）。8K Tonemapped JPG の上半球だけを
+WebP化し、モバイルは 2048×512（50,760 bytes）、PCは 4096×1024
+（106,614 bytes）を読む。実写を読めない時はプロシージャル空へ戻る。
+
+`public/migiwa/*.html` は Next のコンパイル対象外なので、編集用のコメントと
+空白を含んだまま `out/` へコピーされる。`scripts/postprocess-pages.mjs` で
+公開物だけを既存の SWC / cssnano で圧縮し、読みやすい元ソースは維持する。
+2026-08-29 実測: TOP は 443,546 → 227,061 bytes（gzip 155,603 →
+80,909）、実績ページは 54,957 → 44,810 bytes（gzip 15,864 → 12,403）。
+合計 226,632 bytes、gzip換算 78,155 bytes を削減した。
 
 ## 検証
 

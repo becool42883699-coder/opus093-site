@@ -791,31 +791,6 @@
        並べた時に高さが揃わず、一覧が階段状に崩れる。 */
     aspect-ratio:16/10; object-fit:cover; object-position:top center;
   }
-  /* 実績の詳細。PCの画面の横に、スマホの画面を電話機の形で添える。
-     「スマホ対応」を文字で言うより、並べたほうが早い。 */
-  #content .shot-pair{
-    display:grid; gap:18px; margin:26px 0 34px; align-items:start;
-    grid-template-columns:minmax(0,1fr) 190px;
-  }
-  #content .shot-pair .shot{margin:0}
-  #content .shot-pair .shot img{aspect-ratio:16/10}
-  #content .shot-sp{margin:0}
-  #content .shot-sp img{
-    display:block; width:100%; height:auto;
-    border:1px solid rgba(143,212,222,.20); border-radius:9px;
-    filter:saturate(.96) brightness(.97);
-    aspect-ratio:9/17; object-fit:cover; object-position:top center;
-  }
-  #content .shot-sp figcaption{
-    margin-top:9px; font-size:8.5px; letter-spacing:.2em;
-    color:var(--hud); text-transform:uppercase;
-  }
-  @media (max-width:760px){
-    #content .shot-pair{grid-template-columns:minmax(0,1fr); gap:14px; justify-items:start}
-    #content .shot-sp{max-width:160px}
-  }
-  /* 見出しの直後に置く大きい1枚 */
-  #content .shot-lead{margin:26px 0 34px}
   /* TOPの実績。2件を並べる */
   #content .shots{
     display:grid; gap:16px; margin:26px 0 34px;
@@ -824,7 +799,6 @@
   #content .shots-3{grid-template-columns:repeat(3, minmax(0,1fr)); gap:13px}
   @media (max-width:700px){
     #content .shots{grid-template-columns:minmax(0,1fr); gap:14px}
-    #content .shot-lead{margin:20px 0 26px}
   }
 
   /* 本文の立ち上がり。1ブロック = 1つの動きだけ。
@@ -2142,11 +2116,55 @@ vec3 waterFog(vec3 col, float dist, float depth01, float light, float y){
    ここを伸ばさないと透明度を上げても「霞む距離」だけが元のままになる。 */
 float farFade(float d){ return smoothstep(16.0, 86.0, d); }`;
 
-/* --- 空。ドームと、水面の反射・スネルの窓が同じ関数を読む --------
+/* --- 実写の空。Poly Haven "Kloppenheim 06 (Pure Sky)" / CC0。
+   上半球だけをWebP化し、モバイルは2K、PCは4Kを読む。読み込み前・失敗時は
+   直下のプロシージャル空へ戻るので、空が黒く抜ける経路を作らない。 */
+const skyPhotoU = { value:null };
+const skyPhotoReadyU = { value:0 };
+let skyPhotoState = 'loading';
+const SKY_PHOTO_FILE = isMobile
+  ? './sky-kloppenheim-06-2k.webp'
+  : './sky-kloppenheim-06-4k.webp';
+const SKY_PHOTO_SUN_U = 0.604; /* 元画像での太陽中心。uSun と重ねて二重太陽を防ぐ */
+const SKY_PHOTO_U_SHIFT = SKY_PHOTO_SUN_U - (0.5 + SUN_AZ / (Math.PI * 2));
+const SKY_PHOTO_V_SHIFT = 0.046; /* 元画像の太陽は水平線上。uSunの仰角4.9°へ合わせる */
+new THREE.TextureLoader().load(
+  SKY_PHOTO_FILE,
+  tex => {
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+    skyPhotoU.value = tex;
+    skyPhotoReadyU.value = 1;
+    skyPhotoState = 'ready';
+  },
+  undefined,
+  () => { skyPhotoState = 'fallback'; }
+);
+
+/* 空ドームと、水面の反射・スネルの窓が同じ関数を読む。
    ここが1つでないと「反射に映る空」と「実際の空」がズレて嘘になる。 */
 const G_SKY = `
 uniform vec3 uSun;
 uniform float uTime;
+uniform sampler2D uSkyPhoto;
+uniform float uSkyPhotoReady;
+
+vec3 skyPhoto(vec3 dir){
+  /* 4:1画像は全天球の上半分だけ。-Zを中央にして、元画像の太陽を
+     uSunへ方位・高度とも合わせる。下半球の灰色領域は素材に含めていない。 */
+  float u = fract(0.5 + atan(dir.x, -dir.z) / 6.28318530718 + ${SKY_PHOTO_U_SHIFT.toFixed(6)});
+  float v = clamp(acos(clamp(dir.y, 0.0, 1.0)) / 1.57079632679 + ${SKY_PHOTO_V_SHIFT.toFixed(6)}, 0.001, 0.999);
+  vec3 photo = texture2D(uSkyPhoto, vec2(u, v)).rgb;
+  /* トーンマップ済み素材をサイトのACESへもう一度通すため、水平線を保ちつつ
+     天頂側だけ露出を抑える。青の色相は残し、白雲の飽和だけ軽くほどく。 */
+  photo *= mix(0.62, 0.38, smoothstep(0.0, 0.72, max(dir.y, 0.0)));
+  float luma = dot(photo, vec3(0.2126,0.7152,0.0722));
+  return mix(photo, vec3(luma), 0.06);
+}
 
 vec3 skyFn(vec3 dir){
   float h = dir.y;
@@ -2167,6 +2185,11 @@ vec3 skyFn(vec3 dir){
 
   vec3 sky = mix(horizon, middle, smoothstep(0.0, 0.10, hs));
   sky = mix(sky, zenith, smoothstep(0.06, 0.55, hs));
+
+  /* 実写を色と雲形の主役にする。地平線だけは既存の連続な大気色を12%残し、
+     水面との境に写真の端が線として出ないようにする。 */
+  float photoMix = uSkyPhotoReady * mix(0.82, 0.92, smoothstep(0.025, 0.30, hs));
+  sky = mix(sky, skyPhoto(dir), photoMix);
 
   /* 雲。dir.xz / h の平面投影は地平線で座標が発散し、低周波ノイズが
      横長の板に見える。方位ベクトルを半径=仰角の環へ写すことで、継ぎ目を
@@ -2213,16 +2236,24 @@ vec3 skyFn(vec3 dir){
     float shade = clamp(body*0.42 + selfShadow*0.18 + (1.0-detail)*0.07, 0.0, 0.58);
     vec3 cloudColor = mix(cloudAmbient, cloudShadow, shade);
     cloudColor = mix(cloudColor, vec3(0.62,0.70,0.72), rim*0.28);
-    sky = mix(sky, cloudColor, dens*0.54);
+    /* 実写読込後は写真の雲形を壊さない。少量だけ残して空気の停滞感を避け、
+       未読込時は従来どおり100%のフォールバックとして働かせる。 */
+    float procCloud = mix(1.0, 0.12, uSkyPhotoReady);
+    sky = mix(sky, cloudColor, dens*0.54*procCloud);
   }
 
   // 太陽。芯は鋭く、広い散乱は狭める(旧版はこれで空全体が乳白色になっていた)
   /* 2D雲には実際の厚みがないため完全遮光させない。太陽芯を残すことで、
      雲の背後から光が回る夕方の見え方に寄せる。 */
-  float occ = 1.0 - dens*0.55;
-  sky += vec3(1.00,0.70,0.42) * pow(s, 3000.0) * ${(RENDER.sunCore * SUN_CORE_DAMP).toFixed(3)} * occ;
-  sky += vec3(1.00,0.58,0.30) * pow(s, ${SUN_HALO_POW})  * ${(RENDER.sunHalo * SUN_DAMP).toFixed(3)} * occ;
-  sky += vec3(0.80,0.42,0.24) * pow(s, ${SUN_BROAD_POW})   * ${(RENDER.sunBroad * SUN_DAMP).toFixed(3)} * occ;
+  float occ = 1.0 - dens*0.55*mix(1.0, 0.12, uSkyPhotoReady);
+  /* 写真にも太陽と大気散乱が写っている。従来のHDR太陽を同じ強さで足すと
+     二重露光になり、雲の階調が広く白く潰れる。芯だけ残して写真へ光量を譲る。 */
+  float sunCoreGain  = mix(1.0, 0.015, uSkyPhotoReady);
+  float sunHaloGain  = mix(1.0, 0.08, uSkyPhotoReady);
+  float sunBroadGain = mix(1.0, 0.04, uSkyPhotoReady);
+  sky += vec3(1.00,0.70,0.42) * pow(s, 3000.0) * ${(RENDER.sunCore * SUN_CORE_DAMP).toFixed(3)} * occ * sunCoreGain;
+  sky += vec3(1.00,0.58,0.30) * pow(s, ${SUN_HALO_POW})  * ${(RENDER.sunHalo * SUN_DAMP).toFixed(3)} * occ * sunHaloGain;
+  sky += vec3(0.80,0.42,0.24) * pow(s, ${SUN_BROAD_POW})   * ${(RENDER.sunBroad * SUN_DAMP).toFixed(3)} * occ * sunBroadGain;
 
   vec3 below = mix(vec3(0.018,0.065,0.088), vec3(0.0015,0.011,0.023), smoothstep(0.0,0.5,-h));
   return mix(below, sky, smoothstep(-0.02, 0.02, h));
@@ -2234,6 +2265,8 @@ vec3 skyFn(vec3 dir){
 const skyUniforms = {
   uSun:   { value: SUN },
   uTime:  { value: 0 },
+  uSkyPhoto: skyPhotoU,
+  uSkyPhotoReady: skyPhotoReadyU,
   uDepth: { value: 0 },
   uFog:   { value: fogCol },
   uSub:   { value: 0 },      // 0=水上 / 1=水中(水面をまたぐ瞬間だけ補間)
@@ -2279,6 +2312,8 @@ const waterUniforms = {
   uOrigin:{ value: new THREE.Vector2(0,0) },   // メッシュのワールド原点
   uTime:  { value: 0 },
   uSun:   { value: SUN },
+  uSkyPhoto: skyPhotoU,
+  uSkyPhotoReady: skyPhotoReadyU,
   uDepth: { value: 0 },
   uFog:   { value: fogCol },
   /* 平面反射。太陽と空は skyFn が既に返しているので、ここに入れるのは
@@ -3806,6 +3841,7 @@ let CARD_BASE_SCALE = 1;
   for (let i=0;i<Math.min(WORKS.length, layout.length);i++){
     const uni = {
       uTime:{value:0}, uSun:{value:SUN}, uDepth:{value:0}, uFog:{value:fogCol},
+      uSkyPhoto:skyPhotoU, uSkyPhotoReady:skyPhotoReadyU,
       uMap:{value:cardTexture(WORKS[i])},
       tRefract:{value:null},                  // 背後の絵(半解像度)
       uRes:{value:new THREE.Vector2(1,1)},
@@ -5820,6 +5856,7 @@ window.__diag = {
   /* 水面の映り込みとガラスの屈折が「実際に効いているか」を外から読めるようにする。
      絵を見て判断すると、シェーダが黙って落ちた時に気付けない。 */
   get effects(){ return {
+    skyPhoto: skyPhotoState, skyPhotoFile: SKY_PHOTO_FILE,
     reflectAvailable: !!TIER.reflect,
     reflectOn, reflectStrength: waterUniforms.uReflect.value,
     reflectSize: reflectRT ? [reflectRT.width, reflectRT.height] : null,
