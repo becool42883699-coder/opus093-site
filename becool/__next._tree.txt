@@ -15,4 +15,4 @@
 :HL["/opus093-site/becool/img/photo-alphard.webp","image"]
 :HL["/opus093-site/becool/img/icon-car-sales.png","image"]
 :HL["/opus093-site/becool/img/icon-inspection.png","image"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"e5W7rrdCWU9P6biP8NMVU"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"becool","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"AUU15p-hZcEqK15aAl4PN"}
