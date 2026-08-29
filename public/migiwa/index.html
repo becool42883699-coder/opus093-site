@@ -791,31 +791,6 @@
        並べた時に高さが揃わず、一覧が階段状に崩れる。 */
     aspect-ratio:16/10; object-fit:cover; object-position:top center;
   }
-  /* 実績の詳細。PCの画面の横に、スマホの画面を電話機の形で添える。
-     「スマホ対応」を文字で言うより、並べたほうが早い。 */
-  #content .shot-pair{
-    display:grid; gap:18px; margin:26px 0 34px; align-items:start;
-    grid-template-columns:minmax(0,1fr) 190px;
-  }
-  #content .shot-pair .shot{margin:0}
-  #content .shot-pair .shot img{aspect-ratio:16/10}
-  #content .shot-sp{margin:0}
-  #content .shot-sp img{
-    display:block; width:100%; height:auto;
-    border:1px solid rgba(143,212,222,.20); border-radius:9px;
-    filter:saturate(.96) brightness(.97);
-    aspect-ratio:9/17; object-fit:cover; object-position:top center;
-  }
-  #content .shot-sp figcaption{
-    margin-top:9px; font-size:8.5px; letter-spacing:.2em;
-    color:var(--hud); text-transform:uppercase;
-  }
-  @media (max-width:760px){
-    #content .shot-pair{grid-template-columns:minmax(0,1fr); gap:14px; justify-items:start}
-    #content .shot-sp{max-width:160px}
-  }
-  /* 見出しの直後に置く大きい1枚 */
-  #content .shot-lead{margin:26px 0 34px}
   /* TOPの実績。2件を並べる */
   #content .shots{
     display:grid; gap:16px; margin:26px 0 34px;
@@ -824,7 +799,6 @@
   #content .shots-3{grid-template-columns:repeat(3, minmax(0,1fr)); gap:13px}
   @media (max-width:700px){
     #content .shots{grid-template-columns:minmax(0,1fr); gap:14px}
-    #content .shot-lead{margin:20px 0 26px}
   }
 
   /* 本文の立ち上がり。1ブロック = 1つの動きだけ。
