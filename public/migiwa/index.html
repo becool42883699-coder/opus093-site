@@ -2168,42 +2168,58 @@ vec3 skyFn(vec3 dir){
   vec3 sky = mix(horizon, middle, smoothstep(0.0, 0.10, hs));
   sky = mix(sky, zenith, smoothstep(0.06, 0.55, hs));
 
-  /* 大気の薄い層。地平線だけを少し持ち上げて、単なる2色グラデーション
-     ではなく、遠くの空気が光を受けている奥行きを作る。 */
-  float air = pow(1.0 - smoothstep(0.0, 0.78, hs), 1.7);
-  vec3 airColor = mix(vec3(0.075,0.140,0.198), vec3(0.16,0.255,0.315), awT);
-  sky = mix(sky, airColor, air * 0.14);
-
-  /* 雲。方位角(atan)で引くと ±π の折り返しが継ぎ目になるので、
-     視線を「高さ一定の雲の板」へ投影した座標で引く。
-     継ぎ目が無いうえ、雲が地平へ向かって収束して遠近が出る。 */
+  /* 雲。dir.xz / h の平面投影は地平線で座標が発散し、低周波ノイズが
+     横長の板に見える。方位ベクトルを半径=仰角の環へ写すことで、継ぎ目を
+     作らず、地平線でも雲塊の縦横比を保つ。 */
   float dens = 0.0;
-  if (h > 0.006 && h < 0.62){
-    vec2 cp = dir.xz / max(h, 0.055) * 0.42;
-    float band = smoothstep(0.006, 0.05, h) * (1.0 - smoothstep(0.26, 0.58, h));
-    vec2 drift = vec2(uTime*0.010, uTime*0.004);
-    float warpX = vnoise(cp*0.55 + drift*0.31);
-    float warpY = vnoise(cp*0.55 - drift*0.23 + 19.0);
-    vec2 warped = cp + (vec2(warpX, warpY) - 0.5) * 0.30;
-    float broad = fbm(warped + drift, SKY_OCT);
-    float detail = vnoise(warped*3.1 - drift*0.35 + 7.0);
-    float cloudShape = smoothstep(0.38, 0.72, broad);
-    float cloudEdge = smoothstep(0.18, 0.72, detail);
-    dens = cloudShape * mix(0.56, 1.0, cloudEdge) * band;
+  if (h > 0.008 && h < 0.72){
+    float elev = clamp(hs, 0.0, 0.72);
+    float radius = mix(5.15, 1.35, smoothstep(0.0, 0.72, elev));
+    vec2 cp = hd * radius;
+    vec2 drift = vec2(uTime*0.0045, uTime*0.0018);
 
-    /* 雲の底は青灰色、太陽側の上面だけを明るくする。雲全体を白く
-       飛ばさず、密度の違いと銀色の縁で立体感を出す。 */
-    float sunLit = smoothstep(0.02, 0.60, pow(s, 0.42));
-    vec3 cloudShadow = vec3(0.018,0.032,0.055);
-    vec3 cloudTop = mix(vec3(0.16,0.25,0.32), vec3(0.57,0.70,0.75), sunLit);
-    float silverEdge = smoothstep(0.60, 0.95, detail) * sunLit;
-    cloudTop = mix(cloudTop, vec3(0.74,0.83,0.85), silverEdge * 0.35);
-    vec3 cloudColor = mix(cloudShadow, cloudTop, smoothstep(0.32, 0.90, detail + sunLit*0.22));
-    sky = mix(sky, cloudColor, dens*0.76);
+    /* 大きな雲塊に細部を少量だけ混ぜる。細部を密度そのものに掛けないので、
+       SwiftShaderや低DPRでも斑点・ぼけた横縞にならない。 */
+    float broad = fbm(cp*0.78 + drift, SKY_OCT);
+#if SKY_OCT == 2
+    broad *= 1.333333; /* 0.5 + 0.25 を 0..1 へ */
+#else
+    broad *= 1.142857; /* 0.5 + 0.25 + 0.125 を 0..1 へ */
+#endif
+    float detail = vnoise(cp*5.20 - drift*0.42 + 11.7);
+    float form = broad + (detail - 0.5) * 0.18;
+    float altitude = smoothstep(0.008, 0.055, h) * (1.0 - smoothstep(0.28, 0.54, h));
+    dens = smoothstep(0.68, 0.79, form) * altitude;
+
+    /* 太陽方向へ少し進んだ密度をもう一度読む簡易セルフシャドウ。
+       明暗を無関係なノイズで決めず、光が遮られる側だけを青灰色へ落とす。 */
+    float towardSun = fbm((cp + sd*0.16)*0.78 + drift, SKY_OCT);
+#if SKY_OCT == 2
+    towardSun *= 1.333333;
+#else
+    towardSun *= 1.142857;
+#endif
+    float selfShadow = smoothstep(-0.025, 0.115, towardSun - broad);
+    float body = smoothstep(0.67, 0.88, broad);
+    float sunFacing = pow(max(dot(hd, sd), 0.0), 5.0);
+    float rim = smoothstep(0.64, 0.70, form)
+              * (1.0 - smoothstep(0.73, 0.84, form))
+              * sunFacing * altitude;
+
+    vec3 cloudAmbient = mix(vec3(0.130,0.190,0.235), vec3(0.300,0.380,0.420), 0.38 + hs*0.45);
+    float direct = sunFacing * (1.0 - selfShadow);
+    cloudAmbient = mix(cloudAmbient, vec3(0.43,0.49,0.50), direct*0.27);
+    vec3 cloudShadow = vec3(0.045,0.070,0.095);
+    float shade = clamp(body*0.42 + selfShadow*0.18 + (1.0-detail)*0.07, 0.0, 0.58);
+    vec3 cloudColor = mix(cloudAmbient, cloudShadow, shade);
+    cloudColor = mix(cloudColor, vec3(0.62,0.70,0.72), rim*0.28);
+    sky = mix(sky, cloudColor, dens*0.54);
   }
 
   // 太陽。芯は鋭く、広い散乱は狭める(旧版はこれで空全体が乳白色になっていた)
-  float occ = 1.0 - dens*0.80;
+  /* 2D雲には実際の厚みがないため完全遮光させない。太陽芯を残すことで、
+     雲の背後から光が回る夕方の見え方に寄せる。 */
+  float occ = 1.0 - dens*0.55;
   sky += vec3(1.00,0.70,0.42) * pow(s, 3000.0) * ${(RENDER.sunCore * SUN_CORE_DAMP).toFixed(3)} * occ;
   sky += vec3(1.00,0.58,0.30) * pow(s, ${SUN_HALO_POW})  * ${(RENDER.sunHalo * SUN_DAMP).toFixed(3)} * occ;
   sky += vec3(0.80,0.42,0.24) * pow(s, ${SUN_BROAD_POW})   * ${(RENDER.sunBroad * SUN_DAMP).toFixed(3)} * occ;
