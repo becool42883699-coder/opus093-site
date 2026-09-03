@@ -1,21 +1,40 @@
+# OS / エディタ / ローカル設定
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/settings.local.json
+
+# 秘密情報・ローカル環境（example は管理対象に残す）
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# 依存関係・Next.js / TypeScript の生成物
+node_modules/
+/.next/
+/out/
+/dist/
+/build/
+/coverage/
+.turbo/
+.vercel/
+*.tsbuildinfo
+*.log
+
+# 検証・ビルド・一時ファイル（スクリーンショット等・リポジトリには入れない）
+artifacts/
+scratch/
+.tmp-verify/
+tmp/
+temp/
+.cache/
 
 # migiwa: ビルドの中間生成物（copy.json から作り直せる）
-# 検証ループの出力（スクリーンショット等・リポジトリには入れない）
-*.tsbuildinfo
-.DS_Store
-.claude/settings.local.json
-.next/
-artifacts/
-node_modules/
-out/
 public/migiwa/.content.html
 public/migiwa/.works.html
 
-# 実装中の使い捨ての検証スクリプト置き場
-scratch/
-
 # Graft のビルド生成物（graft build で再生成できる）
 graft/.cache/
-
-# graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
