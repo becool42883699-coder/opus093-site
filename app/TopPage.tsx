@@ -183,7 +183,6 @@ export default function TopPage() {
               className={eng.heroVideo}
               autoPlay
               muted
-              loop
               playsInline
               preload="metadata"
               poster={`${BASE_PATH}/hero-trex-construction-final.webp`}
