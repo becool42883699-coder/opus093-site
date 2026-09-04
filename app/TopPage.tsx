@@ -30,6 +30,7 @@ if(!r&&g)document.documentElement.setAttribute('data-engine-motion','on')}catch(
 
 const TEL = "090-7531-5428";
 const TEL_HREF = "tel:09075315428";
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const navItems = [
   ["トップ", "/"],
@@ -178,6 +179,19 @@ export default function TopPage() {
           {/* スクロール進行バー。position:fixed なのでDOM上の位置は見た目に影響しない */}
           <div className={eng.progress} data-progress aria-hidden="true" />
           <section className={eng.hero} aria-labelledby="hero-title">
+            <video
+              className={eng.heroVideo}
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              poster={`${BASE_PATH}/hero-trex-construction-final.webp`}
+              aria-hidden="true"
+              tabIndex={-1}
+            >
+              <source src={`${BASE_PATH}/media/trex-homepage-hero-cinematic-roar.mp4`} type="video/mp4" />
+            </video>
             <p className={eng.eyebrow} data-hero-rise>T-REX CO., LTD. — NEVER STOP THE SITE</p>
             <h1 id="hero-title" data-hero-rise>現場を、<br /><span>止めない。</span></h1>
             <p className={eng.lede} data-hero-rise>

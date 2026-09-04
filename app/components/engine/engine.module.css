@@ -126,21 +126,30 @@
               4幕ステージへ継ぎ目なく渡す。シアンの光を一枚だけ足す。
    どちらもアニメーションしないので reduced-motion でもそのまま出る。 */
 .hero::before,
-.hero::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
 .hero::before {
+  z-index: -3;
   background-image: url("/hero-trex-construction-final.webp");
   background-size: cover; background-position: 72% center;
   opacity: .5; filter: saturate(.75) contrast(1.05);
 }
 .hero::after {
+  z-index: -1;
   background:
     linear-gradient(100deg, var(--e-ink) 14%, rgba(5,8,13,.86) 42%, rgba(5,8,13,.42) 72%, rgba(5,8,13,.55) 100%),
     radial-gradient(52% 44% at 74% 30%, rgba(62,193,240,.14), transparent 70%),
     linear-gradient(to bottom, rgba(5,8,13,.55) 0%, transparent 26%, transparent 58%, var(--e-ink) 97%);
 }
+.hero > .heroVideo {
+  position: absolute; inset: 0; z-index: -2;
+  width: 100%; height: 100%; object-fit: cover; object-position: center;
+  pointer-events: none;
+  filter: saturate(.82) contrast(1.08) brightness(.84);
+}
 /* 縦長の画面では横がほとんど切れるので、恐竜の顔が窓に入る位置まで寄せる。
    暗幕も、左からの斜めではなく上下方向に効かせて本文の可読性を確保する。 */
 @media (max-width: 819px) {
+  .heroVideo { display: none; }
   /* 幅1100pxの軽量版(86KB)に差し替える。SPは画像の横を2割ほどしか見せないので
      解像度を落としても見た目が変わらない一方、転送量は 280KB → 86KB になる。 */
   .hero::before {
@@ -307,6 +316,7 @@
 :global(html[data-engine-motion="on"]) .progress { display: block; }
 
 @media (prefers-reduced-motion: reduce) {
+  .heroVideo { display: none; }
   .cue i { animation: none; }
   .btn { transition: none; }
 }
