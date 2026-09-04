@@ -16,7 +16,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
-import TruckScene from "./components/TruckScene";
 import TopMotion from "./components/TopMotion";
 import { scrollToElement } from "./components/lenisBridge";
 import EngineSceneMount from "./components/engine/EngineSceneMount";
@@ -259,13 +258,11 @@ export default function TopPage() {
         <section className="contentSection equipment" id="equipment" aria-labelledby="equipment-title">
           <div className="sectionIntro"><p>EQUIPMENT</p><h2 id="equipment-title">対応車両</h2><span data-reveal>大型ダンプからクレーン付き特装車まで。<br />架装・修理・塗装に対応します。</span></div>
           <div className="equipmentBody">
-            <TruckScene />
             <ul className="equipmentSpecs">
               <li><b>荷台換装</b><span>用途に合わせた架装・載せ替えに対応</span></li>
               <li><b>板金塗装</b><span>全塗装から部分補修まで</span></li>
               <li><b>出張・持込修理</b><span>現場でも工場でも対応可能</span></li>
             </ul>
-            <p className="equipmentNote"><span className="equipmentHint">DRAG TO ROTATE</span>※ 表示している3Dモデルは車種イメージです。実際の車両とは異なります。</p>
           </div>
         </section>
         <section className="wipeZone" aria-hidden="true">
