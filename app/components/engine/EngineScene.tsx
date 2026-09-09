@@ -31,12 +31,15 @@ const ENV_INTENSITY = 2.0 * EXPOSURE;
 /* ---- 縦画面のフレーミング --------------------------------------------
    v3のカメラのキーフレームは横長(16:10前後)前提。縦画面にそのまま出すと
    エンジンが左右で見切れ、絵が下半分に沈み、その上に本文が重なって読めない。
-   下の2つの定数で「模型を縮めて幅に収める」「描画を上へ寄せる」を行う。
-   値はスマホ390x844で各幕を実測して決めた(本文は下から約266px使う)。 */
-/** 完全な縦画面(aspect 0.55以下)での模型の縮小率。横長へ向けて1.0まで戻す */
-const PORTRAIT_MIN_SCALE = 0.67;
+   下の3つで「カメラを引く」「模型を縮めて幅に収める」「描画を上へ寄せる」。
+   カメラを引く分だけフォグ(FOG_NEAR/FOG_FAR)も遠ざけること。
+   値はスマホ390x844で4幕とも描画を見ながら決めた(本文は下から約270px使う)。 */
+/** 縦画面でカメラを引く強さ(v3と同じ)。これ以上引くとフォグ(9〜22)に沈む */
+const PORTRAIT_PULL = 0.95;
+/** 縦画面での模型の縮小率。カメラを引くとフォグに沈むので、幅合わせは模型側で行う */
+const PORTRAIT_FIT = 0.80;
 /** 完全な縦画面で描画を上へ寄せる量(ステージ高さに対する比)。下側を本文に明け渡す */
-const PORTRAIT_LIFT = 0.24;
+const PORTRAIT_LIFT = 0.20;
 
 /** WebGL2 のみ。three は r163 で WebGL1 を切ったので webgl1 判定で通すと例外になる */
 function hasWebGL2(): boolean {
@@ -160,7 +163,13 @@ export default function EngineScene() {
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0x05080d);
-      scene.fog = new THREE.Fog(0x05080d, 9, 22);
+      /* フォグの距離は v3 のまま。ただし縦画面ではカメラを引くので、
+         引いた分だけ霧も遠ざけないとエンジンが霧に沈んで色が抜ける
+         (実機で「暗くて何が写っているか分からない」状態になっていた)。
+         倍率は resize() で dm に合わせて掛け直す。 */
+      const FOG_NEAR = 9;
+      const FOG_FAR = 22;
+      scene.fog = new THREE.Fog(0x05080d, FOG_NEAR, FOG_FAR);
       const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 60);
 
       /* ---- 環境マップ(HDRI) --------------------------------------------
@@ -343,17 +352,18 @@ export default function EngineScene() {
         renderer.setSize(w, h, false);
         composer.setSize(w, h, false);
         camera.aspect = w / h;
-        /* 縦画面ほどカメラを引く。v3 と同じ補正 */
-        dm = camera.aspect < 1 ? 1 + (1 / camera.aspect - 1) * 0.95 : 1;
+        /* 縦画面ほどカメラを引く(v3と同じ係数)。引いた分フォグも遠ざける ――
+           これを忘れると、実機で「暗くて何が写っているか分からない」状態になる。 */
+        dm = camera.aspect < 1 ? 1 + (1 / camera.aspect - 1) * PORTRAIT_PULL : 1;
+        const fog = scene.fog as THREE_NS.Fog;
+        fog.near = FOG_NEAR * dm;
+        fog.far = FOG_FAR * dm;
 
-        /* 縦画面のフレーミング(定数の意図はファイル冒頭を参照)。
-           dm でカメラを引くだけでは横の見切れを解消しきれない ―― フォグが
-           9〜22 なので引くほど絵が沈む。模型を縮めて幅に収め、setViewOffset で
-           上へ寄せる。横長は scale 1 / オフセットなしでPCの絵は不変。 */
-        /* aspect 1.0(正方形)で0、0.55以下で1になる「縦画面らしさ」。
-           これで縮小と上寄せを連続的に効かせる(端末を回しても飛ばない)。 */
+        /* 縦画面では絵を上へ寄せて、下側を4幕の本文に明け渡す。
+           aspect 1.0(正方形)で0、0.55以下で1になる係数で連続的に効かせる
+           ので、端末を回しても絵が飛ばない。横長ではオフセットなし=PCと同一。 */
         const t = Math.min(1, Math.max(0, (1 - camera.aspect) / 0.45));
-        parts.root.scale.setScalar(1 - t * (1 - PORTRAIT_MIN_SCALE));
+        parts.root.scale.setScalar(1 - t * (1 - PORTRAIT_FIT));
         if (t > 0) camera.setViewOffset(w, h, 0, h * PORTRAIT_LIFT * t, w, h);
         else camera.clearViewOffset();
         camera.updateProjectionMatrix();
@@ -381,6 +391,14 @@ export default function EngineScene() {
       const onVisibility = () => applyLoop();
       document.addEventListener("visibilitychange", onVisibility);
       window.addEventListener("resize", resize);
+      window.addEventListener("orientationchange", resize);
+      /* ステージの実寸が変わったら必ず測り直す。
+         window の resize だけだと、iOS Safari で初期化時に拾ったサイズが
+         レイアウト確定前の値のまま固定されることがある。そうなると
+         camera.aspect が実際のcanvasと食い違い、絵が横に伸びて片側が
+         見切れる(実機で発生した)。ResizeObserver なら取りこぼさない。 */
+      const ro = new ResizeObserver(() => resize());
+      ro.observe(stage);
       const io = new IntersectionObserver(
         (entries) => {
           for (const entry of entries) onScreen = entry.isIntersecting;
@@ -504,6 +522,8 @@ export default function EngineScene() {
         ctx.revert();
         document.removeEventListener("visibilitychange", onVisibility);
         window.removeEventListener("resize", resize);
+        window.removeEventListener("orientationchange", resize);
+        ro.disconnect();
         parts.dispose();
         composer.dispose();
         envMap?.dispose();

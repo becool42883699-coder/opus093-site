@@ -263,57 +263,18 @@
 - 検証用サーバーは `out/` へのsymlink経由で立てる。リビルドしたら
   **プロセスを落として立て直す**（§3-4）。
 
-## 6. T-REX側（ルート `/`）— EQUIPMENT の3D車両ビューア
+## 6. EQUIPMENT の3D車両ビューア（**2026-08-19 撤去済み**）
 
-`/becool` とは別に、ルート側の T-REX サイト（`app/page.tsx` ほか）には
-SERVICE と WORKS の間に **EQUIPMENT（対応車両）セクション**がある。
-クレーン付き特装車の glTF を Three.js で表示し、光と映り込みは HDRI から取る。
+トップの「対応車両」にクレーン付き特装車の glTF を出していたが、**削除した**。
+- ユーザーの指示（「対応車両に使われてる3Dデータいらん」）。
+- モデルが GTA の車両MOD由来でライセンスの出所が不明瞭だった（元々リスクとして記載）。
+- トップの主役がエンジンの4幕になり、3Dが2つ並ぶ意味が薄れた。
 
-### 構成ファイル
-- `app/components/TruckScene.tsx` … シーン本体（"use client"）
-- `app/globals.css` の「EQUIPMENT」ブロック … `.truckStage` / `.truckCanvas` / `.equipmentSpecs`
-- `public/models/crane-truck.glb` … 3.4MB（gzip 1.8MB）/ 約115K三角形
-- `public/assets/hdri/env.hdr` … Poly Haven「quarry_01」1K（CC0・屋外曇天）
-- `public/equipment-crane-truck.webp` … 3Dを出さない環境用の静止画（透過WebP・41KB）
-
-### 守る決まり
-- three とローダーは **必ず動的import**。初期バンドルに載せない。
-- HDRI は `scene.environment` にだけ入れる。**`scene.background` には使わない**
-  （黒背景とサイトの世界観は変えない）。強度は `scene.environmentIntensity = 1.0`。
-  読み込み失敗時は `console.warn` 1行だけ出して映り込みなしで続行する。
-- 回転はスクロール連動のヨー（±0.45rad）と、**fine pointer のときだけ**ドラッグ。
-  タッチではドラッグを取らない（縦スクロールを殺さないため）。
-- canvas は `pointer-events:none` + `touch-action:auto`。ポインタ操作は親
-  `.truckStage` 側で拾う。
-- IntersectionObserver（`rootMargin: 300px`）で画面に近づいたら初期化、離れたら
-  **破棄**（`renderer.dispose()` + `forceContextLoss()`）。タブ非表示で描画ループ停止。
-- reduced-motion / WebGL非対応 / `saveData` / 低性能端末（cores≤2 or memory≤1）は
-  3Dを起動せず静止画のまま。JS無効時も静止画がそのまま残る。
-- 静止画とシーンのカメラは同じ値を使う（fov 34 / 距離 `maxDim*1.22` / 高さ `maxDim*0.36` /
-  ヨー 4.0）。**片方だけ変えると切り替わる瞬間に絵が飛ぶ**ので必ず両方直す。
-
-### モデルの素性と注意（重要）
-- 元データはユーザー提供の FBX（Ural Next クレーン車）。**GTA の車両MOD由来**で、
-  ライセンスの出所がはっきりしない。商用サイトで使い続けるなら権利の確認、
-  もしくは自社車両の実写・自作モデルへの差し替えを勧めること。
-- 取り込み時に次の外国語表記を除去済み。**差し替え・再変換する時は同じ処理が必要**。
-  - ブームの赤文字（電話番号 / ЧЕЛЯБИНЕЦ / GTA MOD配布者のウォーターマーク）
-    → テクスチャ `55.png` を拡散インペイントで塗り潰し
-  - クレーン架装のメーカー銘板・ロシア語警告表記 → `57.png` を周囲色で平滑化
-  - 運転席ドアとクレーンキャビンの**三色旗デカール**
-    → テクスチャではなく純色マテリアルの小さなポリゴン。該当プリミティブを削除
-      （マテリアル `.9` / `.15` / `door_rf_ok.7` / `salon.4` / `.11` の200頂点未満）
-- フロントグリルの「URAL」ロゴは車種そのものの標識なので残してある。
-- コピーは「当社の車両」と言い切らず、**車種イメージ**である旨を必ず併記する。
-
-### 変換パイプライン（再現手順）
-リポジトリにツールは入れない。作業時にスクラッチ領域へ入れて使う。
-1. `assimp export <model>.FBX out.gltf -f gltf2`（FBX2glTF はテクスチャを解決できない）
-2. TGA を PNG へ変換し、gltf の `images[].uri` をファイル名だけに書き換える。
-   **拡張子は小文字**にする（`image/PNG` だと gltf-transform のテクスチャ処理が素通りする）
-3. 車外から見えない `MOTOR`（エンジン）と `salon`（内装）のノードを削除（頂点の約36%）
-4. `gltf-transform` で `dedup → prune → resize 1024 → webp 82 → weld → simplify 0.5 → quantize`
-   （デコーダ不要にするため Draco / meshopt は使わない。`KHR_mesh_quantization` は three が対応済み）
+削除したもの: `app/components/TruckScene.tsx` / `public/models/crane-truck.glb` /
+`public/equipment-crane-truck.webp` / `app/globals.css` の `.truckStage` ほか一式。
+「対応車両」セクション自体は見出し・リード・3項目のカードで残している。
+**復活させる場合は、権利のはっきりした自社車両の実写か自作モデルを使うこと。**
+HDRI（`public/assets/hdri/env.hdr`）はエンジンの4幕が使うので残してある。
 
 ## 7. TRX-4 オーバーホールの4幕演出（**トップページ `/` に移設済み**）
 
@@ -445,6 +406,27 @@ SERVICE と WORKS の間に **EQUIPMENT（対応車両）セクション**があ
   4幕ステージへ継ぎ目なく渡す。
 - 文字のコントラストは実測で担保する（背後の実ピクセルの上位2%を最悪ケースとして
   計測）。現状の最小は本文の 5.80:1（SP）。**暗幕を薄くする時は必ず測り直すこと。**
+
+### 縦画面(スマホ)の4幕フレーミング — 触る前に必ず読む
+v3のカメラのキーフレームは横長(16:10前後)前提。縦画面にそのまま出すと
+**エンジンが左右で見切れ、絵が下半分に沈み、その上に本文が重なって読めない。**
+`EngineScene.tsx` の3つの定数で補正している（横長では一切効かないのでPCの絵は不変）。
+- `PORTRAIT_PULL` 0.95 … カメラを引く強さ（v3と同じ）
+- `PORTRAIT_FIT` 0.80 … 模型を縮めて画面幅に収める
+- `PORTRAIT_LIFT` 0.20 … `camera.setViewOffset` で描画を上へ寄せ、下を本文に明け渡す
+
+**`FOG_NEAR` / `FOG_FAR` は必ず `dm` を掛けること。**
+カメラを引いた分だけ霧も遠ざけないと、エンジンが霧に沈んで
+「暗くて何が写っているか分からない」状態になる（実機でこれをやった）。
+
+**大きさの調整は `PORTRAIT_PULL` ではなく `PORTRAIT_FIT` で行う。**
+引きを強めると絵が小さくなるうえフォグの影響も受け、割に合わない。
+
+計測の注意: `Box3.setFromObject(parts.root)` の投影は**実際の見た目より小さく出る**
+（アニメーション付きメッシュのため）。この数値でフレーミングを詰めると必ず外す。
+描画そのものをスクリーンショットで見て決めること。
+またスクロール後は**カメラのscrubが追いつくまで2.5秒ほど待つ**。
+待たずに撮ると別のフレームを見ていることになり、判断を誤る。
 
 ### 章インジケータの注意
 `[data-chapnow]` / `[data-chapnav]` は**固定ヘッダー側にあり `.page` の外**。
