@@ -51,7 +51,7 @@
   --fs-label:clamp(9px,.75vw,11px);
   --ls-label:.34em;
   --fs-body:clamp(12.5px,1.02vw,15px);
-  --fs-h2:clamp(23px,2.9vw,42px);
+  --fs-h2:clamp(21px,2.0vw,34px);
   --ls-jp:.17em;
 }
 
@@ -197,7 +197,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   transform-origin:58% 42%;
 }
 .heroTitle{
-  font-size:clamp(26px,3.35vw,50px);font-weight:200;line-height:1.78;letter-spacing:var(--ls-jp);
+  font-size:clamp(22px,2.1vw,36px);font-weight:200;line-height:1.78;letter-spacing:var(--ls-jp);
   margin-bottom:clamp(22px,3.2vw,40px);
 }
 .heroTitle span{display:block}
@@ -235,24 +235,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
    ============================================================ */
 .philosophy{
   position:relative;
-  padding:clamp(88px,15vh,170px) var(--gut);
+  padding:clamp(64px,10vh,130px) var(--gut);
   display:grid;
   grid-template-columns:minmax(0,1fr) auto 1px auto minmax(0,.9fr);
   gap:clamp(24px,4vw,62px);
   align-items:stretch;
-  min-height:clamp(420px,62vh,640px);
+  min-height:clamp(320px,44vh,520px);
 }
 .phText{align-self:center;display:flex;flex-direction:column;gap:clamp(20px,2.6vw,34px)}
 .phStrip{
   width:clamp(46px,5vw,74px);
   align-self:stretch;
-  margin-block:calc(clamp(88px,15vh,170px) * -1);
+  margin-block:calc(clamp(64px,10vh,130px) * -1);
   overflow:hidden;
   background:var(--paper-2);
 }
 .phStrip picture{display:block;width:100%;height:100%}
 .phStrip img{width:100%;height:100%;object-fit:cover;object-position:center}
-.philosophy .vline{margin-block:calc(clamp(88px,15vh,170px) * -1)}
+.philosophy .vline{margin-block:calc(clamp(64px,10vh,130px) * -1)}
 .phVert{
   writing-mode:vertical-rl;
   font-size:clamp(11.5px,1vw,14.5px);
@@ -266,8 +266,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .approach{position:relative;padding-inline:var(--gut)}
 .apStage{
   display:grid;
-  grid-template-columns:minmax(0,.86fr) 1px minmax(0,1.14fr);
-  gap:clamp(24px,4vw,64px);
+  grid-template-columns:minmax(0,.66fr) 1px minmax(0,1.05fr) minmax(0,.42fr);
+  column-gap:clamp(16px,2.6vw,38px);row-gap:clamp(24px,4vw,38px);
   align-items:center;
   padding-block:clamp(70px,11vh,130px);
 }
@@ -290,16 +290,15 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* 白いキャプションを明るい写真(水面など)に置くと2.5:1まで落ちるので、
    下端に写真的なヴィネットを敷いてAAを確保する。薄くする時は必ず実測し直すこと */
 .apItem::after{
-  content:"";position:absolute;inset:auto 0 0 0;height:66%;pointer-events:none;
+  content:"";position:absolute;inset:auto 0 0 0;height:70%;pointer-events:none;
   background:linear-gradient(to top,
-    rgba(13,14,13,.66) 0%,rgba(13,14,13,.52) 24%,rgba(13,14,13,.18) 58%,rgba(13,14,13,0) 100%);
+    rgba(13,14,13,.72) 0%,rgba(13,14,13,.60) 30%,rgba(13,14,13,.22) 62%,rgba(13,14,13,0) 100%);
 }
 .apItem figcaption{z-index:2}
 .apCount{
-  display:none;z-index:2;
-  font-family:var(--ff-en);font-size:var(--fs-label);letter-spacing:.2em;color:#fff;
+  display:none;
+  font-family:var(--ff-en);font-size:var(--fs-label);letter-spacing:.2em;color:var(--muted);
   flex-direction:column;align-items:center;gap:4px;line-height:1.6;
-  text-shadow:0 1px 14px rgba(13,14,13,.45);
 }
 .apCount i{font-style:normal;opacity:.6}
 .more{
@@ -322,7 +321,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   display:flex;align-items:baseline;gap:clamp(18px,3vw,46px);flex-wrap:wrap;
 }
 .worksHead h2{
-  font-family:var(--ff-en);font-size:clamp(19px,1.9vw,28px);font-weight:400;
+  font-family:var(--ff-en);font-size:clamp(17px,1.55vw,24px);font-weight:400;
   letter-spacing:.26em;text-transform:uppercase;
   display:flex;align-items:center;gap:clamp(16px,2.4vw,38px);
 }
@@ -339,18 +338,17 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .worksScroller::-webkit-scrollbar{display:none}
 .worksTrack{
   display:flex;align-items:flex-start;
-  gap:clamp(14px,2.2vw,34px);
   padding-inline:var(--gut);
   width:max-content;
 }
-.work{flex:none;width:clamp(232px,32vw,500px);scroll-snap-align:center}
-.work figure{margin:0;overflow:hidden;background:var(--paper-2);aspect-ratio:1.34/1}
+.work{flex:none;width:clamp(210px,26vw,400px);scroll-snap-align:center}
+.work figure{margin:0;overflow:hidden;background:var(--paper-2);aspect-ratio:1.44/1}
 .work img{width:100%;height:100%;object-fit:cover;transform:scale(1.04);
   transition:transform var(--dur-slow) var(--ease-soft)}
 .work:hover img{transform:scale(1)}
 .workCap{
   display:flex;gap:clamp(12px,1.4vw,22px);align-items:baseline;
-  padding:clamp(14px,1.8vw,24px) 0 0;
+  padding:clamp(14px,1.8vw,24px) 0 0 clamp(14px,3.6vw,56px);
 }
 .workCap b{
   font-family:var(--ff-en);font-weight:400;font-size:var(--fs-label);
@@ -469,15 +467,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* ============================================================
    DESKTOP — ピン留め（JSが有効なときだけ）
    ============================================================ */
-@media (min-width:821px){
+@media (min-width:1180px){
   [data-pin="on"] .approach{height:calc(300svh)}
   [data-pin="on"] .apStage{position:sticky;top:0;height:100svh;align-content:center}
   /* 左テキストは固定のまま、右の写真だけ差し替える */
-  [data-pin="on"] .apMedia{display:block;position:relative;aspect-ratio:4/3.1;overflow:hidden;background:var(--paper-2)}
+  [data-pin="on"] .apMedia{display:block;position:relative;overflow:hidden;background:var(--paper-2);
+    aspect-ratio:auto;height:clamp(330px,50svh,540px)}
   [data-pin="on"] .apItem{position:absolute;inset:0;opacity:0;transition:opacity var(--dur-slow) var(--ease-soft)}
   [data-pin="on"] .apItem[data-on="true"]{opacity:1}
-  [data-pin="on"] .apCount{display:flex;position:absolute;
-    right:clamp(14px,1.8vw,26px);bottom:clamp(14px,2vw,26px)}
+  [data-pin="on"] .apCount{display:flex;justify-self:end;align-self:end;
+    padding-bottom:clamp(4px,1vw,14px)}
   [data-pin="on"] .works{height:calc(100svh + var(--pinLen,0px))}
   [data-pin="on"] .worksPin{
     position:sticky;top:0;height:100svh;padding-block:var(--hdr-h) 0;
@@ -485,6 +484,29 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   }
   [data-pin="on"] .worksScroller{overflow:hidden;scroll-snap-type:none}
   [data-pin="on"] .worksTrack{will-change:transform}
+}
+
+/* ============================================================
+   TABLET / MOBILE — ピン留めをやめて縦積み＋横スワイプにする
+   ============================================================ */
+@media (max-width:1179px){
+  .apStage{grid-template-columns:minmax(0,1fr);gap:clamp(24px,5vw,38px)}
+  .approach .vline{display:none}
+  .apMedia{
+    position:relative;aspect-ratio:auto;height:auto;overflow:visible;background:none;
+    display:flex;gap:clamp(12px,3vw,20px);
+    overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    margin-inline:calc(var(--gut) * -1);padding-inline:var(--gut);
+  }
+  .apMedia::-webkit-scrollbar{display:none}
+  .apItem{
+    position:relative;inset:auto;flex:none;
+    width:min(78vw,420px);aspect-ratio:4/3.1;
+    opacity:1;scroll-snap-align:center;background:var(--paper-2);overflow:hidden;
+  }
+  .apCount{display:flex;justify-self:start;align-self:start;color:var(--muted);
+    flex-direction:row;gap:.5em;margin-top:calc(clamp(24px,5vw,38px) * -1 + 4px)}
 }
 
 /* ============================================================
@@ -509,27 +531,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   .phVert{grid-area:vert;max-height:none;align-self:start}
   .phStrip{
     grid-area:strip;width:auto;height:clamp(120px,22vh,180px);
-    margin:clamp(24px,5vh,44px) calc(var(--gut) * -1) calc(clamp(88px,15vh,170px) * -1);
+    margin:clamp(24px,5vh,44px) calc(var(--gut) * -1) calc(clamp(64px,10vh,130px) * -1);
   }
-  .philosophy .vline,.approach .vline{display:none}
-
-  .apStage{grid-template-columns:minmax(0,1fr);gap:clamp(24px,5vw,38px)}
-  .approach .vline{display:none}
-  .apMedia{
-    position:relative;aspect-ratio:auto;height:auto;overflow:visible;background:none;
-    display:flex;gap:clamp(12px,3vw,20px);
-    overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-    margin-inline:calc(var(--gut) * -1);padding-inline:var(--gut);
-  }
-  .apMedia::-webkit-scrollbar{display:none}
-  .apItem{
-    position:relative;inset:auto;flex:none;
-    width:min(78vw,420px);aspect-ratio:4/3.1;
-    opacity:1;scroll-snap-align:center;background:var(--paper-2);overflow:hidden;
-  }
-  .apCount{display:flex;position:static;color:var(--muted);flex-direction:row;gap:.5em;
-    text-shadow:none;margin-top:clamp(12px,2.6vw,18px)}
+  .philosophy .vline{display:none}
 
   .work{width:min(78vw,420px)}
   .work img{transform:none}
@@ -561,7 +565,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   .worksPin{position:static !important;height:auto !important}
   .worksScroller{overflow-x:auto !important}
   .dark{min-height:0}
-  .darkStage{position:relative;height:auto;padding-block:clamp(88px,15vh,170px)}
+  .darkStage{position:relative;height:auto;padding-block:clamp(64px,10vh,130px)}
   .moon{opacity:1;transform:translateY(-50%)}
   .vline::after{transform:scaleY(1)}
   .hdr::before{opacity:1}
@@ -658,8 +662,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
           <figcaption>Water<br>Horizon<br>Time</figcaption>
         </figure>
       </div>
-      <p class="apCount"><span data-ap-now>01</span><i>/</i><span>03</span></p>
       </div>
+      <p class="apCount"><span data-ap-now>01</span><i>/</i><span>03</span></p>
     </div>
   </section>
 
@@ -687,6 +691,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
         <article class="work" data-reveal="up" style="transition-delay:.3s">
           <figure data-reveal="img"><img src="./img/plinth.webp" alt="台座の上で静止する石の球体" width="828" height="584" loading="lazy" decoding="async"></figure>
           <div class="workCap"><b>04</b><span>Stillness</span></div>
+        </article>
+        <article class="work" data-reveal="up" style="transition-delay:.4s">
+          <figure data-reveal="img"><img src="./img/horizon.webp" alt="霞んだ山並みと、水面に映る列柱" width="869" height="649" loading="lazy" decoding="async"></figure>
+          <div class="workCap"><b>05</b><span>Horizon</span></div>
         </article>
         </div>
       </div>
@@ -770,7 +778,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   });
 
   /* ---- ピン留めするかどうか ---- */
-  var wide = window.matchMedia("(min-width: 821px)");
+  var wide = window.matchMedia("(min-width: 1180px)");
   var hero = document.querySelector("[data-hero]");
   var heroBg = document.querySelector("[data-hero-bg]");
   var heroInner = document.querySelector("[data-hero-inner]");
