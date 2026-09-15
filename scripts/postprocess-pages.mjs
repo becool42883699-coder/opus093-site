@@ -91,6 +91,7 @@ const BUILD_ONLY = [
   "migiwa/公開前チェック.md",
   "migiwa/.content.html",
   "migiwa/.works.html",
+  "a-studio/NOTES.md",
 ];
 {
   let dropped = 0;
