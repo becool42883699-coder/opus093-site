@@ -1,0 +1,3 @@
+:HL["/opus093-site/preview/_next/static/chunks/1olta-s7js4o-.css","style"]
+:HL["/opus093-site/preview/_next/static/chunks/0ln0py2w65oh8.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"eEMgwP8QidAyOJEhDXMVI"}
