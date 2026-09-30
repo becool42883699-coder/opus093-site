@@ -3,7 +3,7 @@
 :HL["/opus093-site/preview/_next/static/media/21ca8f3f56c22ca2-s.p.1cp9-4nby68jc.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/opus093-site/preview/_next/static/media/ad9c66e761fed85a-s.p.17y412u0mab7-.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/opus093-site/preview/_next/static/media/trex_inter-s.p.2bn3s6zvc0dyp.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-:HL["/opus093-site/preview/_next/static/chunks/3-zve8k7b_whw.css","style"]
+:HL["/opus093-site/preview/_next/static/chunks/1ueyjtw-fru-5.css","style"]
 :HL["/opus093-site/preview/company-hero-bg.webp","image",{"fetchPriority":"high"}]
 :HL["/opus093-site/preview/brand/trex-logo.png","image"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"company","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"TXZPhrQaCfrZ3oJ8EZi-D"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"company","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"Dh0hlPB8oBI49cxi89V5g"}
