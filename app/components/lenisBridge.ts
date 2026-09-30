@@ -1,9 +1,9 @@
 /**
  * Lenis + GSAP ScrollTrigger の橋渡しを、ページで1つだけ持つための入れ物。
  *
- * トップページは「スクロール演出(TopMotion)」と「4幕エンジン体験(EngineScene)」の
+ * トップページは「スクロール演出(trx/SiteMotion)」と「4幕エンジン体験(EngineScene)」の
  * 2つがスクロールに依存するが、Lenis を2つ作るとスクロールが震えて壊れる。
- * 所有者は TopMotion 1つに固定し、他はここから参照するだけにする。
+ * 所有者は SiteMotion 1つに固定し、他はここから参照するだけにする。
  *
  * ヒーローの「サービス一覧へ」スキップリンクもここから Lenis を取り、
  * ピン区間を飛ばしてスムーズスクロールする。
@@ -14,6 +14,8 @@ type LenisLike = {
     target: string | number | HTMLElement,
     options?: { offset?: number; duration?: number; immediate?: boolean },
   ) => void;
+  stop?: () => void;
+  start?: () => void;
 };
 
 let current: LenisLike | null = null;

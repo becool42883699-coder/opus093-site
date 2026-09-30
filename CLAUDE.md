@@ -293,11 +293,10 @@ HDRI（`public/assets/hdri/env.hdr`）はエンジンの4幕が使うので残�
 - `app/components/engine/EngineScene.tsx` … WebGL＋GSAP＋Lenis。描くDOMは `<canvas>` だけ。
 - `app/components/engine/buildEngine.ts` … 造形とマテリアル。three は引数で受け取る
   （このモジュール自体は three を引き込まない）。
-- `app/components/engine/engine.module.css` … v3のCSSを踏襲。
+- `app/components/engine/engine.module.css` … 4幕ステージ(章の見出し・注釈・ピン)だけ。2026-09 のリデザインでヘッダー・ヒーロー・諸元は §9 の共通部品へ移した。
 
 ### 守る決まり
-- **SubpageShell（＝TrmMotion）を使わない**。v3独自のヘッダーを持つため。
-  **Lenis と ScrollTrigger の橋渡しは `app/components/TopMotion.tsx` が唯一の所有者**で、
+- **Lenis と ScrollTrigger の橋渡しは `app/components/trx/SiteMotion.tsx` が唯一の所有者**で、
   `EngineScene` は Lenis を作らない。2つ作るとホイール1回で2倍スクロールし、
   `<html>` の `lenis-*` クラスが発振して操作感が壊れる（§8 も参照）。
 - 演出の尺・振り付け・カメラのキーフレーム・クランク機構の物理式・縦画面補正(dm)は
@@ -374,21 +373,21 @@ HDRI（`public/assets/hdri/env.hdr`）はエンジンの4幕が使うので残�
   トップは `"use client"` なので、metadata を持たせるにはこの分割が要る。
 - `app/TopPage.tsx` … 本体（`"use client"`）。固定ヘッダー・ヒーロー・4幕・下部セクション・
   フッターまで全部ここ。
-- `app/components/TopMotion.tsx` … Lenis + ScrollTrigger の**唯一の所有者**（§7 参照）。
+- `app/components/trx/SiteMotion.tsx` … Lenis + ScrollTrigger の**唯一の所有者**（§7・§9 参照）。
 - `app/components/lenisBridge.ts` … Lenis インスタンスの受け渡しと `scrollToElement()`。
   Lenis が無い時（モバイル／reduced-motion）はネイティブスクロールに落ちる。
 
 ### 上から順の構成（並べ替えは可、削除は不可）
-ヒーロー（即時表示） → 4幕エンジン体験（ピン区間） → 諸元 → 実績バッジ →
-サービス → EQUIPMENT（3D車両・§6） → 黒→白ワイプ → 施工実績 → 会社情報/アクセス →
-問い合わせCTA → フッター（CC-BY クレジット付き）。
+（2026-09 リデザイン後）ヒーロー（即時表示） → 流れる帯 → ステートメント(01) →
+4幕エンジン体験(02・ピン区間) → 諸元 → 事業(03) → 施工実績(04・PCは横スクロールのピン) →
+数字(05) → 会社(06) → 電話CTA＋フッター（CC-BY クレジット付き）。
 
 ### 命綱（合否ライン。触る前に必ず確認する）
 1. **固定ヘッダーの電話ボタンは全スクロール位置で押せる。** ピン区間中も消さない・
    隠さない・`pointer-events` を切らない。SPは電話アイコン＋番号で1タップ発信
-   （`.telLead` の「電話」ラベルだけ 640px 未満で隠す）。
-2. **ヒーローの電話ボタンはHTMLとして即時表示**。`TopMotion` のフェードイン
-   （`[data-hero-rise]`）の**対象に入れない**。LCPはヒーローのテキストであること
+   （`SiteHeader` の `.tel`）。
+2. **ヒーローの電話ボタンはHTMLとして即時表示**。入場アニメーション
+   （`.x-rise` / `Split`）の**対象に入れない**。LCPはヒーローのテキストであること
    （canvasにしない）。
 3. **ヒーローの「サービス一覧へ ↓」でピン区間を飛ばせる**（`scrollToElement()` 経由）。
    往復してもピンが壊れないこと。
@@ -399,10 +398,12 @@ HDRI（`public/assets/hdri/env.hdr`）はエンジンの4幕が使うので残�
 ブランドのメインビジュアル（`hero-trex-construction-final.webp`）を敷き、その上に
 暗幕を重ねる。**`<img>` / `next/image` ではなく CSS の `background-image` で敷く**こと
 ——要素にすると LCP がヒーローの見出しテキストから写真へ移り、命綱の要件を壊す。
-- 819px以下は軽量版 `hero-trex-construction-sp.webp`（幅1100px・86KB）に差し替え、
-  表示位置を `59% center` に寄せて恐竜の顔を窓に入れる（PCは `72% center`）。
-  SPは画像の横を2割ほどしか見せないので、解像度を落としても見た目は変わらない。
-- 暗幕はPCが左からの斜めグラデ、SPは上下方向。下端は必ず `--e-ink` へ落として
+- （2026-09 リデザイン）819px以下は写真を画面の上半分に置き、恐竜の顔をはっきり見せる。
+  本文はその下の暗部から始まる（ヒーローは画面より長くてよい。電話はヘッダーにも常にある）。
+  SP も PC と同じ `hero-trex-construction-final.webp` を使う（軽量版は縦に伸ばすと粗いため）。
+- PC の動画(`public/media/…roar.mp4`)は **820px以上・reduced-motion でない・通信節約オフ**
+  の時だけ JS で差し込む（スマホに 5MB を送らない）。
+- 暗幕はPCが左からの斜めグラデ、SPは上下方向。下端は必ず `--x-ink` へ落として
   4幕ステージへ継ぎ目なく渡す。
 - 文字のコントラストは実測で担保する（背後の実ピクセルの上位2%を最悪ケースとして
   計測）。現状の最小は本文の 5.80:1（SP）。**暗幕を薄くする時は必ず測り直すこと。**
@@ -446,3 +447,45 @@ LCPと帯域を食い合わせないため。読み込み中は**黒いcanvas＋
 `scripts/postprocess-pages.mjs` が `out/engine/index.html` の `<head>` 先頭に
 `<meta http-equiv="refresh">` を挿す。canonical は `app/engine/page.tsx` 側で `/` を指す。
 JS無効でも転送される。**sitemap.xml / llms.txt に `/engine` を復活させない。**
+
+## 9. T-REX サイトのデザインシステム（2026-09 全面リデザイン）
+
+ユーザーの依頼（「既存のデザイン崩していいから刷新。Awwwards / Webby / FWA で賞を取れる水準」）で、
+T-REX の6ページ（`/` `/service` `/works` `/company` `/recruit` `/contact`）を作り直した。
+`/becool` には一切触れていない（`--x-*` トークンも `data-x-*` 属性も becool では使わない）。
+
+### ファイル
+- `app/globals.css` 末尾 … `--x-*` トークン（面はインク #07090c / ボーン #eceef1 の2色＋
+  ブランドのシアン #3ec1f0 を1色。明地でシアンを文字に使う時だけ `--x-accent-ink`）、
+  Lenis 用CSS、文字分割用の `.x-*` クラス、和文の文節改行（`word-break: auto-phrase`）。
+- `app/components/trx/` … 共通部品。
+  - `site.ts` 電話番号・ナビ・`asset()`（basePath付きパス）。**表記はここだけ直す。**
+  - `SiteHeader` / `SiteFooter` / `PageHero` / `SubPage`（サブページの外枠）/ `Split` / `Stages` / `Icon`
+  - `SiteMotion.tsx` + `effects.ts` … `data-x-*` 属性だけを見て動く演出（下表）。
+  - `site.module.css`（全ページ共通）/ `sub.module.css`（サブページ）。トップは `app/top.module.css`。
+- 書体は `next/font` で自己ホスト（新規npm依存なし）: Archivo（wdth軸で欧文コンデンス）/
+  Noto Sans JP（900まで）/ JetBrains Mono。
+
+### 演出の属性（effects.ts）
+`data-x-split`（見出しを文字ごとにせり上げ）/ `data-x-reveal`（フェードアップ、`="stagger"` で子を順に）/
+`data-x-clip`（画像のクリップ開き）/ `data-x-parallax="n"` / `data-x-words`（文章を読む速さで点灯）/
+`data-x-marquee` / `data-x-hscroll`（PC幅のみピン留めの横スクロール）/ `data-x-preview`（ホバーで
+カーソル追従の画像。マウスのみ）/ `data-x-magnetic` / `data-x-hero` / `data-x-wordmark`。
+- 初期状態は全て `gsap.from` で JS 実行後に付ける。**JS無効・reduced-motion で opacity:0 が残らない。**
+- 読み込み直後の見出し（ヒーロー・サブページの h1）は **サーバー側で文字を割る `Split.tsx` + CSS
+  アニメーション**。JS を待たないので、割り直しのチラつきが無い。
+- 文字を割る時は `segment.ts` で文節に近い単位にまとめて nowrap にする。**1文字ずつ inline-block に
+  すると禁則が効かず「、」「。」だけが次の行へ落ちる（実際に落ちた）。**
+
+### 面とヘッダー
+- 明るい面には必ず `data-surface="light"`（シアンの面は `"accent"`）を付ける。
+  `SiteHeader` がヘッダーの下の面を見て帯の色を切り替える（暗い半透明の帯を明るい面に重ねると
+  濁ったグレーになるため）。`sub.module.css` の明地用の上書きもこの属性で書いている
+  （CSS Modules ではクラス名がファイルごとにハッシュ化されるので `.light` を別ファイルから参照できない）。
+- `.lift` を付けた面は角丸で前の面に重なる。ピン留めする面（施工実績の横スクロール）には付けない。
+
+### 検証の手順（毎回）
+静的エクスポート → `scripts/postprocess-pages.mjs` → `out/` を配信して Playwright で:
+PC 1440 / SP 390 のスクロール撮影、reduced-motion・JS無効・WebGL無効で「見えない本文が残っていないか」、
+横スクロールが出ていないか、コンソールエラーが0か。**タッチスクロールの確認は
+`Input.synthesizeScrollGesture` がこの環境では動かないので `Input.dispatchTouchEvent` で行う。**

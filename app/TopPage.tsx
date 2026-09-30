@@ -1,25 +1,32 @@
 "use client";
 
 /**
- * トップページ。TRX-4 の4幕エンジン体験を主役に据え、その下に従来の各セクションを繋げる。
+ * トップページ(2026 リデザイン)。
  *
- * 体験より先に「電話したい客」を取りこぼさないことを優先している:
- *  - 固定ヘッダーの電話ボタンは全スクロール位置で押せる(ピン区間中も消えない)
- *  - ヒーローの電話ボタンはHTMLとして即時表示。演出のフェードイン対象にしない
- *  - ヒーローの「サービス一覧へ」でピン区間を飛ばして下のセクションへ行ける
+ * 流れ: ヒーロー → 流れる帯 → ステートメント → 4幕エンジン体験(ピン) → 諸元 →
+ *       事業 → 施工実績(横スクロール) → 数字 → 会社 → 電話CTA+フッター
  *
- * 4幕の本文・ラベル・諸元は静的HTMLで出し切るので、JS無効・reduced-motion・
- * WebGL2非対応でも全部読める。演出を出せる環境かどうかは、初回ペイント前に
- * 下の MOTION_PROBE が html[data-engine-motion] を立てて決める(レイアウトが飛ばない)。
+ * 命綱(CLAUDE.md §8。演出の都合で削らない):
+ *  - 固定ヘッダーの電話ボタンは全スクロール位置で押せる(SiteHeader)
+ *  - ヒーローの電話ボタンはHTMLとして即時表示。入場アニメーションの対象にしない
+ *  - ヒーローの「サービス一覧へ」でピン区間を飛ばせる(scrollToElement)
+ *  - 4幕の本文・諸元は静的HTML。JS無効・reduced-motion・WebGL2非対応では縦積みで読める
  */
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
-import TopMotion from "./components/TopMotion";
+import { useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { scrollToElement } from "./components/lenisBridge";
 import EngineSceneMount from "./components/engine/EngineSceneMount";
 import eng from "./components/engine/engine.module.css";
+import SiteHeader from "./components/trx/SiteHeader";
+import SiteFooter from "./components/trx/SiteFooter";
+import SiteMotion from "./components/trx/SiteMotion";
+import Split from "./components/trx/Split";
+import { ArrowGlyph, BrandMark, PhoneGlyph } from "./components/trx/Icon";
+import { asset, HOURS, TEL, TEL_HREF } from "./components/trx/site";
+import site from "./components/trx/site.module.css";
+import t from "./top.module.css";
 
 /* 初回ペイント前に走らせる。EngineScene と同じ条件で判定する。 */
 const MOTION_PROBE = `try{
@@ -27,27 +34,13 @@ var r=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches,
 try{g=!!document.createElement('canvas').getContext('webgl2')}catch(e){}
 if(!r&&g)document.documentElement.setAttribute('data-engine-motion','on')}catch(e){}`;
 
-const TEL = "090-7531-5428";
-const TEL_HREF = "tel:09075315428";
-const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
-
-const navItems = [
-  ["トップ", "/"],
-  ["サービス", "/service"],
-  ["施工実績", "/works"],
-  ["会社概要", "/company"],
-  ["採用情報", "/recruit"],
-  ["お問い合わせ", "/contact"],
-];
-
 const CHAPTERS = [
-  { n: "01", head: <>鉄の<em>塊。</em></>, cap: "20万キロ働いた鋳鉄のブロック。面研とラインボーリングで、もう一度ゼロへ戻す。" },
-  { n: "02", head: <>透視<em>する。</em></>, cap: "外装がガラスに変わる。クランクはあなたのスクロールと連動し、カムがバルブを叩き、上死点で点火する。" },
-  { n: "03", head: <>手で、<em>組む。</em></>, cap: "1,214点。ロッドキャップを外し、ヘッドを吊り上げ、クランクを降ろす——そして全ボルトを規定トルクで組み戻す。" },
-  { n: "04", head: <><em>始動。</em></>, cap: "規定トルクで組み、火を入れる。クランキング——初爆——安定回転。納車まで、あと少し。" },
+  { n: "01", name: "鉄の塊", head: <>鉄の<em>塊。</em></>, cap: "20万キロ働いた鋳鉄のブロック。面研とラインボーリングで、もう一度ゼロへ戻す。" },
+  { n: "02", name: "透視", head: <>透視<em>する。</em></>, cap: "外装がガラスに変わる。クランクはあなたのスクロールと連動し、カムがバルブを叩き、上死点で点火する。" },
+  { n: "03", name: "手組み", head: <>手で、<em>組む。</em></>, cap: "1,214点。ロッドキャップを外し、ヘッドを吊り上げ、クランクを降ろす——そして全ボルトを規定トルクで組み戻す。" },
+  { n: "04", name: "始動", head: <><em>始動。</em></>, cap: "規定トルクで組み、火を入れる。クランキング——初爆——安定回転。納車まで、あと少し。" },
 ];
-
-const CHAPTER_NAV = ["01 鉄の塊", "02 透視", "03 手組み", "04 始動"];
+const CHAPTER_NAV = CHAPTERS.map((c) => `${c.n} ${c.name}`);
 
 const LABELS = [
   { i: 1, cls: "lbl1" as const, b: "ツインカム", rest: " — DOHC 16V" },
@@ -57,157 +50,185 @@ const LABELS = [
 
 const SPECS = [
   { v: <>TRX-4</>, l: "直列4気筒 DOHC 16V" },
-  { v: <>1,998<small> CC</small></>, l: "排気量" },
-  { v: <>10.8<small> : 1</small></>, l: "圧縮比（ブループリント処理）" },
+  { v: <>1,998<small>cc</small></>, l: "排気量" },
+  { v: <>10.8<small>:1</small></>, l: "圧縮比(ブループリント処理)" },
   { v: <>1,214</>, l: "部品点数 — すべて手組み" },
 ];
 
-function PhoneIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />
-    </svg>
-  );
+const MARQUEE = ["Body & Paint", "Cargo Bed", "On-site Repair", "Transport", "Engine Overhaul"];
+
+const PRINCIPLES = [
+  { en: "Speed", ja: "止めない対応力", d: "現場の状況を素早く把握し、復旧までの時間を最小限に抑えます。" },
+  { en: "Quality", ja: "妥協しない品質", d: "見えない部分まで丁寧に。長く安心して使える仕上がりを追求します。" },
+  { en: "Safety", ja: "安全を最優先", d: "作業者と現場の安全を守るため、確認と基本動作を徹底します。" },
+];
+
+const SERVICES = [
+  { n: "01", ja: "板金塗装", en: "Body & Paint", d: "高品質な塗装で、美しく強い仕上がりへ。損傷の修復もお任せください。", img: "/works-photo-4.webp" },
+  { n: "02", ja: "荷台換装・修理", en: "Cargo Bed", d: "用途に合わせた荷台の換装・修理で、作業効率と安全性を向上。", img: "/works-photo-2.webp" },
+  { n: "03", ja: "出張修理", en: "On-site Repair", d: "現場まで駆けつけ、迅速に対応。ダウンタイムを最小限に。", img: "/works-photo-3.webp" },
+  { n: "04", ja: "車両陸送・軽運送", en: "Transport", d: "車両や資材の陸送・軽運送に、安全かつ丁寧に対応します。", img: "/works-photo-7.webp" },
+];
+
+const WORKS = [
+  { img: "/works-photo-7.webp", tag: "荷台換装", title: "施工前 — シャーシのみ", w: 870, h: 654 },
+  { img: "/works-photo-1.webp", tag: "荷台換装", title: "施工中 — 根太の設置", w: 870, h: 653 },
+  { img: "/works-photo-2.webp", tag: "荷台換装", title: "床板張替え 完成", w: 870, h: 654 },
+  { img: "/works-photo-5.webp", tag: "板金塗装", title: "部品の塗装作業", w: 870, h: 1160 },
+  { img: "/works-photo-4.webp", tag: "板金塗装", title: "塗装仕上げ — 鏡面パネル", w: 870, h: 652 },
+  { img: "/works-photo-6.webp", tag: "架装", title: "特殊車両の架装作業", w: 870, h: 654 },
+  { img: "/works-photo-8.webp", tag: "荷台修理", title: "床板張替え — 塗装仕上げ", w: 870, h: 652 },
+];
+
+const FACTS = [
+  { v: "2025", u: "", l: "設立", d: "2025年1月設立。現場に根ざしたサービスを提供" },
+  { v: "02", u: "県", l: "対応エリア", d: "福岡・山口。その他の地域も応相談" },
+  { v: "9–18", u: "", l: "営業時間", d: "定休日は祝日・日曜日・土曜日(営業日あり)" },
+  { v: "2", u: "way", l: "修理の形", d: "現場への出張修理と、工場への持込修理" },
+];
+
+/** 日本時間の時計。サーバー側では描かない(ハイドレーション差分を出さない) */
+function useJstClock() {
+  const [now, setNow] = useState("");
+  useEffect(() => {
+    const fmt = new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo", hour12: false });
+    const tick = () => setNow(fmt.format(new Date()));
+    tick();
+    const id = window.setInterval(tick, 15000);
+    return () => window.clearInterval(id);
+  }, []);
+  return now;
 }
 
-function Brand() {
-  return (
-    <a className={eng.brand} href="#top" aria-label="T-REX トップへ">
-      <span className={eng.tx} aria-hidden="true">TX</span>T-REX
-    </a>
-  );
+/** PC幅・通信節約なし・動きOK のときだけ動画を差し込む(スマホには 5MB を送らない) */
+const VIDEO_QUERY = "(min-width: 820px) and (prefers-reduced-motion: no-preference)";
+function subscribeVideo(onChange: () => void) {
+  const mq = window.matchMedia(VIDEO_QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
 }
-
-function SiteBrand() {
-  return (
-    <a className="brand" href="#top" aria-label="T-REX トップへ">
-      <span className="brandMark" aria-hidden="true"><Image src="/icons/brand-tx.svg" alt="" width={48} height={48} /></span>
-      <span className="brandType"><strong>T-REX</strong><small>T-REX CO., LTD.</small></span>
-    </a>
-  );
+function videoAllowed() {
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+  return window.matchMedia(VIDEO_QUERY).matches && !conn?.saveData;
 }
-
-function UiIcon({ name, className = "" }: { name: string; className?: string }) {
-  return <Image className={`uiIcon ${className}`} src={`/icons/${name}.svg`} alt="" width={48} height={48} aria-hidden="true" />;
-}
-
-function Arrow() {
-  return <UiIcon name="arrow-right" className="arrow" />;
+function useHeroVideo() {
+  return useSyncExternalStore(subscribeVideo, videoAllowed, () => false);
 }
 
 export default function TopPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const clock = useJstClock();
+  const video = useHeroVideo();
 
-  const handleContactSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const subject = encodeURIComponent(`Webサイトからのお問い合わせ：${String(data.get("subject") || "ご相談")}`);
-    const body = encodeURIComponent([
-      `お名前：${String(data.get("name") || "")}`,
-      `会社名：${String(data.get("company") || "")}`,
-      `電話番号：${String(data.get("phone") || "")}`,
-      `メールアドレス：${String(data.get("email") || "")}`,
-      "",
-      String(data.get("message") || ""),
-    ].join("\n"));
-    window.location.href = `mailto:info@t-rex-works.com?subject=${subject}&body=${body}`;
-  };
-
-  useEffect(() => {
-    document.body.classList.toggle("menu-open", menuOpen);
-    return () => document.body.classList.remove("menu-open");
-  }, [menuOpen]);
-
-  /* ピン区間を飛ばして下のセクションへ。Lenis があれば滑らかに送る */
+  /* ピン区間を飛ばして事業一覧へ。Lenis があれば滑らかに送る */
   const skipToSections = () => {
     const target = document.getElementById("service");
-    if (target) scrollToElement(target, -72);
+    if (target) scrollToElement(target, 0);
   };
 
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: MOTION_PROBE }} />
+      <SiteHeader current="/" chapters={CHAPTER_NAV} />
 
-      <header className={`${eng.tokens} ${eng.header}`}>
-        <Brand />
-        <ul className={eng.chapnav} aria-hidden="true">
-          {CHAPTER_NAV.map((label, i) => <li key={label} data-chapnav={i}>{label}</li>)}
-        </ul>
-        <div className={eng.chapnow} data-chapnow aria-hidden="true">01 — 鉄の塊</div>
-        <div className={eng.headerRight}>
-          <nav className={eng.navLinks} aria-label="メインナビゲーション">
-            {navItems.map(([label, href]) => <Link key={href} href={href}>{label}</Link>)}
-          </nav>
-          {/* 命綱。全スクロール位置で押せる */}
-          <a className={eng.tel} href={TEL_HREF} aria-label={`電話でお問い合わせ ${TEL}`}>
-            <PhoneIcon />
-            <span className={eng.telLead}>電話</span>
-            <span className={eng.telNum}>{TEL}</span>
-          </a>
-          <button
-            className={eng.menuButton}
-            type="button"
-            aria-label="メニューを開く"
-            aria-expanded={menuOpen}
-            aria-controls="main-navigation"
-            onClick={() => setMenuOpen(true)}
-          >
-            <span /><span /><span />
-          </button>
-        </div>
-      </header>
+      <main id="top" className={t.main} data-x-site>
+        {/* ---------------- ヒーロー ---------------- */}
+        <section className={t.hero} data-x-hero aria-labelledby="hero-title">
+          <div className={t.heroMedia} data-x-hero-media>
+            {video && (
+              <video
+                className={t.heroVideo}
+                autoPlay muted playsInline preload="auto"
+                poster={asset("/hero-trex-construction-final.webp")}
+                aria-hidden="true" tabIndex={-1}
+              >
+                <source src={asset("/media/trex-homepage-hero-cinematic-roar.mp4")} type="video/mp4" />
+              </video>
+            )}
+          </div>
+          <div className={t.heroShade} aria-hidden="true" />
 
-      <nav
-        id="main-navigation"
-        className={`${eng.tokens} ${eng.mobileNav}`}
-        data-open={menuOpen ? "true" : "false"}
-        aria-label="メインナビゲーション"
-        aria-hidden={!menuOpen}
-      >
-        <button className={eng.mobileClose} type="button" aria-label="メニューを閉じる" onClick={() => setMenuOpen(false)}>×</button>
-        {navItems.map(([label, href]) => (
-          <Link key={href} href={href} onClick={() => setMenuOpen(false)} tabIndex={menuOpen ? 0 : -1}>{label}</Link>
-        ))}
-        <a className={eng.tel} href={TEL_HREF} tabIndex={menuOpen ? 0 : -1}>
-          <PhoneIcon /><span className={eng.telNum}>{TEL}</span>
-        </a>
-      </nav>
-
-      <main id="top" className="trexHome">
-        <div className={eng.page} data-engine-page>
-          {/* スクロール進行バー。position:fixed なのでDOM上の位置は見た目に影響しない */}
-          <div className={eng.progress} data-progress aria-hidden="true" />
-          <section className={eng.hero} aria-labelledby="hero-title">
-            <video
-              className={eng.heroVideo}
-              autoPlay
-              muted
-              playsInline
-              preload="metadata"
-              poster={`${BASE_PATH}/hero-trex-construction-final.webp`}
-              aria-hidden="true"
-              tabIndex={-1}
-            >
-              <source src={`${BASE_PATH}/media/trex-homepage-hero-cinematic-roar.mp4`} type="video/mp4" />
-            </video>
-            <p className={eng.eyebrow} data-hero-rise>T-REX CO., LTD. — NEVER STOP THE SITE</p>
-            <h1 id="hero-title" data-hero-rise>現場を、<br /><span>止めない。</span></h1>
-            <p className={eng.lede} data-hero-rise>
-              板金塗装・荷台換装・修理・出張修理。トラックの心臓部——エンジンまで、T-REXが確かな仕事で応えます。
-              福岡・山口を中心に、現場へ駆けつけます。
+          <div className={t.heroBody} data-x-hero-body>
+            <p className={`${t.heroKicker} x-rise`} style={{ "--d": "100ms" } as CSSProperties}>
+              <i aria-hidden="true" />Never stop the site — 福岡・山口
             </p>
-            <div className={eng.heroActions}>
-              <a className={eng.heroTel} href={TEL_HREF}>
-                <PhoneIcon />
-                {TEL}
-                <small>9:00〜18:00</small>
-              </a>
-              <Link className={eng.heroGhost} href="/contact">仕事を相談する</Link>
+            <h1 id="hero-title" className={t.heroTitle}>
+              <Split lines={[["現場を、"], [{ text: "止めない。", em: true }]]} delay={180} step={55} />
+            </h1>
+            <div className={t.heroFoot}>
+              <p className={`${t.heroLede} x-rise`} style={{ "--d": "650ms" } as CSSProperties}>
+                板金塗装・荷台換装・修理・出張修理。トラックの心臓部——エンジンまで、T-REXが確かな仕事で応えます。
+              </p>
+              {/* 命綱: 入場アニメーションの対象にしない(常に即時表示) */}
+              <div className={t.heroActions}>
+                <a className={t.heroTel} href={TEL_HREF}>
+                  <PhoneGlyph className={t.heroTelGlyph} />
+                  <span className={t.heroTelNum}>{TEL}</span>
+                  <small>{HOURS}</small>
+                </a>
+                <Link className={`${site.pill} ${site.pillGhost} ${t.heroGhost}`} href="/contact" data-x-magnetic>
+                  仕事を相談する<ArrowGlyph className={site.pillArrow} />
+                </Link>
+              </div>
             </div>
-            <button className={eng.skip} type="button" onClick={skipToSections}>
+          </div>
+
+          <div className={t.heroBar}>
+            <p><span>(Area)</span>福岡県・山口県</p>
+            <p><span>(Hours)</span>{HOURS}</p>
+            <p className={t.heroClock}><span>(Local time)</span><b><time suppressHydrationWarning>{clock || "--:--"}</time> JST</b></p>
+            <button className={t.skip} type="button" onClick={skipToSections}>
               サービス一覧へ<i aria-hidden="true" />
             </button>
-            <div className={eng.cue} aria-hidden="true"><i /> SCROLL</div>
+          </div>
+        </section>
+
+        {/* ---------------- 流れる帯 ---------------- */}
+        <div className={t.marquee} data-x-marquee="34" aria-hidden="true">
+          {[0, 1].map((k) => (
+            <div className={t.mTrack} data-x-track key={k}>
+              {MARQUEE.map((m, i) => (
+                <span key={m} className={i % 2 ? t.mOutline : undefined}>
+                  {m}<BrandMark className={t.mMark} />
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* ---------------- ステートメント ---------------- */}
+        <section className={`${site.section} ${site.light} ${site.lift} ${t.statement}`} data-surface="light" aria-labelledby="statement-title">
+          <p className={site.label}><span>(01)</span>About — T-REXについて</p>
+          <h2 id="statement-title" className={site.srOnly}>T-REXについて</h2>
+          <p className={t.statementText} data-x-words>
+            トラックが止まれば、現場が止まる。
+            板金塗装から荷台の換装、出張修理、陸送まで——
+            T-REXは、福岡・山口の現場を動かし続けるための仕事を、一手に引き受けます。
+          </p>
+          <ol className={t.principles} data-x-reveal="stagger">
+            {PRINCIPLES.map((p, i) => (
+              <li key={p.en}>
+                <span className={t.pNum}>0{i + 1}</span>
+                <span className={t.pEn}>{p.en}</span>
+                <h3>{p.ja}</h3>
+                <p>{p.d}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* ---------------- 4幕エンジン ---------------- */}
+        <div className={eng.page} data-engine-page>
+          <div className={eng.progress} data-progress aria-hidden="true" />
+
+          <section className={`${site.section} ${t.engineIntro}`} aria-labelledby="engine-title">
+            <div className={site.head}>
+              <p className={site.label}><span>(02)</span>The Craft — エンジン整備</p>
+              <h2 id="engine-title" className={site.h2} data-x-split>心臓部まで、<br /><em>手で組む。</em></h2>
+              <p className={site.lead} data-x-reveal>
+                ここから先は、TRX-4エンジンの分解から始動までの記録です。
+                3Dは写真ではなく、ブラウザ上でリアルタイムに描いています。スクロールで進めてください。
+              </p>
+            </div>
           </section>
 
           <div className={eng.stageWrap} data-stage-wrap>
@@ -219,9 +240,10 @@ export default function TopPage() {
               </div>
               {CHAPTERS.map((c, i) => (
                 <div className={eng.chapter} key={c.n} data-ch={i + 1}>
+                  <p className={eng.act} aria-hidden="true"><span>Act {c.n}</span> / 04 — {c.name}</p>
                   <div className={eng.num} aria-hidden="true">{c.n}</div>
                   <h2>{c.head}</h2>
-                  <p className={`${eng.serif} ${eng.cap}`}>{c.cap}</p>
+                  <p className={eng.cap}>{c.cap}</p>
                 </div>
               ))}
               {LABELS.map((l) => (
@@ -232,130 +254,143 @@ export default function TopPage() {
             </div>
           </div>
 
-          <section className={eng.spec} aria-labelledby="engine-spec-title">
-            <p className={eng.k} id="engine-spec-title">05 — 諸元 / SPECIFICATIONS</p>
-            <div className={eng.grid}>
+          <section className={`${site.section} ${t.spec}`} data-spec aria-labelledby="engine-spec-title">
+            <p className={site.label} id="engine-spec-title"><span>(—)</span>Specifications — 諸元</p>
+            <div className={t.specGrid}>
               {SPECS.map((s) => (
-                <div className={eng.cell} key={s.l} data-cell>
-                  <div className={eng.v}>{s.v}</div>
-                  <div className={eng.l}>{s.l}</div>
+                <div className={t.specCell} key={s.l} data-cell>
+                  <div className={t.specV}>{s.v}</div>
+                  <div className={t.specL}>{s.l}</div>
                 </div>
               ))}
             </div>
-            <div className={eng.cta}>
-              <Link className={eng.btn} href="/contact">オーバーホールを相談する</Link>
-              <span className={`${eng.price} ${eng.serif}`}>¥480,000〜 — 3年保証</span>
+            <div className={t.specCta}>
+              <Link className={site.pill} href="/contact" data-x-magnetic>
+                オーバーホールを相談する<ArrowGlyph className={site.pillArrow} />
+              </Link>
+              <p className={t.price}><span>¥480,000〜</span>3年保証</p>
             </div>
           </section>
         </div>
 
-        <section className="proofZone" aria-label="T-REXの実績">
-          <div className="heroProof">
-            <dl className="stats">
-              <div><dt>9–18<small>時</small></dt><dd>営業時間</dd></div>
-              <div><dt>2025<small>年</small></dt><dd>1月設立</dd></div>
-              <div><dt>2<small>県</small></dt><dd>福岡・山口を中心に対応</dd></div>
-            </dl>
-            <ul className="chips">
-              <li><UiIcon name="location-pin" /> その他地域も応相談</li>
-              <li><UiIcon name="rapid-response-tools" /> 出張修理対応</li>
-              <li><UiIcon name="shield-quality" /> 持込修理可能</li>
-            </ul>
+        {/* ---------------- 事業 ---------------- */}
+        <section className={`${site.section} ${site.light} ${site.lift} ${t.services}`} id="service" data-surface="light" aria-labelledby="service-title">
+          <div className={site.head}>
+            <p className={site.label}><span>(03)</span>Services — 事業内容</p>
+            <h2 id="service-title" className={site.h2} data-x-split>止めないための、<br /><em>4つの仕事。</em></h2>
+            <p className={site.lead} data-x-reveal>現場のあらゆるニーズに、専門性とスピードで応える。事故対応・点検を含む全6事業は、サービスページでご案内しています。</p>
+          </div>
+          <div className={t.svcList} data-x-preview>
+            {SERVICES.map((sv) => (
+              <Link className={t.svcRow} href="/service" key={sv.n} data-x-preview-row data-x-reveal>
+                <span className={t.svcNum}>{sv.n}</span>
+                <span className={t.svcTitle}>
+                  <strong>{sv.ja}</strong>
+                  <span>{sv.en}</span>
+                </span>
+                <span className={t.svcDesc}>{sv.d}</span>
+                <span className={t.svcThumb} aria-hidden="true">
+                  <Image src={sv.img} alt="" width={870} height={653} sizes="120px" />
+                </span>
+                <ArrowGlyph className={t.svcArrow} />
+              </Link>
+            ))}
+            <div className={t.preview} data-x-preview-box aria-hidden="true">
+              {SERVICES.map((sv) => (
+                <Image key={sv.n} src={sv.img} alt="" width={870} height={653} sizes="320px" data-x-preview-img />
+              ))}
+            </div>
+          </div>
+          <div className={t.svcMore}>
+            <Link className={site.pill} href="/service" data-x-magnetic>
+              全6事業を見る<ArrowGlyph className={site.pillArrow} />
+            </Link>
           </div>
         </section>
 
-        <section className="contentSection services" id="service" aria-labelledby="service-title">
-          <div className="sectionIntro"><p>SERVICE</p><h2 id="service-title">事業内容</h2><span data-reveal>現場のあらゆるニーズに、<br />専門性とスピードで応える。</span></div>
-          <div className="serviceGrid" id="service-content">{[['01','板金塗装','美しく、使い出しの外観へ。損傷の修復もお任せください。','spray-gun'],['02','荷台換装・修理','用途に合わせた荷台の換装・修理で、作業効率と安全性を向上。','cargo-conversion'],['03','出張修理','現場まで駆けつけ、迅速に対応。ダウンタイムを最小限に。','rapid-response-tools'],['04','車両陸送・軽運送','車両や資材の陸送・軽運送に、安全かつ丁寧に対応します。','mobile-repair-truck']].map(([n,t,d,icon]) => <article className="serviceCard" key={n}><b>{n}</b><div className="serviceIcon"><UiIcon name={icon} /></div><h3>{t}</h3><p>{d}</p><Link href="/contact" aria-label={`${t}について相談する`}><Arrow /></Link></article>)}</div>
-        </section>
-        <section className="contentSection equipment" id="equipment" aria-labelledby="equipment-title">
-          <div className="sectionIntro"><p>EQUIPMENT</p><h2 id="equipment-title">対応車両</h2><span data-reveal>大型ダンプからクレーン付き特装車まで。<br />架装・修理・塗装に対応します。</span></div>
-          <div className="equipmentBody">
-            <ul className="equipmentSpecs">
-              <li><b>荷台換装</b><span>用途に合わせた架装・載せ替えに対応</span></li>
-              <li><b>板金塗装</b><span>全塗装から部分補修まで</span></li>
-              <li><b>出張・持込修理</b><span>現場でも工場でも対応可能</span></li>
-            </ul>
+        {/* ---------------- 施工実績(横スクロール) ---------------- */}
+        <section className={t.works} id="works" data-x-hscroll aria-labelledby="works-title">
+          <div className={t.worksTrack} data-x-hscroll-track>
+            <div className={t.worksHead}>
+              <p className={site.label}><span>(04)</span>Works — 施工実績</p>
+              <h2 id="works-title" className={site.h2} data-x-split>仕事で、<br /><em>語る。</em></h2>
+              <p className={site.lead}>シャーシだけの状態から、根太を据え、床を張り、塗って仕上げる。福岡・山口の現場で手がけた仕事の一部です。</p>
+              <Link className={`${site.pill} ${site.pillGhost}`} href="/works" data-x-magnetic>
+                施工実績を見る<ArrowGlyph className={site.pillArrow} />
+              </Link>
+            </div>
+            {WORKS.map((w, i) => (
+              <figure className={`${t.workCard} ${w.h > w.w ? t.workTall : ""}`} key={w.img}>
+                <div className={t.workImg}>
+                  <Image src={w.img} alt={`${w.tag} — ${w.title}`} width={w.w} height={w.h} sizes="(max-width: 899px) 78vw, 40vw" data-x-hscroll-img />
+                </div>
+                <figcaption>
+                  <span>{String(i + 1).padStart(2, "0")}</span>
+                  <b>{w.title}</b>
+                  <small>{w.tag}</small>
+                </figcaption>
+              </figure>
+            ))}
           </div>
+          <div className={t.worksBar} aria-hidden="true"><i data-x-hscroll-bar /></div>
         </section>
-        <section className="wipeZone" aria-hidden="true">
-          <div className="wipePanel"><p className="wipeLabel">PROJECT FILE</p></div>
-        </section>
-        <section className="contentSection works" id="works" aria-labelledby="works-title">
-          <div className="sectionIntro"><p>WORKS</p><h2 id="works-title">施工実績</h2><span data-reveal>一つひとつの仕事が、<br />私たちの誇りです。</span></div>
-          <div className="workGrid">{[['荷台換装・修理','大型ダンプ 荷台換装・修理','2024.05','/works-photo-2.webp'],['車両陸送・軽運送','車両陸送・軽運送対応','2024.04','/works-photo-6.webp'],['板金塗装','特殊車両 全塗装','2024.03','/works-photo-4.webp'],['出張修理','建設機械 油圧部修理','2024.02','/works-photo-3.webp']].map(([tag,title,date,photo],i) => <article className={`workCard work${i+1}`} key={title}><div className="workScene"><Image src={photo} alt={title} width={870} height={653} sizes="(max-width: 767px) 72vw, 25vw" /></div><div><small>{tag}</small><h3>{title}</h3><time>{date}</time><Link href="/contact" aria-label={`${title}の詳細`}><Arrow /></Link></div></article>)}</div>
-        </section>
-        <section className="aboutSection" id="about" aria-labelledby="about-title">
-          <div className="aboutCopy"><p className="sectionLabel">ABOUT</p><h2 id="about-title">T-REXについて</h2><p data-reveal>T-REX CO., LTD.は、現場の最前線を支えるプロフェッショナル集団です。お客様の課題に真摯に向き合い、スピード・品質・安全のすべてに妥協せず、信頼されるパートナーであり続けます。</p><Link className="outlineButton" href="/company">会社概要を見る <Arrow /></Link></div>
-          <div className="aboutScene" aria-hidden="true">
-            <svg className="trm-lineArt" viewBox="0 0 800 560" preserveAspectRatio="xMidYMax slice" focusable="false">
-              <path d="M0 470 H800" />
-              <path d="M60 470 V330 H150 V470 M78 352 H132 M78 386 H132 M78 420 H132" />
-              <path d="M150 470 V392 H232 V470 M168 414 H214 M168 442 H214" />
-              <path d="M640 470 V302 H726 V470 M658 326 H708 M658 360 H708 M658 394 H708 M658 428 H708" />
-              <path d="M330 470 V120 M318 470 V440 M342 470 V440" />
-              <path d="M330 120 L620 152 M330 120 L240 134" />
-              <path d="M330 78 V120 M330 78 L620 152 M330 78 L240 134" />
-              <path d="M540 143 V222 M526 222 H554 M526 222 V244 H554 V222" />
-            </svg>
-            <div className="aboutSceneType"><span>FIELD</span><strong>PARTNER</strong><small>T-REX CO., LTD.</small></div>
-            <Image className="aboutMascot" src="/hero-trex-v3-cropped.webp" alt="" width={1008} height={1013} sizes="(max-width: 767px) 88vw, 42vw" />
-            <div className="aboutSceneBadge"><UiIcon name="location-pin" /><span>FUKUOKA / YAMAGUCHI</span><b>現場へ、駆けつける。</b></div>
-          </div>
-          <ul className="aboutFeatures"><li><UiIcon name="calendar-experience" /><b>2025年1月設立</b><span>現場に根ざしたサービスを提供</span></li><li><UiIcon name="location-pin" /><b>福岡・山口を中心に対応</b><span>その他地域も可能な限り対応</span></li><li><UiIcon name="clock-fast" /><b>出張修理可能</b><span>現場へ伺い迅速に対応</span></li><li><UiIcon name="shield-safety" /><b>持込修理可能</b><span>車両・機械の持ち込みに対応</span></li></ul>
-        </section>
-        <section className="companySection" id="company" aria-labelledby="company-title">
-          <div className="companyHeading"><p className="sectionLabel">COMPANY</p><h2 id="company-title">会社情報</h2><p data-reveal>福岡県・山口県を中心に、建設・土木・運送の現場を支えます。</p></div>
-          <dl className="companyProfile">
-            <div><dt>代表者</dt><dd>中津留 龍也</dd></div>
-            <div><dt>電話番号</dt><dd><a href={TEL_HREF}>{TEL}</a></dd></div>
-            <div><dt>FAX番号</dt><dd>093-967-2347</dd></div>
-            <div><dt>メールアドレス</dt><dd><a href="mailto:info@t-rex-works.com">info@t-rex-works.com</a></dd></div>
-            <div><dt>営業時間</dt><dd>9:00〜18:00</dd></div>
-            <div><dt>定休日</dt><dd>祝日・日曜日・土曜日（営業日あり）</dd></div>
-            <div><dt>設立年月</dt><dd>2025年1月</dd></div>
-            <div><dt>資本金</dt><dd>300万円</dd></div>
-            <div><dt>法人番号</dt><dd>8290801031174</dd></div>
+
+        {/* ---------------- 数字 ---------------- */}
+        <section className={`${site.section} ${site.lift} ${t.facts}`} data-surface="accent" aria-labelledby="facts-title">
+          <p className={site.label}><span>(05)</span>Facts — 数字で見るT-REX</p>
+          <h2 id="facts-title" className={site.srOnly}>数字で見るT-REX</h2>
+          <dl className={t.factGrid} data-x-reveal="stagger">
+            {FACTS.map((f) => (
+              <div key={f.l} className={t.fact}>
+                <dt>{f.l}</dt>
+                <dd className={t.factV}>{f.v}<small>{f.u}</small></dd>
+                <dd className={t.factD}>{f.d}</dd>
+              </div>
+            ))}
           </dl>
-          <div className="businessScope">
-            <div><UiIcon name="location-pin" /><h3>営業・対応範囲</h3><p>福岡県・山口県を中心に、その他の地域も可能な限り対応します。出張修理・持込修理ともに可能です。</p></div>
-            <div><UiIcon name="gear-technology" /><h3>主な取引先業種</h3><p>建設機械リース会社、解体業、建設業、土木業、運送業</p></div>
-          </div>
-          <article className="representativeMessage">
-            <p className="sectionLabel">MESSAGE</p><h3>代表あいさつ</h3><p>現場で生まれる一つひとつの課題に誠実に向き合い、確かな技術と迅速な対応で、お客様の仕事を支えてまいります。</p><strong>代表　中津留 龍也</strong>
-          </article>
-          <div className="mapPending" aria-label="Googleマップ設置予定"><UiIcon name="location-pin" /><div><strong>Google Map</strong><span>所在地情報を確認後、地図を表示します。</span></div></div>
         </section>
-        <section className="contactSection" id="contact" aria-labelledby="contact-title">
-          <div className="contactIntro"><p className="sectionLabel">CONTACT</p><h2 id="contact-title">お問い合わせ</h2><span data-reveal>現場のことなら、T-REXにご相談ください。</span><div className="phone"><small><UiIcon name="phone" /> お電話でのお問い合わせ</small><a href={TEL_HREF}>{TEL}</a><span>営業時間 9:00〜18:00</span></div><a className="mailAddress" href="mailto:info@t-rex-works.com"><UiIcon name="mail" /> info@t-rex-works.com</a><p className="trm-areaNote">対応エリア: 福岡県(北九州市・福岡市ほか全域)/山口県(下関市ほか全域)。その他の地域もご相談ください。出張修理・持込修理どちらも対応します。</p></div>
-          <form className="contactForm" onSubmit={handleContactSubmit}>
-            <label>お名前<span>必須</span><input name="name" autoComplete="name" required /></label>
-            <label>会社名<input name="company" autoComplete="organization" /></label>
-            <label>電話番号<input name="phone" type="tel" autoComplete="tel" /></label>
-            <label>メールアドレス<span>必須</span><input name="email" type="email" autoComplete="email" required /></label>
-            <label>ご相談内容<select name="subject" defaultValue="修理・施工のご相談"><option>修理・施工のご相談</option><option>出張対応について</option><option>持込修理について</option><option>その他</option></select></label>
-            <label className="formMessage">お問い合わせ内容<span>必須</span><textarea name="message" rows={6} required /></label>
-            <button type="submit">メール内容を確認する <Arrow /></button>
-          </form>
+
+        {/* ---------------- 会社 ---------------- */}
+        <section className={`${site.section} ${site.light} ${site.lift} ${t.company}`} id="company" data-surface="light" aria-labelledby="company-title">
+          <div className={t.companyArt}>
+            <div className={t.companyDisc} aria-hidden="true" data-x-parallax="6" />
+            <Image className={t.mascot} src="/hero-trex-v3-cropped.webp" alt="T-REXのマスコット。トラックを抱えた青い恐竜" width={1008} height={1013} sizes="(max-width: 899px) 86vw, 40vw" />
+            <p className={t.companyTag} aria-hidden="true">Field<br />Partner</p>
+          </div>
+          <div className={t.companyBody}>
+            <p className={site.label}><span>(06)</span>Company — 会社情報</p>
+            <h2 id="company-title" className={site.h2} data-x-split>現場の、<br /><em>いちばん近くに。</em></h2>
+            <p className={t.companyText} data-x-reveal>
+              T-REX CO., LTD.は、現場の最前線を支えるプロフェッショナル集団です。お客様の課題に真摯に向き合い、スピード・品質・安全のすべてに妥協せず、信頼されるパートナーであり続けます。
+            </p>
+            <blockquote className={t.quote} data-x-reveal>
+              <p>現場で生まれる一つひとつの課題に誠実に向き合い、確かな技術と迅速な対応で、お客様の仕事を支えてまいります。</p>
+              <footer>代表 中津留 龍也</footer>
+            </blockquote>
+            <dl className={t.profile} data-x-reveal="stagger">
+              <div><dt>設立</dt><dd>2025年1月</dd></div>
+              <div><dt>資本金</dt><dd>300万円</dd></div>
+              <div><dt>主な取引先</dt><dd>建設機械リース会社、解体業、建設業、土木業、運送業</dd></div>
+              <div><dt>対応</dt><dd>出張修理・持込修理</dd></div>
+            </dl>
+            <Link className={site.pill} href="/company" data-x-magnetic>
+              会社概要を見る<ArrowGlyph className={site.pillArrow} />
+            </Link>
+          </div>
         </section>
       </main>
 
-      <footer className="siteFooter">
-        <SiteBrand />
-        <div><Link href="/service">サービス</Link><Link href="/works">施工実績</Link><Link href="/company">会社概要</Link><Link href="/recruit">採用情報</Link><Link href="/contact">お問い合わせ</Link></div>
-        <p className="creditNote">
-          エンジンの3Dは写真ではなく、ブラウザ上でリアルタイムに描いています。
-          This work is based on{" "}
-          <a href="https://sketchfab.com/3d-models/inline-4-engine-block-diagram-see-through-cf087cd5f8ff4dd495576d206a6dafcf" rel="noopener noreferrer" target="_blank">&quot;Inline 4 engine block diagram (see through)&quot;</a>{" "}
-          by <a href="https://sketchfab.com/Lame3dModels" rel="noopener noreferrer" target="_blank">Lame3D models</a>{" "}
-          and <a href="https://sketchfab.com/3d-models/rigged-4-cylinder-engine-free-e14ebe68273d49a3becda6802270b4b0" rel="noopener noreferrer" target="_blank">&quot;Rigged 4-Cylinder Engine (FREE)&quot;</a>{" "}
-          by <a href="https://sketchfab.com/david.gnzlv" rel="noopener noreferrer" target="_blank">david.gnzlv</a>, licensed under{" "}
-          <a href="http://creativecommons.org/licenses/by/4.0/" rel="noopener noreferrer" target="_blank">CC-BY-4.0</a>. 環境マップは Poly Haven「quarry_01」(CC0)。
-        </p>
-        <small>© T-REX CO., LTD. All Rights Reserved.</small>
-      </footer>
+      <SiteFooter>
+        エンジンの3Dは写真ではなく、ブラウザ上でリアルタイムに描いています。
+        This work is based on{" "}
+        <a href="https://sketchfab.com/3d-models/inline-4-engine-block-diagram-see-through-cf087cd5f8ff4dd495576d206a6dafcf" rel="noopener noreferrer" target="_blank">&quot;Inline 4 engine block diagram (see through)&quot;</a>{" "}
+        by <a href="https://sketchfab.com/Lame3dModels" rel="noopener noreferrer" target="_blank">Lame3D models</a>{" "}
+        and <a href="https://sketchfab.com/3d-models/rigged-4-cylinder-engine-free-e14ebe68273d49a3becda6802270b4b0" rel="noopener noreferrer" target="_blank">&quot;Rigged 4-Cylinder Engine (FREE)&quot;</a>{" "}
+        by <a href="https://sketchfab.com/david.gnzlv" rel="noopener noreferrer" target="_blank">david.gnzlv</a>, licensed under{" "}
+        <a href="http://creativecommons.org/licenses/by/4.0/" rel="noopener noreferrer" target="_blank">CC-BY-4.0</a>. 環境マップは Poly Haven「quarry_01」(CC0)。
+      </SiteFooter>
 
-      <TopMotion />
+      <SiteMotion />
     </>
   );
 }

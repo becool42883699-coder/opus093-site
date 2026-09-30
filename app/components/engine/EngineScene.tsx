@@ -8,9 +8,9 @@
  *
  * このコンポーネントが描くDOMは <canvas> だけ。4幕のコピー・ラベル・諸元は
  * app/engine/page.tsx がサーバー側で出しており、ここからは data-* 属性で拾う
- * (app/components/TrmMotion.tsx と同じ流儀。JS無効でも本文が読める)。
+ * (JS無効でも本文が読める)。
  *
- * Lenis の橋渡しはトップページの TopMotion が唯一の所有者。ここは作らない
+ * Lenis の橋渡しは components/trx/SiteMotion が唯一の所有者。ここは作らない
  * (2つ作るとスクロールが震えて壊れる。CLAUDE.md §3 の Lenis 二重生成)。
  */
 
@@ -40,6 +40,9 @@ const PORTRAIT_PULL = 0.95;
 const PORTRAIT_FIT = 0.80;
 /** 完全な縦画面で描画を上へ寄せる量(ステージ高さに対する比)。下側を本文に明け渡す */
 const PORTRAIT_LIFT = 0.20;
+/* 横長の画面では絵を右へ寄せ、左下の4幕の本文と重ならないようにする(2026 リデザイン)。
+   aspect 1.3 で0、1.8以上で最大。幅に対する割合。 */
+const LANDSCAPE_SHIFT = 0.1;
 
 /** WebGL2 のみ。three は r163 で WebGL1 を切ったので webgl1 判定で通すと例外になる */
 function hasWebGL2(): boolean {
@@ -162,14 +165,14 @@ export default function EngineScene() {
       };
 
       const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x05080d);
+      scene.background = new THREE.Color(0x07090c); // --x-ink と同じ(ステージの継ぎ目を消す)
       /* フォグの距離は v3 のまま。ただし縦画面ではカメラを引くので、
          引いた分だけ霧も遠ざけないとエンジンが霧に沈んで色が抜ける
          (実機で「暗くて何が写っているか分からない」状態になっていた)。
          倍率は resize() で dm に合わせて掛け直す。 */
       const FOG_NEAR = 9;
       const FOG_FAR = 22;
-      scene.fog = new THREE.Fog(0x05080d, FOG_NEAR, FOG_FAR);
+      scene.fog = new THREE.Fog(0x07090c, FOG_NEAR, FOG_FAR);
       const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 60);
 
       /* ---- 環境マップ(HDRI) --------------------------------------------
@@ -364,7 +367,9 @@ export default function EngineScene() {
            ので、端末を回しても絵が飛ばない。横長ではオフセットなし=PCと同一。 */
         const t = Math.min(1, Math.max(0, (1 - camera.aspect) / 0.45));
         parts.root.scale.setScalar(1 - t * (1 - PORTRAIT_FIT));
+        const k = Math.min(1, Math.max(0, (camera.aspect - 1.3) / 0.5));
         if (t > 0) camera.setViewOffset(w, h, 0, h * PORTRAIT_LIFT * t, w, h);
+        else if (k > 0) camera.setViewOffset(w, h, -w * LANDSCAPE_SHIFT * k, 0, w, h);
         else camera.clearViewOffset();
         camera.updateProjectionMatrix();
       };
@@ -374,7 +379,7 @@ export default function EngineScene() {
         composer.render();
       };
 
-      /* Lenis の橋渡しは TopMotion が持つ(2つ作るとスクロールが壊れるため)。
+      /* Lenis の橋渡しは SiteMotion が持つ(2つ作るとスクロールが壊れるため)。
          ここは ScrollTrigger のタイムラインを積むだけ。 */
       gsap.registerPlugin(ScrollTrigger);
 
@@ -507,7 +512,7 @@ export default function EngineScene() {
           stagger: 0.1,
           duration: 0.8,
           ease: "power3.out",
-          scrollTrigger: { trigger: `.${styles.spec}`, start: "top 78%" },
+          scrollTrigger: { trigger: "[data-spec]", start: "top 78%" },
         });
       }, page);
 
