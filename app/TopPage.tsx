@@ -22,6 +22,7 @@ import SiteHeader from "./components/trx/SiteHeader";
 import SiteFooter from "./components/trx/SiteFooter";
 import SiteMotion from "./components/trx/SiteMotion";
 import V14Hero, { HERO_PROBE } from "./components/trx/V14Hero";
+import Loader, { LOADER_PROBE } from "./components/trx/Loader";
 import { ArrowGlyph, Logo } from "./components/trx/Icon";
 import site from "./components/trx/site.module.css";
 import t from "./top.module.css";
@@ -96,7 +97,8 @@ export default function TopPage() {
 
   return (
     <>
-      <script dangerouslySetInnerHTML={{ __html: MOTION_PROBE + HERO_PROBE }} />
+      <script dangerouslySetInnerHTML={{ __html: MOTION_PROBE + HERO_PROBE + LOADER_PROBE }} />
+      <Loader />
       <SiteHeader current="/" chapters={CHAPTER_NAV} />
 
       <main id="top" className={t.main} data-x-site>

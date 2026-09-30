@@ -1,0 +1,83 @@
+/* ロード画面(Loader.tsx)。v14 のヒーローと同じ語彙(濃紺・座標・シアン→ブルー)でつなぐ */
+
+.loader {
+  display: none;
+  position: fixed; inset: 0; z-index: 200;
+  grid-template-rows: auto 1fr auto;
+  padding: calc(env(safe-area-inset-top) + 28px) 5.5vw calc(env(safe-area-inset-bottom) + 28px);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(40, 199, 255, .12), transparent 38%),
+    radial-gradient(circle at 84% 70%, rgba(122, 85, 255, .12), transparent 34%),
+    #030719;
+  color: #eaf4ff; font-family: var(--x-inter);
+  clip-path: inset(0 0 0 0);
+}
+/* 出すのは初回ペイント前のスクリプトが html[data-loading] を立てた時だけ */
+:global(html[data-loading]) .loader {
+  display: grid;
+  /* JS が止まっても7秒で必ず消える保険 */
+  animation: failsafe .6s ease 7s forwards;
+}
+/* 退場: 幕が上へ抜け、ロゴは少し大きくなりながら溶ける */
+.loader[data-state="out"] {
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path .9s cubic-bezier(.76, 0, .24, 1);
+}
+.loader[data-state="out"] .center { transform: scale(1.08); opacity: 0; filter: blur(6px); transition: transform .9s cubic-bezier(.22, 1, .36, 1), opacity .6s, filter .6s; }
+.loader[data-state="gone"] { display: none !important; }
+@keyframes failsafe { to { opacity: 0; visibility: hidden; pointer-events: none; } }
+
+.meta {
+  display: flex; justify-content: space-between; gap: 16px;
+  font-size: clamp(9px, .94vw, 13px); letter-spacing: .16em; color: rgba(213, 237, 241, .45);
+}
+
+.center { display: grid; place-content: center; justify-items: center; gap: 26px; }
+.logo { position: relative; width: clamp(170px, 22vw, 300px); }
+.logoDim { display: block; width: 100%; height: auto; opacity: .12; }
+/* 満ちる側。clip-path の右端を進み具合に合わせて動かす(JS) */
+.logoFill {
+  position: absolute; inset: 0; clip-path: inset(0 100% 0 0);
+  filter: drop-shadow(0 0 14px rgba(99, 220, 255, .55));
+  /* JS が起動するまで(約1秒)もCSSだけで満ち始める。JS が引き継いだら止める */
+  animation: creep 2.4s cubic-bezier(.2, .7, .3, 1) forwards;
+}
+.loader[data-run] .logoFill { animation: none; }
+@keyframes creep { to { clip-path: inset(0 80% 0 0); } }
+.logoImg { display: block; width: 100%; height: auto; }
+.tag {
+  margin: 0; font-size: clamp(10px, 1vw, 13px); font-weight: 800; letter-spacing: .32em; color: #00bce8;
+  animation: blink 1.6s ease-in-out infinite;
+}
+@keyframes blink { 50% { opacity: .45; } }
+
+.bottom { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 18px 28px; }
+.count {
+  margin: 0; line-height: .8; font-weight: 800; font-variant-numeric: tabular-nums;
+  font-size: clamp(56px, 8vw, 120px); letter-spacing: -.02em;
+  background: linear-gradient(180deg, #ffffff 30%, #63dcff 120%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.count small { margin-left: .08em; font-size: .3em; color: #63dcff; -webkit-text-fill-color: #63dcff; }
+.bar { position: relative; align-self: center; height: 2px; border-radius: 2px; background: rgba(99, 220, 255, .16); overflow: hidden; }
+.bar i {
+  position: absolute; inset: 0; transform: scaleX(0); transform-origin: 0 50%;
+  background: linear-gradient(90deg, #4478ff, #63dcff); box-shadow: 0 0 10px rgba(99, 220, 255, .7);
+}
+.tel {
+  display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px 0 14px; border-radius: 999px;
+  background: linear-gradient(106deg, #ffffff 15%, #d9f8ff 85%); color: #07142f;
+  font-size: 14px; font-weight: 800; letter-spacing: .02em; font-variant-numeric: tabular-nums; white-space: nowrap;
+  box-shadow: 0 0 18px rgba(99, 220, 255, .35);
+}
+.tel:focus-visible { outline: 2px solid #63dcff; outline-offset: 3px; }
+.telGlyph { width: 15px; height: 15px; }
+
+@media (max-width: 619px) {
+  .meta { font-size: 9px; letter-spacing: .1em; }
+  .bottom { grid-template-columns: auto 1fr; }
+  .tel { grid-column: 1 / -1; justify-self: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loader { display: none !important; }
+}

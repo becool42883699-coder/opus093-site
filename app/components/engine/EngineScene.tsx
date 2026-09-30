@@ -60,7 +60,7 @@ function hasWebGL2(): boolean {
  * アイドル(最長1.5秒で打ち切り)でプリフェッチを始める。
  */
 function afterHeroPaint(): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise<void>((resolve) => {
     const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number })
       .requestIdleCallback;
     requestAnimationFrame(() =>
@@ -69,6 +69,16 @@ function afterHeroPaint(): Promise<void> {
         else setTimeout(resolve, 200);
       }),
     );
+  }).then(afterLoader);
+}
+
+/* ロード画面(trx/Loader.tsx)が出ている間は重い読み込みを始めない。
+   メインスレッドを塞ぐとロゴの満ち方が止まり、ヒーロー動画の帯域も食い合うため。 */
+function afterLoader(): Promise<void> {
+  if (!document.documentElement.hasAttribute("data-loading")) return Promise.resolve();
+  return new Promise((resolve) => {
+    const t = window.setTimeout(resolve, 8000);
+    window.addEventListener("trex:loaded", () => { window.clearTimeout(t); resolve(); }, { once: true });
   });
 }
 

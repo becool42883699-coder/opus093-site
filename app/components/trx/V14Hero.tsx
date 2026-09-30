@@ -61,14 +61,30 @@ export default function V14Hero({ nextId }: { nextId: string }) {
     v.addEventListener("timeupdate", onTime);
     v.addEventListener("ended", onEnded);
     v.addEventListener("error", toStill);
-    /* 自動再生が拒否された(省電力モード等)ら静止画へ */
-    v.play()?.catch(toStill);
-    /* 読み込みが遅すぎる場合の保険 */
-    const guard = window.setTimeout(() => {
-      if (v.readyState < 2) toStill();
-    }, 6000);
+    let guard = 0;
+    const start = () => {
+      /* 自動再生が拒否された(省電力モード等)ら静止画へ */
+      v.play()?.catch(toStill);
+      /* 読み込みが遅すぎる場合の保険 */
+      guard = window.setTimeout(() => {
+        if (v.readyState < 2) toStill();
+      }, 6000);
+    };
+    /* ロード画面(Loader.tsx)が出ている間は再生を待つ。吠える瞬間を幕の裏で消費しないため */
+    let loaderGuard = 0;
+    if (root.hasAttribute("data-loading")) {
+      window.addEventListener("trex:loaded", start, { once: true });
+      /* ロード画面が何かで止まっても7.5秒で再生を始める */
+      loaderGuard = window.setTimeout(() => {
+        window.removeEventListener("trex:loaded", start);
+        start();
+      }, 7500);
+      window.addEventListener("trex:loaded", () => window.clearTimeout(loaderGuard), { once: true });
+    } else start();
     return () => {
+      window.removeEventListener("trex:loaded", start);
       window.clearTimeout(guard);
+      window.clearTimeout(loaderGuard);
       v.removeEventListener("timeupdate", onTime);
       v.removeEventListener("ended", onEnded);
       v.removeEventListener("error", toStill);

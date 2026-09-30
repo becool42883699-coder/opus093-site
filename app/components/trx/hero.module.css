@@ -59,7 +59,7 @@
 :global(html[data-hero-intro]) .lockup:not([data-on]) {
   opacity: 0;
   /* JS が止まっても必ず出す保険 */
-  animation: reveal 0s 9s forwards;
+  animation: reveal 0s 15s forwards; /* ロード画面(最長5秒)+吠えるまで(4.75秒)より後 */
 }
 .lockup[data-on] > * { animation: copyIn .9s cubic-bezier(.2, .8, .2, 1) both; }
 .lockup[data-on] > .eyebrow { animation-delay: .08s; }
