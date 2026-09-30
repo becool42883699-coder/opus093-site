@@ -165,14 +165,14 @@ export default function EngineScene() {
       };
 
       const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x07090c); // --x-ink と同じ(ステージの継ぎ目を消す)
+      scene.background = new THREE.Color(0x030719); // --x-ink と同じ(ステージの継ぎ目を消す)
       /* フォグの距離は v3 のまま。ただし縦画面ではカメラを引くので、
          引いた分だけ霧も遠ざけないとエンジンが霧に沈んで色が抜ける
          (実機で「暗くて何が写っているか分からない」状態になっていた)。
          倍率は resize() で dm に合わせて掛け直す。 */
       const FOG_NEAR = 9;
       const FOG_FAR = 22;
-      scene.fog = new THREE.Fog(0x07090c, FOG_NEAR, FOG_FAR);
+      scene.fog = new THREE.Fog(0x030719, FOG_NEAR, FOG_FAR);
       const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 60);
 
       /* ---- 環境マップ(HDRI) --------------------------------------------

@@ -37,7 +37,7 @@
 .num {
   font-family: var(--x-display); font-weight: 900; font-stretch: 70%;
   font-size: clamp(6rem, 22vw, 17rem); line-height: .78; letter-spacing: -.04em;
-  color: transparent; -webkit-text-stroke: 1.5px rgba(62, 193, 240, .9);
+  color: transparent; -webkit-text-stroke: 1.5px rgba(99, 220, 255, .9);
 }
 .chapter h2 {
   margin: 14px 0 0; font-weight: 900; letter-spacing: -.03em; line-height: 1.08;
@@ -50,7 +50,7 @@
   position: absolute; z-index: 5; pointer-events: none; white-space: nowrap;
   font-family: var(--x-mono); font-size: 10.5px; letter-spacing: .14em; color: var(--e-bone);
 }
-.lbl i { display: block; height: 1px; background: rgba(62, 193, 240, .55); margin-top: 8px; transform-origin: 0 50%; }
+.lbl i { display: block; height: 1px; background: rgba(99, 220, 255, .55); margin-top: 8px; transform-origin: 0 50%; }
 .lbl b { color: var(--e-accent); font-weight: 500; }
 .lbl1 { top: 18%; left: 6%; }
 .lbl1 i { width: 140px; }
@@ -73,14 +73,14 @@
 .vin {
   position: absolute; inset: 0; z-index: 2; pointer-events: none;
   background:
-    radial-gradient(120% 90% at 60% 42%, transparent 46%, rgba(7, 9, 12, .78) 100%),
-    linear-gradient(0deg, rgba(7, 9, 12, .7) 0%, transparent 34%);
+    radial-gradient(120% 90% at 60% 42%, transparent 46%, rgba(3, 7, 25, .78) 100%),
+    linear-gradient(0deg, rgba(3, 7, 25, .7) 0%, transparent 34%);
 }
 
 /* 読み込み中の進捗。スピナーは使わず、ステージ下端の細いバーだけ */
 .loadTrack {
   position: absolute; left: 0; right: 0; bottom: 0; height: 2px; z-index: 6;
-  background: rgba(62, 193, 240, .16); pointer-events: none;
+  background: rgba(99, 220, 255, .16); pointer-events: none;
   transition: opacity .5s .3s ease;
 }
 .loadFill {
@@ -101,7 +101,7 @@
 @media (max-width: 819px), (max-height: 560px) {
   :global(html[data-engine-motion="on"]) .chapter::before {
     content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 64%;
-    background: linear-gradient(to top, var(--e-ink) 12%, rgba(7, 9, 12, .94) 32%, rgba(7, 9, 12, .66) 56%, transparent 100%);
+    background: linear-gradient(to top, var(--e-ink) 12%, rgba(3, 7, 25, .94) 32%, rgba(3, 7, 25, .66) 56%, transparent 100%);
     z-index: -1; pointer-events: none;
   }
 }

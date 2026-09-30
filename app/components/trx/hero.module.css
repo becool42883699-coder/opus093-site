@@ -1,0 +1,162 @@
+/* トップのヒーロー = ユーザー制作 v14 のヒーローの移植(V14Hero.tsx)。
+   数値は v14 の実測値(幅957pxの設計値)を画面幅に換算したもの。見た目を変えないこと。 */
+
+.hero {
+  position: relative; isolation: isolate; overflow: hidden;
+  min-height: 600px; height: 100vh; height: 100svh;
+  background: #02080f; color: #eaf4ff;
+  font-family: var(--x-inter);
+}
+/* 動画を出さない時(JS無効・reduced-motion・通信節約・再生失敗)は吠える場面の静止画 */
+.stage {
+  position: absolute; inset: 0; z-index: 0;
+  background: #02080f url("/media/trex-hero-roar.webp") 60% center / cover no-repeat;
+}
+.video {
+  display: none; position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: 60% center;
+  opacity: .96; filter: saturate(.9) contrast(1.04) brightness(1.08);
+  animation: videoIn 1.6s cubic-bezier(.2, .8, .2, 1) both;
+}
+:global(html[data-hero-video]) .hero:not([data-still]) .video { display: block; }
+@keyframes videoIn { from { opacity: 0; transform: scale(1.08); } to { opacity: .96; transform: none; } }
+
+/* 薄い方眼(v14 の stage grid) */
+.grid {
+  position: absolute; inset: 0; z-index: 2; opacity: .22; pointer-events: none;
+  background:
+    linear-gradient(rgba(91, 172, 196, .16) 1px, transparent 1px) 0 0 / 100% 88px,
+    linear-gradient(90deg, rgba(91, 172, 196, .16) 1px, transparent 1px) 0 0 / 88px 100%;
+}
+/* ロックアップの背後の光の輪(v14 の halo) */
+.halo {
+  position: absolute; left: 50%; top: 52%; z-index: 3; pointer-events: none;
+  width: min(69vw, 118vh); aspect-ratio: 1; translate: -50% -50%;
+  border: 1px solid rgba(0, 188, 232, .18); border-radius: 50%;
+  box-shadow: 0 0 0 28px rgba(0, 188, 232, .024), 0 0 0 56px rgba(0, 188, 232, .02);
+}
+
+/* 小さな欧文(座標・BRAND・縦書き)。v14 と同じ 45% の白 */
+.meta, .vertical {
+  font-size: clamp(9px, .94vw, 13px); letter-spacing: .16em; line-height: 1.9;
+  color: rgba(213, 237, 241, .45);
+}
+.meta {
+  position: absolute; z-index: 5; left: 5.5vw; right: 5.5vw;
+  top: calc(var(--x-header) + clamp(28px, 9vh, 110px));
+  display: flex; justify-content: space-between; gap: 16px;
+}
+.vertical {
+  position: absolute; z-index: 5; right: 3vw; bottom: 28%; margin: 0;
+  writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .2em;
+}
+
+/* ロックアップ: 吠える瞬間に現れる */
+.lockup {
+  position: absolute; z-index: 20; left: 50%; top: 52%; translate: -50% -50%;
+  display: grid; justify-items: center; text-align: center; width: max-content; max-width: 92vw;
+}
+:global(html[data-hero-intro]) .lockup:not([data-on]) {
+  opacity: 0;
+  /* JS が止まっても必ず出す保険 */
+  animation: reveal 0s 9s forwards;
+}
+.lockup[data-on] > * { animation: copyIn .9s cubic-bezier(.2, .8, .2, 1) both; }
+.lockup[data-on] > .eyebrow { animation-delay: .08s; }
+.lockup[data-on] > .logo { animation-duration: 1.1s; animation-delay: .22s; }
+.lockup[data-on] > .built { animation-delay: .4s; }
+.lockup[data-on] > .field { animation-delay: .5s; }
+@keyframes copyIn { from { opacity: 0; transform: translate3d(0, 18px, 0) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes reveal { to { opacity: 1; } }
+
+.eyebrow {
+  margin: 0; font-size: clamp(10px, 1.05vw, 15px); font-weight: 800; letter-spacing: .24em; color: #00bce8;
+}
+.logo {
+  position: relative; margin: clamp(14px, 3vw, 44px) 0 0; font-weight: 400; line-height: .7;
+  /* v14 と同じ Impact。無い端末(iPhone 等)でも近い形になるよう Archivo の極太・細幅を控えに置く */
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", var(--x-display);
+  font-stretch: 62%;
+}
+.word {
+  display: block; font-size: clamp(88px, 14vw, 240px); letter-spacing: -.025em; color: #fff;
+  font-weight: 900;
+}
+.co {
+  position: absolute; right: -.35em; bottom: -.28em;
+  font-size: clamp(20px, 3.2vw, 55px); letter-spacing: .01em; color: var(--x-orange);
+  font-weight: 900; text-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+}
+.built {
+  display: flex; align-items: center; gap: 1.2em; margin: clamp(22px, 3.4vw, 50px) 0 0;
+  font-size: clamp(12px, 1.56vw, 22px); font-weight: 900; letter-spacing: .16em;
+}
+.built b { color: rgba(240, 249, 250, .92); font-weight: 900; }
+.built i { width: 2.6em; height: 1px; opacity: .72; background: linear-gradient(90deg, rgba(240, 249, 250, .2), #0088ff); }
+.built em { font-style: normal; color: var(--x-orange); }
+.field {
+  margin: clamp(10px, 1.6vw, 24px) 0 0; font-size: clamp(9px, .94vw, 13px); font-weight: 800; letter-spacing: .24em;
+  color: rgba(213, 237, 241, .6);
+}
+
+/* 下端のバー(01 — 03 / FUKUOKA / YAMAGUCHI / SCROLL TO ENTER) */
+.bar {
+  position: absolute; z-index: 7; left: 5.5vw; right: 5.5vw; bottom: calc(22px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 20px; padding: 7px;
+  border-radius: 14px;
+  background: linear-gradient(-90deg, rgba(14, 42, 92, .4) 0%, rgba(7, 16, 39, .13) 55%, rgba(21, 51, 106, .33) 100%), rgba(3, 7, 25, .6);
+  -webkit-backdrop-filter: blur(9px); backdrop-filter: blur(9px);
+  box-shadow: 0 10px 28px rgba(2, 6, 23, .4);
+  font-size: clamp(10px, 1.05vw, 14px); font-weight: 800;
+}
+.idx {
+  display: inline-flex; align-items: center; gap: 12px; flex: none;
+  padding: 7px 12px; border-radius: 10px; border: 1px solid rgba(99, 220, 255, .2); background: rgba(8, 26, 59, .8);
+  letter-spacing: .16em;
+}
+.idx b { color: #9becff; font-weight: 800; }
+.idx > span { color: #8091b2; }
+.idx i { position: relative; display: block; width: 4.4em; height: 2px; border-radius: 2px; background: rgba(99, 220, 255, .18); overflow: hidden; }
+.idx i span {
+  position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(0);
+  background: linear-gradient(90deg, #4478ff, #63dcff); box-shadow: 0 0 8px rgba(99, 220, 255, .53);
+  transition: transform .3s linear;
+}
+.area { flex: 1; text-align: center; letter-spacing: .21em; color: #c9eaf4; }
+.enter {
+  display: inline-flex; align-items: center; gap: 12px; flex: none;
+  padding: 5px 5px 5px 18px; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(99, 220, 255, .27); background: rgba(11, 22, 51, .8);
+  box-shadow: 0 0 16px rgba(99, 220, 255, .12);
+  color: #f5fbff; font: inherit; letter-spacing: .18em;
+  transition: box-shadow .3s;
+}
+.enter i {
+  display: grid; place-items: center; width: 2.6em; height: 2.6em; border-radius: 50%;
+  border: 1px solid #bff7ff; background: linear-gradient(135deg, #63dcff 15%, #4a72ff 85%);
+  box-shadow: 0 0 14px rgba(99, 220, 255, .4);
+  color: #06112c; font-style: normal; font-size: 1.3em; letter-spacing: 0;
+  animation: nudge 2.4s ease-in-out infinite;
+}
+.enter:hover { box-shadow: 0 0 26px rgba(99, 220, 255, .35); }
+.enter:focus-visible { outline: 2px solid #63dcff; outline-offset: 3px; }
+@keyframes nudge { 50% { transform: translateY(3px); } }
+
+/* 縦長の画面: 同じ部品を縦に収め直す(v14 は PC の絵を縮めていた) */
+@media (max-width: 819px) {
+  .video, .stage { background-position: 62% center; object-position: 62% center; }
+  .meta { left: 16px; right: 16px; font-size: 9px; letter-spacing: .12em; }
+  .vertical { right: 8px; bottom: 34%; font-size: 9px; }
+  .lockup { top: 48%; }
+  .halo { width: 118vw; top: 48%; }
+  .word { font-size: 30vw; }
+  .co { font-size: 7vw; right: -.2em; }
+  .built { font-size: 13px; letter-spacing: .12em; }
+  .field { font-size: 9px; letter-spacing: .18em; }
+  .bar { left: 12px; right: 12px; gap: 10px; flex-wrap: wrap; font-size: 10px; }
+  .area { order: 3; flex-basis: 100%; padding: 4px 0 2px; letter-spacing: .18em; }
+  .enter { margin-left: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .video, .lockup > *, .enter i { animation: none !important; }
+}

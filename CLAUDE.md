@@ -386,10 +386,11 @@ HDRI（`public/assets/hdri/env.hdr`）はエンジンの4幕が使うので残�
 1. **固定ヘッダーの電話ボタンは全スクロール位置で押せる。** ピン区間中も消さない・
    隠さない・`pointer-events` を切らない。SPは電話アイコン＋番号で1タップ発信
    （`SiteHeader` の `.tel`）。
-2. **ヒーローの電話ボタンはHTMLとして即時表示**。入場アニメーション
-   （`.x-rise` / `Split`）の**対象に入れない**。LCPはヒーローのテキストであること
-   （canvasにしない）。
-3. **ヒーローの「サービス一覧へ ↓」でピン区間を飛ばせる**（`scrollToElement()` 経由）。
+2. ~~ヒーローの電話ボタン~~ → **2026-09-30 ユーザー指定で撤去**。ヒーローはユーザー制作 v14 の
+   ヒーローを「そのまま」使う決定（§10）。v14 のヒーローに電話ボタンは無い。電話の導線は
+   固定ヘッダー（命綱1）と、フッター直前の大きな電話CTAが担う。
+3. **4幕のピン区間を飛ばせる**（`scrollToElement()` 経由）。2026-09-30 以降は、エンジン導入部の
+   「4幕を飛ばして事業一覧へ」ボタンが担う（ヒーローの「SCROLL TO ENTER」は次の面へ送るだけ）。
    往復してもピンが壊れないこと。
 4. reduced-motion / JS無効 / WebGL2非対応では、4幕が縦積みの静的テキストに落ち、
    ヒーローと下部セクションが完全に読める。
@@ -489,3 +490,30 @@ T-REX の6ページ（`/` `/service` `/works` `/company` `/recruit` `/contact`�
 PC 1440 / SP 390 のスクロール撮影、reduced-motion・JS無効・WebGL無効で「見えない本文が残っていないか」、
 横スクロールが出ていないか、コンソールエラーが0か。**タッチスクロールの確認は
 `Input.synthesizeScrollGesture` がこの環境では動かないので `Input.dispatchTouchEvent` で行う。**
+
+## 10. v14（ユーザー制作版）との融合（2026-09-30）
+
+ユーザーが別途 ChatGPT のサイト機能で作っていた T-REX サイト v14
+（`trex-pendev-claude-handoff-v14-20260925.zip`、公開 https://trex-pendev-preview-20260923.yu08yun.chatgpt.site/）と、
+§9 の刷新版を融合した。指示は「**ヒーローはこのままにしたい。あとはうまいこと融合。ロゴも入れてる**」。
+
+- **ヒーロー = v14 のヒーローを見た目そのまま移植**（`app/components/trx/V14Hero.tsx` + `hero.module.css`）。
+  動画は1回再生、**4.75秒（吠える瞬間）で「T-Rex CO., LTD. / BUILT — TO REPAIR.」が現れる**。
+  座標・BRAND/001・縦書き NEVER STOP THE SITE・方眼・光の輪・下端バー（01—03 / FUKUOKA / YAMAGUCHI /
+  SCROLL TO ENTER）も v14 の実測値。**勝手に要素を足したり消したりしないこと。**
+  - v14 は幅957pxの絵を zoom で縮める作りで、スマホでは文字が4〜5pxだった。移植版は画面幅に合わせて
+    配置し直している（見た目の構成は同じ）。
+  - 動画: 元は4K・14MB。`public/media/trex-hero-1080.mp4`（PC）/ `-720.mp4`（スマホ）に変換済み。
+    動画を出さない時（reduced-motion・通信節約・自動再生拒否・JS無効）は `trex-hero-roar.webp` の静止画と
+    ロックアップを最初から出す。JS が止まっても CSS の保険で9秒後にロックアップが出る。
+  - 「T-Rex」は v14 と同じ Impact。Impact の無い端末（iPhone 等）では Archivo の極太・細幅で代替。
+  - v14 の背面にあった screen 合成のレイヤーは**デザインツールの画面キャプチャの残骸**だったので持ち込んでいない。
+- **公式ロゴ** `public/brand/trex-logo.png`（白抜き）をヘッダー・フッター・代表カードに使用（`Icon.tsx` の `Logo`）。
+- **配色を v14 に寄せた**: 濃紺 #030719 / ブランドブルー #005bff / シアン #63dcff / 紫の光 / 差し色オレンジ #ff7c32。
+  明るい面は v14 の淡い青のインクの滲み（`public/brand/ink-light-*.webp`）、数字の面は v14 のブルー。
+  ヘッダーは v14 と同じ濃紺グラデの帯で、面によって色を変えない。
+- **フォント**: v14 の専用フォント（Inter の欧文サブセット）を `app/fonts/trex-inter.woff2` として
+  `next/font/local` で読み込み、ラベル・数字に使う（旧 JetBrains Mono は廃止）。
+- 文言: 事業の並び（板金塗装 / 荷台換装 / 車両修理 / 出張修理 / 車両陸送・軽運送）と About の文は v14 のもの。
+  サービスページは v14 の「車両修理」を加えて **7事業**。
+- v14 の相談イラスト（`public/brand/consult.webp`）をフッターの電話CTAに、代表カードを会社セクションに移植。

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowGlyph, BrandMark, PhoneGlyph } from "./Icon";
-import { FAX, HOLIDAYS, HOURS, MAIL, NAV, TEL, TEL_HREF } from "./site";
+import { ArrowGlyph, Logo, PhoneGlyph } from "./Icon";
+import { asset, FAX, HOLIDAYS, HOURS, MAIL, NAV, TEL, TEL_HREF } from "./site";
 import s from "./site.module.css";
 
 /**
@@ -14,6 +14,9 @@ export default function SiteFooter({ cta = true, children }: { cta?: boolean; ch
     <footer className={s.footer} data-x-site>
       {cta && (
         <section className={s.footCta} aria-labelledby="foot-cta-title">
+          {/* v14 の「相談」のイラスト */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className={s.footArt} src={asset("/brand/consult.webp")} alt="" width={520} height={540} loading="lazy" data-x-parallax="10" />
           <p className={s.label}><span>(Contact)</span>お問い合わせ</p>
           <h2 id="foot-cta-title" className={s.footCtaTitle} data-x-split>
             現場のことなら、<br />まず電話一本。
@@ -34,8 +37,7 @@ export default function SiteFooter({ cta = true, children }: { cta?: boolean; ch
       <div className={s.footGrid}>
         <div className={s.footBrand}>
           <Link className={s.brand} href="/" aria-label="T-REX トップへ">
-            <BrandMark className={s.brandMark} />
-            <span className={s.brandType}>T-REX<small>CO., LTD.</small></span>
+            <Logo className={s.footLogo} />
           </Link>
           <p>現場を、止めない。<br />福岡・山口の板金塗装・荷台換装・出張修理・車両陸送。</p>
         </div>

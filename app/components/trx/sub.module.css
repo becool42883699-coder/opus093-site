@@ -46,15 +46,21 @@
 }
 
 /* ---- カードのグリッド(価値観・募集職種) ---- */
-.cards { display: grid; gap: 1px; background: var(--x-line); border: 1px solid var(--x-line); }
+/* v14 のガラス調カード */
+.cards { display: grid; gap: clamp(12px, 1.4vw, 20px); }
 .card {
   position: relative; display: grid; align-content: start; gap: 14px;
-  padding: clamp(26px, 3vw, 44px); background: var(--x-ink);
-  transition: background-color .5s var(--x-ease);
+  padding: clamp(26px, 3vw, 44px); border-radius: 18px;
+  background: linear-gradient(160deg, rgba(14, 42, 92, .55) 0%, rgba(7, 17, 45, .78) 100%);
+  box-shadow: inset 0 0 0 1px rgba(99, 220, 255, .16), 0 18px 40px rgba(2, 6, 23, .35);
+  transition: box-shadow .5s var(--x-ease), transform .6s var(--x-ease);
 }
-[data-surface="light"] .card { background: var(--x-bone); }
-.card:hover { background: var(--x-ink-2); }
-[data-surface="light"] .card:hover { background: #e3e7eb; }
+.card:hover { box-shadow: inset 0 0 0 1px rgba(99, 220, 255, .4), 0 0 30px rgba(99, 220, 255, .12), 0 18px 40px rgba(2, 6, 23, .35); transform: translateY(-3px); }
+[data-surface="light"] .card {
+  background: rgba(255, 255, 255, .62); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8), 0 18px 40px rgba(16, 38, 76, .12);
+}
+[data-surface="light"] .card:hover { box-shadow: inset 0 0 0 1px rgba(0, 91, 255, .35), 0 22px 44px rgba(0, 91, 255, .16); }
 .cardHead { display: flex; align-items: center; justify-content: space-between; }
 .cardNum { font-family: var(--x-mono); font-size: var(--x-fs-label); letter-spacing: .12em; color: var(--x-accent); }
 [data-surface="light"] .cardNum { color: var(--x-accent-ink); }
@@ -97,9 +103,13 @@
 @media (min-width: 720px) { .table > div { grid-template-columns: 12em 1fr; gap: 24px; align-items: baseline; padding: 22px 0; } }
 
 /* ---- 2つ並びの補足ブロック ---- */
-.pair { display: grid; gap: 1px; margin-top: clamp(48px, 6vw, 96px); background: var(--x-line); border: 1px solid var(--x-line); }
-.pair > * { display: grid; gap: 12px; align-content: start; padding: clamp(24px, 3vw, 40px); background: var(--x-ink); }
-[data-surface="light"] .pair > * { background: var(--x-bone); }
+.pair { display: grid; gap: clamp(12px, 1.4vw, 20px); margin-top: clamp(48px, 6vw, 96px); }
+.pair > * {
+  display: grid; gap: 12px; align-content: start; padding: clamp(24px, 3vw, 40px); border-radius: 18px;
+  background: linear-gradient(160deg, rgba(14, 42, 92, .55) 0%, rgba(7, 17, 45, .78) 100%);
+  box-shadow: inset 0 0 0 1px rgba(99, 220, 255, .16);
+}
+[data-surface="light"] .pair > * { background: rgba(255, 255, 255, .62); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .8), 0 18px 40px rgba(16, 38, 76, .1); }
 .pair h3 { margin: 0; font-size: var(--x-fs-h3); font-weight: 800; }
 .pair p { margin: 0; color: var(--x-fg-2); font-size: var(--x-fs-body); line-height: 1.9; }
 .pairIcon { font-size: 34px; color: var(--x-accent); }
@@ -137,7 +147,7 @@
 .stagesHint {
   position: absolute; left: 50%; bottom: 18px; z-index: 2; translate: -50% 0;
   display: inline-flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 999px;
-  background: rgba(7, 9, 12, .72); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  background: rgba(3, 7, 25, .72); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
   font-family: var(--x-mono); font-size: 11px; letter-spacing: .12em; color: var(--x-fg); pointer-events: none;
 }
 .stagesBar { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; border-top: 1px solid var(--x-line); }
@@ -170,7 +180,7 @@
 .field { display: grid; gap: 10px; }
 .field > span { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; letter-spacing: .04em; }
 .field > span b {
-  padding: 2px 8px; border-radius: 999px; background: var(--x-ink); color: var(--x-bone);
+  padding: 2px 8px; border-radius: 999px; background: #005bff; color: #fff;
   font-family: var(--x-mono); font-size: 10px; font-weight: 400; letter-spacing: .1em;
 }
 .field input, .field select, .field textarea {

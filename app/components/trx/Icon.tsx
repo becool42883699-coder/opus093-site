@@ -11,6 +11,12 @@ export function Icon({ name, className = "" }: { name: string; className?: strin
   return <span className={`${s.icon} ${className}`} style={style} aria-hidden="true" />;
 }
 
+/** 公式ロゴ(白抜き・横長)。ユーザー制作の v14 から取り込んだもの */
+export function Logo({ className = "" }: { className?: string }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img className={className} src={asset("/brand/trex-logo.png")} alt="T-Rex 株式会社" width={231} height={150} />;
+}
+
 /** ロゴマーク。シアンの円に TX。brand-tx.svg と同じ字形をインラインで持つ */
 export function BrandMark({ className = "" }: { className?: string }) {
   return (

@@ -4,8 +4,8 @@
  * 全ページ共通の固定ヘッダーとメニュー。
  *
  * 命綱: 電話ボタンはどのスクロール位置・どの画面幅でも押せる。隠す演出を入れない。
- * JS無効でも読めるよう、既定は「不透明の帯」。ページ先頭にいる間だけ JS が
- * data-top を立てて透明にする(暗いヒーローの上に載るため)。
+ * 帯は v14(ユーザー制作版)と同じ濃紺のグラデで、どの面の上でも変えない。
+ * ロゴは公式ロゴ(public/brand/trex-logo.png)。
  *
  * chapters を渡すとトップの4幕用の章ナビを出す。EngineScene が
  * [data-chapnav] / [data-chapnow] を document から引いて書き換える。
@@ -13,7 +13,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { BrandMark, PhoneGlyph } from "./Icon";
+import { Logo, PhoneGlyph } from "./Icon";
 import { HOURS, MAIL, NAV, TEL, TEL_HREF } from "./site";
 import { getLenis } from "../lenisBridge";
 import s from "./site.module.css";
@@ -22,42 +22,6 @@ export default function SiteHeader({ current = "/", chapters }: { current?: stri
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
-  const header = useRef<HTMLElement>(null);
-
-  /* 先頭にいる間だけ透明。rAF で間引く */
-  useEffect(() => {
-    const el = header.current;
-    if (!el) return;
-    let frame = 0;
-    /* ヘッダーの下にある面の色(data-surface)に合わせて帯の色を切り替える。
-       明るい面の上で暗い半透明の帯を重ねると、濁ったグレーになるため */
-    const surfaces = Array.from(document.querySelectorAll<HTMLElement>("[data-surface]"));
-    const update = () => {
-      frame = 0;
-      el.dataset.top = window.scrollY < 24 ? "true" : "false";
-      const line = el.offsetHeight - 1;
-      let surface = "dark";
-      for (const sec of surfaces) {
-        const r = sec.getBoundingClientRect();
-        if (r.top <= line && r.bottom > line) {
-          surface = sec.dataset.surface || "dark";
-          break;
-        }
-      }
-      el.dataset.surface = surface;
-    };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, []);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -85,10 +49,9 @@ export default function SiteHeader({ current = "/", chapters }: { current?: stri
 
   return (
     <>
-      <header ref={header} className={s.header} data-site-header>
+      <header className={s.header} data-site-header>
         <Link className={s.brand} href="/" aria-label="T-REX トップへ">
-          <BrandMark className={s.brandMark} />
-          <span className={s.brandType}>T-REX<small>CO., LTD.</small></span>
+          <Logo className={s.logo} />
         </Link>
 
         {chapters && (

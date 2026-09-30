@@ -15,16 +15,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { scrollToElement } from "./components/lenisBridge";
 import EngineSceneMount from "./components/engine/EngineSceneMount";
 import eng from "./components/engine/engine.module.css";
 import SiteHeader from "./components/trx/SiteHeader";
 import SiteFooter from "./components/trx/SiteFooter";
 import SiteMotion from "./components/trx/SiteMotion";
-import Split from "./components/trx/Split";
-import { ArrowGlyph, BrandMark, PhoneGlyph } from "./components/trx/Icon";
-import { asset, HOURS, TEL, TEL_HREF } from "./components/trx/site";
+import V14Hero, { HERO_PROBE } from "./components/trx/V14Hero";
+import { ArrowGlyph, Logo } from "./components/trx/Icon";
 import site from "./components/trx/site.module.css";
 import t from "./top.module.css";
 
@@ -63,11 +61,13 @@ const PRINCIPLES = [
   { en: "Safety", ja: "安全を最優先", d: "作業者と現場の安全を守るため、確認と基本動作を徹底します。" },
 ];
 
+/* 事業の並びと文言は v14(ユーザー制作版)に合わせた */
 const SERVICES = [
-  { n: "01", ja: "板金塗装", en: "Body & Paint", d: "高品質な塗装で、美しく強い仕上がりへ。損傷の修復もお任せください。", img: "/works-photo-4.webp" },
-  { n: "02", ja: "荷台換装・修理", en: "Cargo Bed", d: "用途に合わせた荷台の換装・修理で、作業効率と安全性を向上。", img: "/works-photo-2.webp" },
-  { n: "03", ja: "出張修理", en: "On-site Repair", d: "現場まで駆けつけ、迅速に対応。ダウンタイムを最小限に。", img: "/works-photo-3.webp" },
-  { n: "04", ja: "車両陸送・軽運送", en: "Transport", d: "車両や資材の陸送・軽運送に、安全かつ丁寧に対応します。", img: "/works-photo-7.webp" },
+  { n: "01", ja: "板金塗装", en: "Body & Paint", d: "部分補修から全塗装、色合わせまで自社一貫で仕上げます。", img: "/works-photo-4.webp" },
+  { n: "02", ja: "荷台換装", en: "Cargo Conversion", d: "架装・特装の載せ替えをワンストップで対応します。", img: "/works-photo-2.webp" },
+  { n: "03", ja: "車両修理", en: "Vehicle Repair", d: "エンジンから足回りまで、整備士が一括で対応します。", img: "/works-photo-6.webp" },
+  { n: "04", ja: "出張修理", en: "Mobile Response", d: "動かせない車両は現場へ。稼働を止めません。", img: "/works-photo-3.webp" },
+  { n: "05", ja: "車両陸送・軽運送", en: "Transport", d: "全国どこへでも、自社手配で陸送・軽運送。", img: "/works-photo-7.webp" },
 ];
 
 const WORKS = [
@@ -87,38 +87,7 @@ const FACTS = [
   { v: "2", u: "way", l: "修理の形", d: "現場への出張修理と、工場への持込修理" },
 ];
 
-/** 日本時間の時計。サーバー側では描かない(ハイドレーション差分を出さない) */
-function useJstClock() {
-  const [now, setNow] = useState("");
-  useEffect(() => {
-    const fmt = new Intl.DateTimeFormat("ja-JP", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo", hour12: false });
-    const tick = () => setNow(fmt.format(new Date()));
-    tick();
-    const id = window.setInterval(tick, 15000);
-    return () => window.clearInterval(id);
-  }, []);
-  return now;
-}
-
-/** PC幅・通信節約なし・動きOK のときだけ動画を差し込む(スマホには 5MB を送らない) */
-const VIDEO_QUERY = "(min-width: 820px) and (prefers-reduced-motion: no-preference)";
-function subscribeVideo(onChange: () => void) {
-  const mq = window.matchMedia(VIDEO_QUERY);
-  mq.addEventListener("change", onChange);
-  return () => mq.removeEventListener("change", onChange);
-}
-function videoAllowed() {
-  const conn = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-  return window.matchMedia(VIDEO_QUERY).matches && !conn?.saveData;
-}
-function useHeroVideo() {
-  return useSyncExternalStore(subscribeVideo, videoAllowed, () => false);
-}
-
 export default function TopPage() {
-  const clock = useJstClock();
-  const video = useHeroVideo();
-
   /* ピン区間を飛ばして事業一覧へ。Lenis があれば滑らかに送る */
   const skipToSections = () => {
     const target = document.getElementById("service");
@@ -127,60 +96,12 @@ export default function TopPage() {
 
   return (
     <>
-      <script dangerouslySetInnerHTML={{ __html: MOTION_PROBE }} />
+      <script dangerouslySetInnerHTML={{ __html: MOTION_PROBE + HERO_PROBE }} />
       <SiteHeader current="/" chapters={CHAPTER_NAV} />
 
       <main id="top" className={t.main} data-x-site>
-        {/* ---------------- ヒーロー ---------------- */}
-        <section className={t.hero} data-x-hero aria-labelledby="hero-title">
-          <div className={t.heroMedia} data-x-hero-media>
-            {video && (
-              <video
-                className={t.heroVideo}
-                autoPlay muted playsInline preload="auto"
-                poster={asset("/hero-trex-construction-final.webp")}
-                aria-hidden="true" tabIndex={-1}
-              >
-                <source src={asset("/media/trex-homepage-hero-cinematic-roar.mp4")} type="video/mp4" />
-              </video>
-            )}
-          </div>
-          <div className={t.heroShade} aria-hidden="true" />
-
-          <div className={t.heroBody} data-x-hero-body>
-            <p className={`${t.heroKicker} x-rise`} style={{ "--d": "100ms" } as CSSProperties}>
-              <i aria-hidden="true" />Never stop the site — 福岡・山口
-            </p>
-            <h1 id="hero-title" className={t.heroTitle}>
-              <Split lines={[["現場を、"], [{ text: "止めない。", em: true }]]} delay={180} step={55} />
-            </h1>
-            <div className={t.heroFoot}>
-              <p className={`${t.heroLede} x-rise`} style={{ "--d": "650ms" } as CSSProperties}>
-                板金塗装・荷台換装・修理・出張修理。トラックの心臓部——エンジンまで、T-REXが確かな仕事で応えます。
-              </p>
-              {/* 命綱: 入場アニメーションの対象にしない(常に即時表示) */}
-              <div className={t.heroActions}>
-                <a className={t.heroTel} href={TEL_HREF}>
-                  <PhoneGlyph className={t.heroTelGlyph} />
-                  <span className={t.heroTelNum}>{TEL}</span>
-                  <small>{HOURS}</small>
-                </a>
-                <Link className={`${site.pill} ${site.pillGhost} ${t.heroGhost}`} href="/contact" data-x-magnetic>
-                  仕事を相談する<ArrowGlyph className={site.pillArrow} />
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className={t.heroBar}>
-            <p><span>(Area)</span>福岡県・山口県</p>
-            <p><span>(Hours)</span>{HOURS}</p>
-            <p className={t.heroClock}><span>(Local time)</span><b><time suppressHydrationWarning>{clock || "--:--"}</time> JST</b></p>
-            <button className={t.skip} type="button" onClick={skipToSections}>
-              サービス一覧へ<i aria-hidden="true" />
-            </button>
-          </div>
-        </section>
+        {/* ---------------- ヒーロー(ユーザー制作 v14 の移植・見た目はそのまま) ---------------- */}
+        <V14Hero nextId="about" />
 
         {/* ---------------- 流れる帯 ---------------- */}
         <div className={t.marquee} data-x-marquee="34" aria-hidden="true">
@@ -188,7 +109,7 @@ export default function TopPage() {
             <div className={t.mTrack} data-x-track key={k}>
               {MARQUEE.map((m, i) => (
                 <span key={m} className={i % 2 ? t.mOutline : undefined}>
-                  {m}<BrandMark className={t.mMark} />
+                  {m}<i className={t.mMark} />
                 </span>
               ))}
             </div>
@@ -196,7 +117,7 @@ export default function TopPage() {
         </div>
 
         {/* ---------------- ステートメント ---------------- */}
-        <section className={`${site.section} ${site.light} ${site.lift} ${t.statement}`} data-surface="light" aria-labelledby="statement-title">
+        <section className={`${site.section} ${site.light} ${site.lift} ${t.statement}`} id="about" data-surface="light" aria-labelledby="statement-title">
           <p className={site.label}><span>(01)</span>About — T-REXについて</p>
           <h2 id="statement-title" className={site.srOnly}>T-REXについて</h2>
           <p className={t.statementText} data-x-words>
@@ -228,6 +149,10 @@ export default function TopPage() {
                 ここから先は、TRX-4エンジンの分解から始動までの記録です。
                 3Dは写真ではなく、ブラウザ上でリアルタイムに描いています。スクロールで進めてください。
               </p>
+              {/* 命綱: 4幕のピン区間を飛ばして事業一覧へ */}
+              <button className={t.skip} type="button" onClick={skipToSections}>
+                4幕を飛ばして事業一覧へ<i aria-hidden="true" />
+              </button>
             </div>
           </section>
 
@@ -277,8 +202,8 @@ export default function TopPage() {
         <section className={`${site.section} ${site.light} ${site.lift} ${t.services}`} id="service" data-surface="light" aria-labelledby="service-title">
           <div className={site.head}>
             <p className={site.label}><span>(03)</span>Services — 事業内容</p>
-            <h2 id="service-title" className={site.h2} data-x-split>止めないための、<br /><em>4つの仕事。</em></h2>
-            <p className={site.lead} data-x-reveal>現場のあらゆるニーズに、専門性とスピードで応える。事故対応・点検を含む全6事業は、サービスページでご案内しています。</p>
+            <h2 id="service-title" className={site.h2} data-x-split>トラックの困りごとを、<br /><em>一社でまとめて。</em></h2>
+            <p className={site.lead} data-x-reveal>トラックまわりの困りごとを、一社でまとめて引き受けます。記載以外の作業もご相談いただけます。</p>
           </div>
           <div className={t.svcList} data-x-preview>
             {SERVICES.map((sv) => (
@@ -303,7 +228,7 @@ export default function TopPage() {
           </div>
           <div className={t.svcMore}>
             <Link className={site.pill} href="/service" data-x-magnetic>
-              全6事業を見る<ArrowGlyph className={site.pillArrow} />
+              全7事業を見る<ArrowGlyph className={site.pillArrow} />
             </Link>
           </div>
         </section>
@@ -359,14 +284,16 @@ export default function TopPage() {
           </div>
           <div className={t.companyBody}>
             <p className={site.label}><span>(06)</span>Company — 会社情報</p>
-            <h2 id="company-title" className={site.h2} data-x-split>現場の、<br /><em>いちばん近くに。</em></h2>
+            <h2 id="company-title" className={site.h2} data-x-split>現場で生まれる課題に、<br /><em>誠実に向き合う。</em></h2>
             <p className={t.companyText} data-x-reveal>
-              T-REX CO., LTD.は、現場の最前線を支えるプロフェッショナル集団です。お客様の課題に真摯に向き合い、スピード・品質・安全のすべてに妥協せず、信頼されるパートナーであり続けます。
+              確かな技術と迅速な対応で、お客様の仕事を支えていく。T-REXは、トラック・大型車を中心とした板金塗装、荷台換装・修理、出張対応を通じて、現場の「困った」に応える会社です。
             </p>
-            <blockquote className={t.quote} data-x-reveal>
-              <p>現場で生まれる一つひとつの課題に誠実に向き合い、確かな技術と迅速な対応で、お客様の仕事を支えてまいります。</p>
-              <footer>代表 中津留 龍也</footer>
-            </blockquote>
+            {/* v14 の代表カード */}
+            <div className={t.repCard} data-x-reveal>
+              <div className={t.repLogo}><Logo className={t.repLogoImg} /></div>
+              <p className={t.repPill}>NEVER STOP THE SITE.</p>
+              <p className={t.repName}><small>代表</small>中津留 龍也</p>
+            </div>
             <dl className={t.profile} data-x-reveal="stagger">
               <div><dt>設立</dt><dd>2025年1月</dd></div>
               <div><dt>資本金</dt><dd>300万円</dd></div>

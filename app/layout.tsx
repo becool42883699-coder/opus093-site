@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Archivo, JetBrains_Mono, Noto_Sans_JP } from "next/font/google";
+import { Archivo, Noto_Sans_JP } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { JsonLd, localBusinessLd, SITE_URL } from "./components/TrmSeo";
 
@@ -8,7 +9,8 @@ const notoSansJp = Noto_Sans_JP({ subsets: ["latin"], weight: ["400", "500", "70
 /* 欧文のディスプレイ書体。幅(wdth)軸を持つ可変フォントなので、コンデンスの見出しと
    通常幅の数字を1ファイルで賄える */
 const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo", display: "swap" });
-const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "700"], variable: "--font-jbmono", display: "swap" });
+/* v14 で使っていた専用フォント(Inter の欧文サブセット・可変ウェイト)。ラベルと数字に使う */
+const trexInter = localFont({ src: "./fonts/trex-inter.woff2", weight: "100 900", variable: "--font-trex-inter", display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -27,7 +29,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ja">
-      <body className={`${notoSansJp.variable} ${archivo.variable} ${jetbrainsMono.variable}`}>{children}<JsonLd data={localBusinessLd} /></body>
+      <body className={`${notoSansJp.variable} ${archivo.variable} ${trexInter.variable}`}>{children}<JsonLd data={localBusinessLd} /></body>
     </html>
   );
 }

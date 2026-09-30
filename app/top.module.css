@@ -3,85 +3,15 @@
 
 .main { background: var(--x-ink); color: var(--x-fg); }
 
-/* ================================================================
-   ヒーロー
-   ================================================================ */
-.hero {
-  position: relative; isolation: isolate; overflow: hidden;
-  min-height: 100vh; min-height: 100svh;
-  display: flex; flex-direction: column; justify-content: flex-end;
-  padding: calc(var(--x-header) + env(safe-area-inset-top) + 24px) var(--x-m) 0;
-  color: var(--x-fg);
-}
-/* 写真は CSS の background-image で敷く(<img> にすると LCP が見出しから写真へ移る)。
-   PC では上に動画が重なる(JS で差し込む)。 */
-.heroMedia {
-  position: absolute; inset: 0; z-index: -2; transform-origin: 50% 0;
-  background: var(--x-ink) url("/hero-trex-construction-final.webp") 70% center / cover no-repeat;
-}
-.heroVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.heroShade {
-  position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background:
-    linear-gradient(98deg, rgba(7, 9, 12, .92) 0%, rgba(7, 9, 12, .8) 32%, rgba(7, 9, 12, .5) 48%, rgba(7, 9, 12, .12) 64%, rgba(7, 9, 12, 0) 78%),
-    linear-gradient(180deg, rgba(7, 9, 12, .55) 0%, rgba(7, 9, 12, 0) 22%, rgba(7, 9, 12, 0) 62%, var(--x-ink) 100%);
-}
-.heroBody { position: relative; max-width: 1400px; }
-.heroKicker {
-  display: flex; align-items: center; gap: 12px; margin: 0;
-  font-family: var(--x-mono); font-size: var(--x-fs-label); letter-spacing: .16em; text-transform: uppercase; color: var(--x-fg-2);
-}
-.heroKicker i { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--x-accent); }
-.heroKicker i::after {
-  content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 1px solid var(--x-accent);
-  animation: ping 2.4s var(--x-ease) infinite;
-}
-@keyframes ping { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
-.heroTitle {
-  margin: clamp(14px, 2vw, 26px) 0 0 -.04em;
-  font-size: clamp(3.4rem, 10vw, 11.5rem); font-weight: 900; line-height: 1.02; letter-spacing: -.045em;
-}
-.heroTitle em { font-style: normal; color: var(--x-accent); }
-.heroFoot {
-  display: grid; gap: 22px; margin-top: clamp(22px, 3vw, 40px);
-}
-.heroLede { margin: 0; max-width: 30em; color: var(--x-fg-2); font-size: var(--x-fs-lead); line-height: 1.9; }
-.heroActions { display: flex; flex-wrap: wrap; gap: 12px; }
-.heroTel {
-  display: inline-flex; align-items: center; gap: 12px;
-  min-height: 64px; padding: 0 28px 0 24px; border-radius: 999px;
-  background: var(--x-accent); color: var(--x-ink);
-  transition: background-color .35s, transform .5s var(--x-ease);
-}
-.heroTel:hover { background: var(--x-fg); }
-.heroTel:focus-visible { outline: 2px solid var(--x-fg); outline-offset: 4px; }
-.heroTelGlyph { width: 20px; height: 20px; flex: none; }
-.heroTelNum { font-family: var(--x-display); font-size: 23px; font-weight: 800; font-stretch: 86%; letter-spacing: .01em; font-variant-numeric: tabular-nums; }
-.heroTel small { font-family: var(--x-mono); font-size: 11px; letter-spacing: .06em; opacity: .72; }
-.heroGhost { min-height: 64px; padding: 0 30px; }
-@media (min-width: 900px) {
-  .heroFoot { grid-template-columns: minmax(0, 30em) auto; justify-content: space-between; align-items: end; gap: 40px; }
-}
-
-.heroBar {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px;
-  margin-top: clamp(28px, 4.4vw, 60px);
-  padding: 18px 0 calc(20px + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--x-line-2);
-  font-family: var(--x-mono); font-size: var(--x-fs-label); letter-spacing: .1em; color: var(--x-fg-2);
-}
-.heroBar p { margin: 0; display: grid; gap: 4px; }
-.heroBar b { font-weight: 400; }
-.heroBar p span { color: var(--x-mute); text-transform: uppercase; letter-spacing: .14em; }
-.heroClock time { font-variant-numeric: tabular-nums; }
+/* 4幕のピン区間を飛ばす導線(命綱)。エンジンの導入部に置く */
 .skip {
-  display: inline-flex; align-items: center; justify-content: flex-end; gap: 12px; justify-self: end; align-self: end;
+  display: inline-flex; align-items: center; gap: 12px; justify-self: start; margin-top: 8px;
   padding: 8px 0; border: 0; background: none; cursor: pointer; color: var(--x-fg);
   font-family: var(--x-sans); font-size: 13px; font-weight: 700; letter-spacing: .08em;
 }
 .skip i {
   position: relative; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
-  box-shadow: inset 0 0 0 1px var(--x-line-2); transition: background-color .4s, box-shadow .4s;
+  box-shadow: inset 0 0 0 1px rgba(99, 220, 255, .35); transition: background-color .4s, box-shadow .4s;
 }
 .skip i::before {
   content: ""; width: 8px; height: 8px; margin-top: -4px;
@@ -89,29 +19,7 @@
 }
 .skip:hover i { background: var(--x-accent); box-shadow: none; color: var(--x-ink); }
 .skip:focus-visible { outline: 2px solid var(--x-accent); outline-offset: 4px; }
-@media (min-width: 900px) {
-  .heroBar { grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: end; }
-}
-/* 縦長の画面: 写真を上に置いて恐竜の顔を見せ、本文はその下の暗部から始める。
-   本文が長いのでヒーローは画面より長くなってよい(電話はヘッダーにも常にある)。 */
-@media (max-width: 819px) {
-  .hero { justify-content: flex-start; padding-top: calc(env(safe-area-inset-top) + min(48svh, 104vw)); }
-  .heroMedia { bottom: auto; height: calc(min(48svh, 104vw) + 150px); background-position: 63% 0; }
-  .heroShade {
-    bottom: auto; height: calc(min(48svh, 104vw) + 151px);
-    background: linear-gradient(180deg, rgba(7, 9, 12, .55) 0%, rgba(7, 9, 12, 0) 18%, rgba(7, 9, 12, 0) 48%, rgba(7, 9, 12, .86) 76%, var(--x-ink) 100%);
-  }
-  .heroActions > * { flex: 1 1 100%; justify-content: center; }
-  .heroClock { display: none !important; }
-  .skip { grid-column: 1 / -1; justify-self: stretch; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--x-line); }
-}
-@media (max-height: 560px) and (orientation: landscape) {
-  .heroTitle { font-size: clamp(2.2rem, 11vh, 4rem); }
-  .heroLede { display: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .heroKicker i::after { animation: none; }
-}
+@media (min-width: 900px) { .skip { grid-column: 8 / 13; } }
 
 /* ================================================================
    流れる帯
@@ -129,7 +37,7 @@
   text-transform: uppercase; color: var(--x-fg); white-space: nowrap;
 }
 .mTrack > .mOutline { color: transparent; -webkit-text-stroke: 1.5px rgba(242, 244, 246, .55); }
-.mMark { width: .42em; height: .42em; flex: none; }
+.mMark { display: block; width: .28em; height: .28em; flex: none; border-radius: 50%; background: linear-gradient(135deg, #63dcff, #4a72ff); box-shadow: 0 0 .3em rgba(99, 220, 255, .7); }
 
 /* ================================================================
    ステートメント
@@ -316,8 +224,11 @@
    数字(ブランドのシアンを面として1回だけ使う)
    ================================================================ */
 .facts {
-  background: var(--x-accent); color: var(--x-ink);
-  --x-mute: rgba(7, 9, 12, .74); --x-line: rgba(7, 9, 12, .24);
+  /* v14 のブランドブルーの面 + 暗いインクの滲み */
+  background: url("/brand/ink-dark.webp") center / cover no-repeat, linear-gradient(120deg, #0a3fc4 0%, #005bff 55%, #3b4dff 100%);
+  background-blend-mode: soft-light, normal;
+  color: #fff;
+  --x-fg: #fff; --x-mute: rgba(234, 244, 255, .82); --x-line: rgba(234, 244, 255, .26);
 }
 .facts .factGrid { margin: clamp(32px, 5vw, 72px) 0 0; }
 .factGrid { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--x-line); }
@@ -337,7 +248,7 @@
   .fact:first-child { padding-left: 0; }
   .fact + .fact { border-left: 1px solid var(--x-line); padding-left: 24px; }
 }
-.facts p[class] > span:first-child { color: var(--x-ink); }
+.facts p[class] > span:first-child { color: #bff7ff; }
 
 /* ================================================================
    会社
@@ -347,10 +258,10 @@
 .companyDisc {
   position: absolute; inset: 6% 4% 2%; border-radius: 50%;
   background:
-    repeating-linear-gradient(0deg, rgba(62, 193, 240, .08) 0 1px, transparent 1px 32px),
-    repeating-linear-gradient(90deg, rgba(62, 193, 240, .08) 0 1px, transparent 1px 32px),
-    radial-gradient(circle at 50% 40%, #16202b 0%, var(--x-ink) 70%);
-  box-shadow: 0 0 0 1px rgba(62, 193, 240, .35), 0 0 0 14px var(--x-bone), 0 0 0 15px var(--x-line-2);
+    repeating-linear-gradient(0deg, rgba(99, 220, 255, .08) 0 1px, transparent 1px 32px),
+    repeating-linear-gradient(90deg, rgba(99, 220, 255, .08) 0 1px, transparent 1px 32px),
+    radial-gradient(circle at 50% 40%, #13307a 0%, #07142f 70%);
+  box-shadow: 0 0 0 1px rgba(99, 220, 255, .35), 0 0 0 14px var(--x-bone), 0 0 0 15px var(--x-line-2);
 }
 .mascot { position: relative; display: block; width: 100%; height: auto; }
 .companyTag {
@@ -373,3 +284,31 @@
   .company { grid-template-columns: 5fr 6fr; }
   .companyArt { position: sticky; top: calc(var(--x-header) + 6vh); align-self: start; }
 }
+
+/* 代表カード(v14 の About にあったもの) */
+.repCard {
+  display: grid; grid-template-columns: auto 1fr; grid-template-areas: "logo name" "logo pill";
+  align-items: center; gap: 12px 22px; width: 100%; max-width: 520px;
+  padding: 18px; border-radius: 20px;
+  background: linear-gradient(160deg, #0b1d45 0%, #07142f 100%);
+  box-shadow: 0 24px 50px rgba(16, 38, 76, .28), inset 0 0 0 1px rgba(99, 220, 255, .18);
+  color: #eaf4ff;
+}
+.repLogo {
+  grid-area: logo; display: grid; place-items: center; width: 118px; height: 90px; border-radius: 14px;
+  background: linear-gradient(160deg, #13307a, #07142f); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .22), 0 0 24px rgba(99, 220, 255, .2);
+}
+.repLogoImg { width: 88px; height: auto; }
+.repPill {
+  grid-area: pill; justify-self: start; margin: 0; padding: 8px 14px; border-radius: 10px;
+  background: linear-gradient(100deg, #005bff, #2f8cff); box-shadow: 0 0 18px rgba(0, 91, 255, .45);
+  font-family: var(--x-inter); font-size: 10px; font-weight: 800; letter-spacing: .22em; color: #fff; white-space: nowrap;
+}
+@media (max-width: 519px) {
+  .repCard { gap: 10px 14px; padding: 14px; }
+  .repLogo { width: 92px; height: 72px; }
+  .repLogoImg { width: 70px; }
+  .repPill { font-size: 8.5px; letter-spacing: .14em; padding: 7px 10px; }
+}
+.repName { grid-area: name; margin: 0; font-size: 18px; font-weight: 900; letter-spacing: .06em; }
+.repName small { display: block; margin-bottom: 4px; font-family: var(--x-inter); font-size: 10px; font-weight: 800; letter-spacing: .2em; color: #63dcff; }

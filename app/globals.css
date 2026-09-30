@@ -95,24 +95,31 @@ header[class*="header"] { border-bottom-color: transparent !important; }
          ラベル・数字=JetBrains Mono。
    ============================================================ */
 :root {
-  --x-ink: #07090c;
-  --x-ink-2: #0d1117;
-  --x-ink-3: #151b23;
-  --x-bone: #eceef1;
-  --x-bone-2: #dde1e6;
-  --x-fg: #f2f4f6;
-  --x-fg-2: #c7cdd4;
-  --x-mute: #8b95a3;       /* 対インク 6.6:1 */
-  --x-mute-d: #56606d;     /* 対ボーン 5.5:1 */
-  --x-line: rgba(242, 244, 246, .12);
-  --x-line-2: rgba(242, 244, 246, .22);
-  --x-line-d: rgba(7, 9, 12, .14);
-  --x-accent: #3ec1f0;     /* 対インク 9.6:1 */
-  --x-accent-ink: #086a90; /* 対ボーン 5.2:1 */
+  /* 2026-09 v14(ユーザー制作版)と融合: 濃紺〜青〜紫のダークUI + シアン + 差し色オレンジ */
+  --x-ink: #030719;
+  --x-ink-2: #07112d;
+  --x-ink-3: #0c1a3d;
+  --x-bone: #e8eefb;       /* 明るい面の下地(実際はインクの滲みテクスチャを重ねる) */
+  --x-bone-2: #d8e2f6;
+  --x-fg: #eaf4ff;
+  --x-fg-2: #c9d6ea;
+  --x-mute: #8e9bb5;       /* 対インク 7.2:1 */
+  --x-mute-d: #4c5b76;     /* 対明面 5.7:1 */
+  --x-line: rgba(201, 214, 234, .13);
+  --x-line-2: rgba(201, 214, 234, .24);
+  --x-line-d: rgba(16, 38, 76, .14);
+  --x-accent: #63dcff;     /* 対インク 12.6:1 */
+  --x-accent-ink: #0a4fd8; /* 明面で文字に使う青。対明面 5.6:1 */
+  --x-blue: #005bff;       /* v14 のブランドブルー(面・ボタン用) */
+  --x-violet: #7a55ff;
+  --x-orange: #ff7c32;     /* v14 の差し色。ヒーローと要所だけ */
+  --x-glow: radial-gradient(circle at 50% 0%, rgba(40, 199, 255, .09), transparent 34%), radial-gradient(circle at 84% 38%, rgba(122, 85, 255, .10), transparent 32%);
 
   --x-display: var(--font-archivo, "Archivo"), var(--font-noto, "Noto Sans JP"), system-ui, sans-serif;
   --x-sans: var(--font-noto, "Noto Sans JP"), "Hiragino Kaku Gothic ProN", "Yu Gothic", system-ui, sans-serif;
-  --x-mono: var(--font-jbmono, "JetBrains Mono"), ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* ラベル・数字は v14 と同じ専用フォント(Inter 系)。旧 JetBrains Mono の役割を引き継ぐ */
+  --x-mono: var(--font-trex-inter, "Inter"), system-ui, sans-serif;
+  --x-inter: var(--font-trex-inter, "Inter"), system-ui, sans-serif;
 
   --x-m: clamp(16px, 4.4vw, 72px);           /* ページ左右の余白 */
   --x-gap: clamp(12px, 1.6vw, 24px);

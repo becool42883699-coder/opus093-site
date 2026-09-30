@@ -10,18 +10,19 @@ import sub from "../components/trx/sub.module.css";
 
 export const metadata: Metadata = {
   title: "事業案内|福岡・山口の板金塗装/出張修理 T-REX",
-  description: "福岡県・山口県対応。板金塗装、荷台修理・架装、出張修理、事故対応・保険修理、メンテナンス・点検、車両陸送・軽運送の6事業をワンストップで提供するT-REXの事業案内です。",
+  description: "福岡県・山口県対応。板金塗装、荷台修理・架装、車両修理、出張修理、事故対応・保険修理、メンテナンス・点検、車両陸送・軽運送の7事業をワンストップで提供するT-REXの事業案内です。",
   alternates: { canonical: "/service/" },
-  openGraph: { title: "事業案内|T-REX CO., LTD.", description: "福岡・山口対応の6つの事業をご案内。", images: ["/service-hero-bg.webp"] },
+  openGraph: { title: "事業案内|T-REX CO., LTD.", description: "福岡・山口対応の7つの事業をご案内。", images: ["/service-hero-bg.webp"] },
 };
 
 const services = [
   ["01", "板金塗装", "Body & Paint", "高品質な塗装で、美しく\n強い仕上がりへ。", "spray-gun"],
   ["02", "荷台修理・架装", "Cargo Bed & Body Work", "用途に応じた設計で\n作業効率と安全性を向上。", "cargo-conversion"],
-  ["03", "出張修理サービス", "On-site Repair", "現場へ駆けつけ、迅速に\nトラブルを解決します。", "mobile-repair-truck"],
-  ["04", "事故対応・保険修理", "Accident & Insurance", "事故後の対応も安心。\n保険修理までサポート。", "shield-confirm"],
-  ["05", "メンテナンス・点検", "Maintenance", "定期点検でトラブルを\n未然に防ぎます。", "inspection-tools"],
-  ["06", "車両陸送・軽運送", "Transport", "安全・確実な車両輸送と\n軽貨物運送を行います。", "rapid-response-tools"],
+  ["03", "車両修理", "Vehicle Repair", "エンジンから足回りまで、\n整備士が一括で対応します。", "gear-technology"],
+  ["04", "出張修理サービス", "On-site Repair", "現場へ駆けつけ、迅速に\nトラブルを解決します。", "mobile-repair-truck"],
+  ["05", "事故対応・保険修理", "Accident & Insurance", "事故後の対応も安心。\n保険修理までサポート。", "shield-confirm"],
+  ["06", "メンテナンス・点検", "Maintenance", "定期点検でトラブルを\n未然に防ぎます。", "inspection-tools"],
+  ["07", "車両陸送・軽運送", "Transport", "安全・確実な車両輸送と\n軽貨物運送を行います。", "rapid-response-tools"],
 ] as const;
 
 export default function ServicePage() {
@@ -35,8 +36,8 @@ export default function ServicePage() {
 
       <PageHero
         index="02" en="Services"
-        ja={[["現場を支える、"], [{ text: "6つの事業。", em: true }]]}
-        lead="福岡県・山口県の現場を支える6つの事業。板金塗装から車両陸送まで、確かな技術でワンストップ対応します。"
+        ja={[["現場を支える、"], [{ text: "7つの事業。", em: true }]]}
+        lead="福岡県・山口県の現場を支える7つの事業。板金塗装から車両陸送まで、確かな技術でワンストップ対応します。"
         image={{ src: "/service-hero-bg.webp", width: 1920, height: 800, position: "50% 40%" }}
         imageAlt="北九州の街並みとT-REXのマスコットを描いたブループリント"
       />
@@ -45,7 +46,7 @@ export default function ServicePage() {
         <div className={site.head}>
           <p className={site.label}><span>(01)</span>Our Business — 事業一覧</p>
           <h2 id="svc-title" className={site.h2} data-x-split>板金塗装から、<br /><em>車両陸送まで。</em></h2>
-          <p className={site.lead} data-x-reveal>ひとつの窓口で、外装の板金塗装から荷台の修理・架装、事故後の保険修理、定期点検、輸送までを引き受けます。</p>
+          <p className={site.lead} data-x-reveal>ひとつの窓口で、外装の板金塗装から荷台の修理・架装、エンジンや足回りの修理、事故後の保険修理、定期点検、輸送までを引き受けます。</p>
         </div>
         <div className={sub.rows}>
           {services.map(([n, title, en, desc, icon]) => (
