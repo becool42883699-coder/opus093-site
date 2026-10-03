@@ -11,10 +11,6 @@
   --e-line: var(--x-line);
   position: relative; background: var(--e-ink); color: var(--e-bone);
 }
-.progress {
-  position: fixed; top: 0; left: 0; z-index: 95; height: 2px; width: 100%;
-  background: var(--e-accent); transform: scaleX(0); transform-origin: 0 50%;
-}
 
 /* ---- ステージ(ピン留めされる4幕) ---- */
 .stageWrap { position: relative; }
@@ -90,9 +86,8 @@
 .page[data-assets="ready"] .loadTrack { opacity: 0; }
 
 /* 注釈と進行バーは演出を出す時だけ */
-.lbl, .progress { display: none; }
+.lbl { display: none; }
 :global(html[data-engine-motion="on"]) .lbl { display: block; }
-:global(html[data-engine-motion="on"]) .progress { display: block; }
 
 /* ---- 縦画面・背の低い横向き ----
    4幕の絵は縦画面だと下寄せになるので、JS 側(EngineScene の PORTRAIT_LIFT と

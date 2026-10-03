@@ -165,3 +165,7 @@ html.lenis, html.lenis body { height: auto; }
 /* T-REX のページでは和文を文節で折り返す(Chrome 119+。未対応ブラウザは従来どおり) */
 [data-x-site] :where(p, h1, h2, h3, dd, figcaption, li, summary, blockquote) { word-break: auto-phrase; }
 [data-x-site] ::selection, [data-site-header] ::selection { background: var(--x-accent); color: var(--x-ink); }
+/* カーソルの輪(trx/Chrome.tsx)がラベル付きの円になる場所では本物のカーソルを隠す */
+html[data-x-cursor] [data-cursor="view"], html[data-x-cursor] [data-cursor="drag"] { cursor: none; }
+/* 見出しは和文の約物を詰める(palt)。本文は読みやすさのため既定の字送りのまま */
+[data-x-site] :where(h1, h2, h3, [data-x-words]), [data-x-site] .x-palt { font-feature-settings: "palt"; }

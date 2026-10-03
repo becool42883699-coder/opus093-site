@@ -45,7 +45,7 @@
 .statement { padding-bottom: clamp(80px, 10vw, 160px); }
 .statementText {
   margin: clamp(28px, 4vw, 60px) 0 0; max-width: 19em; text-wrap: pretty;
-  font-size: clamp(1.75rem, 4.6vw, 5rem); font-weight: 700; line-height: 1.38; letter-spacing: -.02em;
+  font-size: clamp(1.75rem, 4.6vw, 5rem); font-weight: 700; line-height: 1.38; letter-spacing: -.005em;
   line-break: strict;
 }
 .principles {
@@ -71,6 +71,38 @@
    ================================================================ */
 .engineIntro { padding-bottom: clamp(40px, 5vw, 80px); background: transparent; }
 .engineIntro > div { margin-bottom: 0; }
+
+/* 4幕の目次。輪郭だけの大きな番号 + 英字 + 和名 */
+.acts {
+  display: grid; grid-template-columns: 1fr 1fr; margin: clamp(56px, 7vw, 110px) 0 0; padding: 0; list-style: none;
+  border-top: 1px solid var(--x-line);
+}
+.acts li { position: relative; display: grid; align-content: start; gap: 10px; padding: 22px 14px 26px 0; border-bottom: 1px solid var(--x-line); }
+.acts li:nth-child(even) { padding-left: 14px; border-left: 1px solid var(--x-line); }
+.actNum {
+  font-family: var(--x-display); font-weight: 900; font-stretch: 72%;
+  font-size: clamp(3.4rem, 7.4vw, 7.6rem); line-height: .82; letter-spacing: -.03em;
+  color: transparent; -webkit-text-stroke: 1px rgba(99, 220, 255, .5);
+  transition: color .6s var(--x-ease), -webkit-text-stroke-color .6s;
+}
+.acts li:hover .actNum { color: rgba(99, 220, 255, .14); -webkit-text-stroke-color: var(--x-accent); }
+.actEn { font-family: var(--x-inter); font-size: 10.5px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--x-accent); }
+@media (max-width: 519px) { .actEn { font-size: 9.5px; letter-spacing: .1em; } }
+/* 目次は「これから流れる4幕」の予告なので、4幕が縦積みの静的版に落ちる時(JS無効・WebGL2非対応等)は出さない */
+:global(html:not([data-engine-motion="on"])) .acts { display: none; }
+.actJa { font-size: clamp(1.15rem, 1.7vw, 1.6rem); font-weight: 900; letter-spacing: .02em; }
+@media (min-width: 900px) {
+  .acts { grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--x-line); }
+  .acts li { padding: 32px 24px 36px; border-bottom: 0; }
+  .acts li:first-child { padding-left: 0; }
+  .acts li + li { padding-left: 24px; border-left: 1px solid var(--x-line); }
+  /* 幕の順番を示す細い矢印 */
+  .acts li:not(:last-child)::after {
+    content: ""; position: absolute; right: -5px; top: 50%; width: 9px; height: 9px; z-index: 1;
+    border-top: 1px solid var(--x-accent); border-right: 1px solid var(--x-accent);
+    background: var(--x-ink); transform: rotate(45deg);
+  }
+}
 
 .spec { background: transparent; }
 .specGrid {
@@ -113,7 +145,7 @@
 }
 .svcNum { grid-area: num; padding-top: .7em; font-family: var(--x-mono); font-size: var(--x-fs-label); color: var(--x-accent-ink); transition: color .5s; }
 .svcTitle { grid-area: title; display: grid; gap: 4px; transition: transform .7s var(--x-ease); }
-.svcTitle strong { font-size: clamp(1.55rem, 3.6vw, 3.6rem); font-weight: 900; line-height: 1.15; letter-spacing: -.02em; }
+.svcTitle strong { font-size: clamp(1.55rem, 3.6vw, 3.6rem); font-weight: 900; line-height: 1.15; letter-spacing: -.005em; }
 .svcTitle span {
   font-family: var(--x-display); font-weight: 700; font-stretch: 80%; text-transform: uppercase;
   font-size: 12px; letter-spacing: .14em; color: var(--x-mute); transition: color .5s;
@@ -182,21 +214,31 @@
   width: calc(100vw - var(--x-m) * 2); display: grid; gap: 22px; justify-items: start;
 }
 .workCard { grid-row: 2; margin: 0; scroll-snap-align: start; }
-.workImg { position: relative; overflow: hidden; aspect-ratio: 4 / 3; border-radius: 3px; background: var(--x-ink-2); }
+.workImg { position: relative; display: block; overflow: hidden; aspect-ratio: 4 / 3; border-radius: 3px; background: var(--x-ink-2); }
 .workImg img {
   position: absolute; top: 0; left: -8%; width: 116%; height: 100%; object-fit: cover;
   /* スマホで撮った現場写真の色味を揃える。ホバーで元の色へ */
-  filter: saturate(.78) contrast(1.06) brightness(.94); transition: filter .8s var(--x-ease);
+  filter: saturate(.78) contrast(1.06) brightness(.94);
+  transition: filter .8s var(--x-ease), scale 1.2s var(--x-ease);
 }
-.workCard:hover .workImg img { filter: none; }
+.workCard:hover .workImg img { filter: none; scale: 1.05; }
+.workImg:focus-visible { outline: 2px solid var(--x-accent); outline-offset: 4px; }
 .workCard figcaption {
   display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: 12px;
-  padding-top: 14px; font-size: 14px; font-weight: 700;
+  padding-top: 16px; font-size: 15px; font-weight: 700; letter-spacing: .02em;
 }
-.workCard figcaption span, .workCard figcaption small { font-family: var(--x-mono); font-size: 11px; font-weight: 400; letter-spacing: .08em; }
+.workCard figcaption span, .workCard figcaption small { font-family: var(--x-mono); font-size: 11.5px; font-weight: 800; letter-spacing: .12em; }
 .workCard figcaption span { color: var(--x-accent); }
 .workCard figcaption small { color: var(--x-mute); }
-.worksBar { display: none; }
+.worksBar, .worksCount { display: none; }
+/* スマホ: 横にスワイプできることを示す */
+.swipe {
+  display: inline-flex; align-items: center; gap: 10px; margin: 6px 0 0;
+  font-family: var(--x-inter); font-size: 11px; font-weight: 800; letter-spacing: .24em; text-transform: uppercase; color: var(--x-mute);
+}
+.swipeArrow { width: 14px; height: 14px; color: var(--x-accent); transform: rotate(45deg); animation: nudge 1.8s var(--x-ease) infinite; }
+@keyframes nudge { 0%, 100% { translate: 0 0; } 50% { translate: 6px 0; } }
+@media (prefers-reduced-motion: reduce) { .swipeArrow { animation: none; } }
 @media (min-width: 900px) {
   .works { height: 100vh; height: 100svh; padding: 0; }
   .worksTrack {
@@ -215,9 +257,15 @@
     background: var(--x-line);
   }
   .worksBar i { display: block; height: 100%; background: var(--x-accent); transform-origin: 0 50%; }
+  .swipe { display: none; }
+  .worksCount {
+    display: flex; align-items: baseline; gap: .5em; position: absolute; right: var(--x-m); bottom: calc(5vh + 16px); margin: 0;
+    font-family: var(--x-inter); font-size: 12px; font-weight: 800; letter-spacing: .2em; color: var(--x-mute);
+  }
+  .worksCount b { font-family: var(--x-display); font-weight: 900; font-stretch: 72%; font-size: 30px; letter-spacing: 0; color: var(--x-fg); font-variant-numeric: tabular-nums; }
   /* JS が無い / reduced-motion ではピンしないので、横スクロールで見られるようにする */
   :global(html:not([data-x-motion])) .works { overflow-x: auto; }
-  :global(html:not([data-x-motion])) .worksBar { display: none; }
+  :global(html:not([data-x-motion])) .worksBar, :global(html:not([data-x-motion])) .worksCount { display: none; }
 }
 
 /* ================================================================

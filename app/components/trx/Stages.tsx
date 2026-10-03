@@ -18,7 +18,7 @@ export default function Stages({ stages, width, height }: { stages: [Stage, Stag
   const active = v < 34 ? 0 : v < 67 ? 1 : 2;
   return (
     <div className={s.stages}>
-      <div className={s.stagesView}>
+      <div className={s.stagesView} data-cursor="drag">
         <Image src={stages[2].src} alt={stages[2].alt} width={width} height={height} sizes="(max-width: 899px) 100vw, 60vw" />
         <Image src={stages[1].src} alt={stages[1].alt} width={width} height={height} sizes="(max-width: 899px) 100vw, 60vw" style={{ opacity: o1 }} />
         <Image src={stages[0].src} alt={stages[0].alt} width={width} height={height} sizes="(max-width: 899px) 100vw, 60vw" style={{ opacity: o0 }} />

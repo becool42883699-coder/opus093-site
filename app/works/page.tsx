@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowGlyph, Icon } from "../components/trx/Icon";
 import PageHero from "../components/trx/PageHero";
+import Gallery, { type Photo } from "../components/trx/Gallery";
 import Stages from "../components/trx/Stages";
 import SubPage from "../components/trx/SubPage";
 import site from "../components/trx/site.module.css";
@@ -22,7 +22,7 @@ const works = [
   ["04", "車両陸送・軽運送対応", "車両陸送", "車両や資材を安全・確実に輸送。日程や搬入条件に合わせて柔軟に対応します。", "mobile-repair-truck"],
 ] as const;
 
-const photos = [
+const photos: Photo[] = [
   { src: "/works-photo-8.webp", alt: "福岡・山口対応 T-REXの床板張替え 塗装仕上げの完成荷台", cap: "床板張替え 完成 — 塗装仕上げ", w: 870, h: 652 },
   { src: "/works-photo-6.webp", alt: "福岡・山口対応 T-REXの特殊車両 架装作業", cap: "特殊車両の架装作業", w: 870, h: 654 },
   { src: "/works-photo-3.webp", alt: "福岡・山口対応 T-REXによる大型車両の床板一部修理 施工", cap: "床板一部修理 施工", w: 870, h: 653 },
@@ -90,16 +90,7 @@ export default function WorksPage() {
           <h2 id="photos-title" className={site.h2} data-x-split>手の跡が、<br /><em>残る仕事。</em></h2>
           <p className={site.lead} data-x-reveal>実際の作業風景と仕上がりの一部をご紹介します。</p>
         </div>
-        <div className={sub.gallery}>
-          {photos.map((p, i) => (
-            <figure className={`${sub.shot} ${p.tall ? sub.shotTall : ""}`} key={p.src}>
-              <div className={sub.shotImg} data-x-clip>
-                <Image src={p.src} alt={p.alt} width={p.w} height={p.h} sizes="(max-width: 719px) 100vw, (max-width: 1099px) 50vw, 34vw" />
-              </div>
-              <figcaption><span>{String(i + 1).padStart(2, "0")}</span>{p.cap}</figcaption>
-            </figure>
-          ))}
-        </div>
+        <Gallery photos={photos} />
       </section>
     </SubPage>
   );

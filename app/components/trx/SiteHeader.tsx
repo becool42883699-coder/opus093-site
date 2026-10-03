@@ -28,6 +28,11 @@ export default function SiteHeader({ current = "/", chapters }: { current?: stri
     menuButton.current?.focus();
   }, []);
 
+  /* トップの4幕の途中から別ページへ移った時、章ナビの状態が残らないようにする */
+  useEffect(() => {
+    if (!chapters) delete document.documentElement.dataset.enginePinned;
+  }, [chapters]);
+
   /* メニューを開いている間は背面のスクロールを止め、Esc で閉じる */
   useEffect(() => {
     if (!open) return;
@@ -49,7 +54,7 @@ export default function SiteHeader({ current = "/", chapters }: { current?: stri
 
   return (
     <>
-      <header className={s.header} data-site-header>
+      <header className={s.header} data-site-header data-chapters={chapters ? "" : undefined}>
         <Link className={s.brand} href="/" aria-label="T-REX トップへ">
           <Logo className={s.logo} />
         </Link>
@@ -90,6 +95,8 @@ export default function SiteHeader({ current = "/", chapters }: { current?: stri
             <span className={s.srOnly}>を開く</span>
           </button>
         </div>
+        {/* ページ全体の読み進み(effects.ts が scaleX を動かす) */}
+        <span className={s.progress} data-x-progress aria-hidden="true" />
       </header>
 
       <div

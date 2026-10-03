@@ -12,6 +12,8 @@
  *   data-x-magnetic         ボタンがカーソルに少し吸い寄せられる(マウスのみ)
  *   data-x-hero             ヒーローの退場(中のメディアを拡大・本文を持ち上げる)
  *   data-x-wordmark         フッターの巨大ロゴのせり上がり
+ *   data-x-count[="n"]      中の最初の数字を n(既定0)から数え上げる。桁区切り・小数・先頭の0は元の表記に合わせる
+ *   data-x-progress         ページ全体の読み進み(scaleX)
  *
  * 初期状態(隠す・ずらす)は全て gsap.from で JS 実行後に付ける。
  * JS無効・reduced-motion ではどの要素も最初から読める状態のまま。
@@ -211,6 +213,55 @@ export function initEffects(gsap: Gsap, ScrollTrigger: ST): () => void {
       });
     });
 
+    /* ---- 数字の数え上げ ---- */
+    gsap.utils.toArray<HTMLElement>("[data-x-count]").forEach((el) => {
+      const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      let node: Text | null = null;
+      while (walker.nextNode()) {
+        if (/\d/.test(walker.currentNode.textContent ?? "")) {
+          node = walker.currentNode as Text;
+          break;
+        }
+      }
+      if (!node) return;
+      const text = node.textContent ?? "";
+      const raw = text.match(/\d[\d,]*(?:\.\d+)?/)?.[0];
+      if (!raw) return;
+      const plain = raw.replace(/,/g, "");
+      const target = parseFloat(plain);
+      const decimals = (plain.split(".")[1] ?? "").length;
+      const padTo = plain.startsWith("0") ? plain.split(".")[0].length : 0;
+      const format = (v: number) => {
+        let out = raw.includes(",")
+          ? v.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+          : v.toFixed(decimals);
+        if (padTo) out = out.padStart(padTo + (decimals ? decimals + 1 : 0), "0");
+        return text.replace(raw, out);
+      };
+      const textNode = node;
+      const counter = { v: Number(el.dataset.xCount) || 0 };
+      textNode.textContent = format(counter.v);
+      disposers.push(() => (textNode.textContent = text));
+      gsap.to(counter, {
+        v: target,
+        duration: 1.8,
+        ease: "expo.out",
+        scrollTrigger: { trigger: el, start: "top 90%", once: true },
+        onUpdate: () => (textNode.textContent = format(counter.v)),
+        onComplete: () => (textNode.textContent = text),
+      });
+    });
+
+    /* ---- 読み進みの線 ---- */
+    const progress = gsap.utils.toArray<HTMLElement>("[data-x-progress]");
+    if (progress.length) {
+      ScrollTrigger.create({
+        start: 0,
+        end: "max",
+        onUpdate: (self) => progress.forEach((bar) => (bar.style.transform = `scaleX(${self.progress.toFixed(4)})`)),
+      });
+    }
+
     /* ---- 横スクロールのギャラリー(900px以上) ----
        上に4幕エンジンのピンがあるので、refreshPriority を下げて
        エンジン側のピンの後に測り直させる(順番が逆だと開始位置がずれる)。 */
@@ -234,6 +285,21 @@ export function initEffects(gsap: Gsap, ScrollTrigger: ST): () => void {
             refreshPriority: -1,
           },
         });
+        /* 今見ている枚数(01 / 07) */
+        const count = section.querySelector<HTMLElement>("[data-x-hscroll-count]");
+        const cards = track.querySelectorAll("[data-x-hscroll-img]").length;
+        if (count && cards) {
+          ScrollTrigger.create({
+            trigger: section,
+            start: "top top",
+            end: () => `+=${distance()}`,
+            refreshPriority: -1,
+            onUpdate: (self) => {
+              const n = Math.min(cards, Math.floor(self.progress * cards) + 1);
+              count.textContent = String(n).padStart(2, "0");
+            },
+          });
+        }
         const bar = section.querySelector<HTMLElement>("[data-x-hscroll-bar]");
         if (bar) {
           gsap.fromTo(bar, { scaleX: 0 }, {

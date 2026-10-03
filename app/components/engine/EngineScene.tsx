@@ -442,11 +442,6 @@ export default function EngineScene() {
       /* ---- 振り付け(絶対時刻。合計9.4。v3の値をそのまま) ---- */
       const shellProxy = { o: 1 };
       const ctx = gsap.context(() => {
-        gsap.to("[data-progress]", {
-          scaleX: 1,
-          ease: "none",
-          scrollTrigger: { trigger: document.body, start: "top top", end: "bottom bottom", scrub: 0.4 },
-        });
         gsap.set(['[data-ch="2"]', '[data-ch="3"]', '[data-ch="4"]', "[data-lbl]"], { autoAlpha: 0 });
         gsap.set("[data-lbl] i", { scaleX: 0 });
 

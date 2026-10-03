@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 全ページ共通のモーション層。DOM は描かない。
+ * 全ページ共通のモーション層。描くのは画面の外側の演出(Chrome.tsx: 遷移の幕・カーソルの輪)だけ。
  *
  * Lenis + ScrollTrigger の橋渡しはページにつき**このコンポーネント1つだけ**が持つ。
  * トップの4幕エンジン(EngineScene)は Lenis を作らず、ここが作ったものの上に乗る。
@@ -12,6 +12,7 @@
 import { useEffect } from "react";
 import { setLenis } from "../lenisBridge";
 import { initEffects } from "./effects";
+import SiteChrome from "./Chrome";
 
 export default function SiteMotion() {
   useEffect(() => {
@@ -73,5 +74,5 @@ export default function SiteMotion() {
     };
   }, []);
 
-  return null;
+  return <SiteChrome />;
 }

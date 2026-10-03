@@ -1,0 +1,105 @@
+/* Chrome.tsx(ページ遷移の幕・カーソルの輪)。状態は <html> の属性で持つ */
+
+/* ================================================================
+   ページ遷移の幕
+   ================================================================ */
+.curtain {
+  position: fixed; inset: 0; z-index: 150; pointer-events: none; visibility: hidden;
+  display: grid; place-items: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(40, 199, 255, .13), transparent 40%),
+    radial-gradient(circle at 84% 80%, rgba(122, 85, 255, .16), transparent 36%),
+    #030719;
+  color: #eaf4ff;
+  clip-path: inset(100% 0 0 0);
+}
+/* 上がる(遷移前) */
+:global(html[data-x-leaving]) .curtain {
+  visibility: visible; pointer-events: auto;
+  clip-path: inset(0 0 0 0);
+  transition: clip-path .62s cubic-bezier(.76, 0, .24, 1);
+}
+/* 抜ける(遷移後)。閉じた状態から上へ */
+:global(html[data-x-entering]) .curtain {
+  visibility: visible;
+  clip-path: inset(0 0 100% 0);
+  transition: clip-path .9s cubic-bezier(.76, 0, .24, 1) .08s;
+}
+
+/* v14 のヒーローと同じ方眼。中心ほど濃い */
+.curtainGrid {
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(99, 220, 255, .07) 0 1px, transparent 1px 64px),
+    repeating-linear-gradient(90deg, rgba(99, 220, 255, .07) 0 1px, transparent 1px 64px);
+  -webkit-mask: radial-gradient(circle at 50% 50%, #000 0%, transparent 62%);
+  mask: radial-gradient(circle at 50% 50%, #000 0%, transparent 62%);
+}
+
+.curtainBody { position: relative; display: grid; justify-items: center; gap: 18px; text-align: center; }
+.curtainBody > * {
+  opacity: 0; transform: translateY(36px);
+  transition: opacity .4s ease, transform .6s cubic-bezier(.22, 1, .36, 1);
+}
+:global(html[data-x-leaving]) .curtainBody > * { opacity: 1; transform: none; }
+:global(html[data-x-leaving]) .curtainBody > :nth-child(1) { transition-delay: .18s; }
+:global(html[data-x-leaving]) .curtainBody > :nth-child(2) { transition-delay: .24s; }
+:global(html[data-x-leaving]) .curtainBody > :nth-child(3) { transition-delay: .3s; }
+/* 抜ける時は中身が先に上へ逃げる */
+:global(html[data-x-entering]) .curtainBody > * { opacity: 0; transform: translateY(-48px); transition-duration: .35s, .7s; }
+
+.curtainLogo { display: block; width: clamp(96px, 9vw, 132px); height: auto; filter: drop-shadow(0 0 16px rgba(99, 220, 255, .45)); }
+.curtainEn {
+  font-family: var(--x-display); font-weight: 900; font-stretch: 72%;
+  font-size: clamp(3.2rem, 11vw, 10rem); line-height: .86; letter-spacing: -.03em; text-transform: uppercase;
+  background: linear-gradient(180deg, #ffffff 30%, #63dcff 130%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.curtainNum { font-family: var(--x-inter); font-size: 11px; font-weight: 800; letter-spacing: .28em; color: #63dcff; }
+
+.curtainBar { position: absolute; left: 50%; bottom: clamp(36px, 8vh, 72px); width: min(240px, 50vw); height: 1px; translate: -50% 0; background: rgba(99, 220, 255, .16); overflow: hidden; }
+.curtainBar i { display: block; height: 100%; background: linear-gradient(90deg, #4478ff, #63dcff); transform: scaleX(0); transform-origin: 0 50%; }
+:global(html[data-x-leaving]) .curtainBar i { transform: scaleX(1); transition: transform 1.4s cubic-bezier(.22, 1, .36, 1) .2s; }
+
+/* ================================================================
+   カーソルの輪(マウスのみ。JS が html[data-x-cursor] を立てた時だけ)
+   ================================================================ */
+.ring {
+  position: fixed; top: 0; left: 0; z-index: 160; pointer-events: none;
+  display: none; width: 0; height: 0;
+  opacity: 0; transition: opacity .3s;
+  mix-blend-mode: difference;
+}
+/* 出すのは表示の切り替えだけ。状態の規則(.ring[data-…])が詳細度で勝てるよう、ここでは他を指定しない */
+:global(html[data-x-cursor]) .ring { display: block; }
+.ring[data-on="true"] { opacity: 1; }
+.ring::before {
+  content: ""; position: absolute; left: -17px; top: -17px; width: 34px; height: 34px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .9);
+  transition: transform .5s cubic-bezier(.22, 1, .36, 1), background-color .3s, box-shadow .3s;
+}
+.ring > span {
+  position: absolute; left: 0; top: 0; translate: -50% -50%; white-space: nowrap;
+  font-family: var(--x-inter); font-size: 11px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase;
+  color: #030719; opacity: 0; scale: .6; transition: opacity .25s, scale .5s cubic-bezier(.22, 1, .36, 1);
+}
+/* リンクの上: 輪が広がる */
+.ring[data-state="link"]::before { transform: scale(1.65); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .7); }
+.ring[data-down="true"]::before { transform: scale(.78); }
+/* ラベル付き(写真を見る・ドラッグする): シアンの円。ここだけ通常の合成 */
+.ring[data-state="view"], .ring[data-state="drag"] { mix-blend-mode: normal; }
+.ring[data-state="view"]::before, .ring[data-state="drag"]::before {
+  transform: scale(2.7); background: #63dcff; box-shadow: 0 0 24px rgba(99, 220, 255, .55);
+}
+.ring[data-state="view"] > span, .ring[data-state="drag"] > span { opacity: 1; scale: 1; }
+.ring[data-state="hide"] { opacity: 0; }
+
+/* ================================================================
+   粒子の質感(ごく薄いフィルムグレイン)。止まった1枚を敷くだけで動かさない
+   ================================================================ */
+.grain {
+  position: fixed; inset: 0; z-index: 140; pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 180px 180px;
+  opacity: .045;
+}

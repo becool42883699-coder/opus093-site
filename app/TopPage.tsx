@@ -13,6 +13,7 @@
  *  - 4幕の本文・諸元は静的HTML。JS無効・reduced-motion・WebGL2非対応では縦積みで読める
  */
 
+import { useLayoutEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { scrollToElement } from "./components/lenisBridge";
@@ -34,10 +35,10 @@ try{g=!!document.createElement('canvas').getContext('webgl2')}catch(e){}
 if(!r&&g)document.documentElement.setAttribute('data-engine-motion','on')}catch(e){}`;
 
 const CHAPTERS = [
-  { n: "01", name: "鉄の塊", head: <>鉄の<em>塊。</em></>, cap: "20万キロ働いた鋳鉄のブロック。面研とラインボーリングで、もう一度ゼロへ戻す。" },
-  { n: "02", name: "透視", head: <>透視<em>する。</em></>, cap: "外装がガラスに変わる。クランクはあなたのスクロールと連動し、カムがバルブを叩き、上死点で点火する。" },
-  { n: "03", name: "手組み", head: <>手で、<em>組む。</em></>, cap: "1,214点。ロッドキャップを外し、ヘッドを吊り上げ、クランクを降ろす——そして全ボルトを規定トルクで組み戻す。" },
-  { n: "04", name: "始動", head: <><em>始動。</em></>, cap: "規定トルクで組み、火を入れる。クランキング——初爆——安定回転。納車まで、あと少し。" },
+  { n: "01", name: "鉄の塊", en: "Raw Iron", head: <>鉄の<em>塊。</em></>, cap: "20万キロ働いた鋳鉄のブロック。面研とラインボーリングで、もう一度ゼロへ戻す。" },
+  { n: "02", name: "透視", en: "X-Ray", head: <>透視<em>する。</em></>, cap: "外装がガラスに変わる。クランクはあなたのスクロールと連動し、カムがバルブを叩き、上死点で点火する。" },
+  { n: "03", name: "手組み", en: "Hand-Built", head: <>手で、<em>組む。</em></>, cap: "1,214点。ロッドキャップを外し、ヘッドを吊り上げ、クランクを降ろす——そして全ボルトを規定トルクで組み戻す。" },
+  { n: "04", name: "始動", en: "Ignition", head: <><em>始動。</em></>, cap: "規定トルクで組み、火を入れる。クランキング——初爆——安定回転。納車まで、あと少し。" },
 ];
 const CHAPTER_NAV = CHAPTERS.map((c) => `${c.n} ${c.name}`);
 
@@ -47,11 +48,12 @@ const LABELS = [
   { i: 3, cls: "lbl3" as const, b: "ロッドキャップ", rest: " — 規定トルク管理" },
 ];
 
+/* count: 数え上げの開始値(effects.ts の data-x-count)。型番は数えない */
 const SPECS = [
   { v: <>TRX-4</>, l: "直列4気筒 DOHC 16V" },
-  { v: <>1,998<small>cc</small></>, l: "排気量" },
-  { v: <>10.8<small>:1</small></>, l: "圧縮比(ブループリント処理)" },
-  { v: <>1,214</>, l: "部品点数 — すべて手組み" },
+  { v: <>1,998<small>cc</small></>, l: "排気量", count: "0" },
+  { v: <>10.8<small>:1</small></>, l: "圧縮比(ブループリント処理)", count: "0" },
+  { v: <>1,214</>, l: "部品点数 — すべて手組み", count: "0" },
 ];
 
 const MARQUEE = ["Body & Paint", "Cargo Bed", "On-site Repair", "Transport", "Engine Overhaul"];
@@ -82,13 +84,26 @@ const WORKS = [
 ];
 
 const FACTS = [
-  { v: "2025", u: "", l: "設立", d: "2025年1月設立。現場に根ざしたサービスを提供" },
-  { v: "02", u: "県", l: "対応エリア", d: "福岡・山口。その他の地域も応相談" },
+  { v: "2025", u: "", l: "設立", d: "2025年1月設立。現場に根ざしたサービスを提供", count: "2000" },
+  { v: "02", u: "県", l: "対応エリア", d: "福岡・山口。その他の地域も応相談", count: "0" },
   { v: "9–18", u: "", l: "営業時間", d: "定休日は祝日・日曜日・土曜日(営業日あり)" },
-  { v: "2", u: "way", l: "修理の形", d: "現場への出張修理と、工場への持込修理" },
+  { v: "2", u: "way", l: "修理の形", d: "現場への出張修理と、工場への持込修理", count: "0" },
 ];
 
+/* クライアント遷移で来た時は上のインラインスクリプトが実行されない(React は描いた <script> を
+   走らせない)ので、同じ判定を描画前にもう一度行う。冪等なので初回読み込みで2回走っても同じ結果。
+   ロード画面(LOADER_PROBE)は初回読み込みだけの演出なので、ここでは走らせない。 */
+const runProbes = () => {
+  try {
+    new Function(MOTION_PROBE + HERO_PROBE)();
+  } catch {
+    /* 判定できなければ静的版のまま */
+  }
+};
+
 export default function TopPage() {
+  useLayoutEffect(runProbes, []);
+
   /* ピン区間を飛ばして事業一覧へ。Lenis があれば滑らかに送る */
   const skipToSections = () => {
     const target = document.getElementById("service");
@@ -141,7 +156,6 @@ export default function TopPage() {
 
         {/* ---------------- 4幕エンジン ---------------- */}
         <div className={eng.page} data-engine-page>
-          <div className={eng.progress} data-progress aria-hidden="true" />
 
           <section className={`${site.section} ${t.engineIntro}`} aria-labelledby="engine-title">
             <div className={site.head}>
@@ -156,6 +170,16 @@ export default function TopPage() {
                 4幕を飛ばして事業一覧へ<i aria-hidden="true" />
               </button>
             </div>
+            {/* これから見る4幕の目次 */}
+            <ol className={t.acts} data-x-reveal="stagger" aria-label="4幕の構成">
+              {CHAPTERS.map((c) => (
+                <li key={c.n}>
+                  <span className={t.actNum} aria-hidden="true">{c.n}</span>
+                  <span className={t.actEn}>Act {c.n} — {c.en}</span>
+                  <b className={t.actJa}>{c.name}</b>
+                </li>
+              ))}
+            </ol>
           </section>
 
           <div className={eng.stageWrap} data-stage-wrap>
@@ -186,7 +210,7 @@ export default function TopPage() {
             <div className={t.specGrid}>
               {SPECS.map((s) => (
                 <div className={t.specCell} key={s.l} data-cell>
-                  <div className={t.specV}>{s.v}</div>
+                  <div className={t.specV} data-x-count={s.count}>{s.v}</div>
                   <div className={t.specL}>{s.l}</div>
                 </div>
               ))}
@@ -207,7 +231,7 @@ export default function TopPage() {
             <h2 id="service-title" className={site.h2} data-x-split>トラックの困りごとを、<br /><em>一社でまとめて。</em></h2>
             <p className={site.lead} data-x-reveal>トラックまわりの困りごとを、一社でまとめて引き受けます。記載以外の作業もご相談いただけます。</p>
           </div>
-          <div className={t.svcList} data-x-preview>
+          <div className={t.svcList} data-x-preview data-cursor="hide">
             {SERVICES.map((sv) => (
               <Link className={t.svcRow} href="/service" key={sv.n} data-x-preview-row data-x-reveal>
                 <span className={t.svcNum}>{sv.n}</span>
@@ -245,12 +269,13 @@ export default function TopPage() {
               <Link className={`${site.pill} ${site.pillGhost}`} href="/works" data-x-magnetic>
                 施工実績を見る<ArrowGlyph className={site.pillArrow} />
               </Link>
+              <p className={t.swipe} aria-hidden="true">Swipe<ArrowGlyph className={t.swipeArrow} /></p>
             </div>
             {WORKS.map((w, i) => (
               <figure className={`${t.workCard} ${w.h > w.w ? t.workTall : ""}`} key={w.img}>
-                <div className={t.workImg}>
+                <Link className={t.workImg} href="/works" data-cursor="view" aria-label={`${w.title}(施工実績へ)`}>
                   <Image src={w.img} alt={`${w.tag} — ${w.title}`} width={w.w} height={w.h} sizes="(max-width: 899px) 78vw, 40vw" data-x-hscroll-img />
-                </div>
+                </Link>
                 <figcaption>
                   <span>{String(i + 1).padStart(2, "0")}</span>
                   <b>{w.title}</b>
@@ -260,6 +285,7 @@ export default function TopPage() {
             ))}
           </div>
           <div className={t.worksBar} aria-hidden="true"><i data-x-hscroll-bar /></div>
+          <p className={t.worksCount} aria-hidden="true"><b data-x-hscroll-count>01</b> / {String(WORKS.length).padStart(2, "0")}</p>
         </section>
 
         {/* ---------------- 数字 ---------------- */}
@@ -270,7 +296,7 @@ export default function TopPage() {
             {FACTS.map((f) => (
               <div key={f.l} className={t.fact}>
                 <dt>{f.l}</dt>
-                <dd className={t.factV}>{f.v}<small>{f.u}</small></dd>
+                <dd className={t.factV} data-x-count={f.count}>{f.v}<small>{f.u}</small></dd>
                 <dd className={t.factD}>{f.d}</dd>
               </div>
             ))}
