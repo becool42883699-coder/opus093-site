@@ -5,7 +5,7 @@
  *
  * 命綱: 電話ボタンはどのスクロール位置・どの画面幅でも押せる。隠す演出を入れない。
  * 帯は v14(ユーザー制作版)と同じ濃紺のグラデで、どの面の上でも変えない。
- * ロゴは公式ロゴ(public/brand/trex-logo.png)。
+ * ロゴは公式ロゴ(public/brand/trex-logo.svg)。
  *
  * chapters を渡すとトップの4幕用の章ナビを出す。EngineScene が
  * [data-chapnav] / [data-chapnow] を document から引いて書き換える。
