@@ -106,15 +106,18 @@ python preview/render_poses.py     # preview/out/ に各ポーズの画像を出
 - 静止画の控え(`img.dino`)は全体の `img{max-width:100%}` で縮められてスマホで崩れていた(チャット版から)→ `max-width:none`。
 - JS 無効では `<noscript>` で静止画を出し、見出しの位置も CSS で決める(JS が無いと heroLayout が走らない)。
 - OGP・テーマ色・ファビコン(インラインSVG)・構造化データ(AutoRepair)を追加。
-- **ロゴは全部、背骨ロゴ**(ヒーローの左・ヘッダー・メニュー・フッター)。2026-10-18 ユーザー指定「ヒーローの左にロゴ」+ ロゴデータ受領。
-  - 原本は `brand/`(ユーザーから受け取った `T-Rex_spine_4formats.zip` の中身そのまま: SVG / AI / PDF / EPS / 透過PNG / データ仕様.txt)。
-    全形状パス化済み・RGB・青の濃淡はベクターのグラデーション。**原本は書き換えない。**
-  - 原本は紺→明るい青で、このページの青(#0164cc)・黒の面では沈む。そこで**形はそのまま色だけ**
-    「紺→白 / 明るい青→シアン(#00cfff)」に写した `site/assets/logo-spine-reverse.svg` を使う。
-    作り直す時は `python3 tools/logo_reverse.py brand/T-Rex_spine.svg site/assets/logo-spine-reverse.svg`。
-    白い面に置く日が来たら原本の `brand/T-Rex_spine.svg` をそのまま使えばよい。
-  - 縦横比は 922:760(約1.21)。ヒーローの幅は PC `clamp(250px,25vw,420px)`、スマホ `min(250px,62vw,24svh)`。
+- **ロゴは全部、弧のロゴ(データの色のまま)**(ヒーローの左・ヘッダー・メニュー・フッター)。
+  2026-10-18 ユーザー指定「全部」「データの色のまま」。
+  - 原本は `brand/T-Rex_arc.ai`(Illustrator。中身は PDF で、図形35個・紺 #04113b ＋ブルー #005bff の2色だけ)。
+    `site/assets/logo-arc.svg` はそれを PyMuPDF で図形のまま SVG にし、全面クリップとレイヤー名だけ外したもの。
+    **色は触っていない。** 原本色の控えが `brand/T-Rex_arc.svg`。
+  - **注意(ユーザーに報告済み・判断待ち)**: データの色のままだと、黒い面(メニュー・フッター)では紺の部分がほぼ見えず、
+    青い面(ヒーロー・ヘッダー)ではブルーの部分(右上の丸・x の右半分)が背景に溶ける。PCのヘッダーは「T-Re>」に見える。
+  - 縦横比は 840:547(約1.54)。ヒーローの幅は PC `clamp(250px,25vw,420px)`、スマホ `min(250px,62vw,24svh)`。
     **スマホは高さ(svh)でも縛ること。** 縛らないと iPhone SE 等でボタンが恐竜のヘルメットに重なる。
+  - その前に使っていた**背骨ロゴ**の原本も `brand/` に残してある(`T-Rex_spine_4formats.zip` の中身そのまま)。
+    白→シアンにした版は `python3 tools/logo_reverse.py brand/T-Rex_spine.svg site/assets/logo-spine-reverse.svg` で作り直せる。
+    **原本は書き換えない。**
   - ヘッダーは高さ 72px(スマホ 58px)。前の細い線のロゴを小さくしたら「何か白いもの」にしか見えず「ロゴが反映されてない」と言われた。これより小さくしない。
   - ロゴに drop-shadow を掛けると青地で四角い影が出たので掛けない。
   - 社名の表記はページ本文が「T-rex株式会社」(ヘルメットの字と同じ)、ロゴが「T-Rex株式会社」。どちらに揃えるかは未決定(ユーザーに確認中)。
