@@ -60,11 +60,13 @@ img{max-width:100%}
   padding:calc(16px + env(safe-area-inset-top,0px)) clamp(20px,4vw,56px) 16px;transition:background .3s,box-shadow .3s,padding .3s}
 .hd.solid{background:var(--blue);box-shadow:0 1px 0 rgba(255,255,255,.12);padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:10px}
 .logo{display:flex;align-items:center;text-decoration:none;line-height:1;flex:none}
-/* 公式ロゴ(白抜き。既存の T-REX サイトと同じ assets/trex-logo.png) */
-.logo img{display:block;width:auto;height:62px;transition:height .3s}
-.hd.solid .logo img{height:52px}
-.ft .logo img{height:84px}
-@media (max-width:899px){ .logo img{height:54px} .hd.solid .logo img{height:48px} }
+/* 公式ロゴ(白抜き)。既存の T-REX サイトの trex-logo.png(231×150)を4倍に拡大し、
+   縁をくっきりさせ直した assets/trex-logo@4x.png を使う(ヒーローの大きさでもぼやけない) */
+/* 線が細いロゴなので、小さいと「何か白いもの」にしか見えない(実際にそう言われた)。社名が読める大きさを下限にする */
+.logo img{display:block;width:auto;height:78px;margin:-6px 0;transition:height .3s}
+.hd.solid .logo img{height:66px}
+.ft .logo img{height:120px}
+@media (max-width:899px){ .logo img{height:62px} .hd.solid .logo img{height:56px} }
 @media (prefers-reduced-motion:reduce){ .logo img{transition:none} }
 .nav{margin-left:auto;display:flex;align-items:center;gap:clamp(18px,2.4vw,36px)}
 .nav ul{display:flex;gap:clamp(18px,2.4vw,36px);list-style:none;margin:0;padding:0}
@@ -115,6 +117,8 @@ img.dino{max-width:none}
 .lockup{margin:0;line-height:.9;display:flex;flex-direction:column;align-items:flex-start}
 .lockup .wm{font-size:clamp(68px,9.4vw,152px);letter-spacing:-.035em;margin-left:-.04em}
 .lockup .kk{font-weight:900;font-size:clamp(36px,4.9vw,80px);letter-spacing:.06em;margin-top:.12em}
+/* ヒーローの社名は公式ロゴ(2026-10-18 ユーザー指定「ヒーローの左にロゴ」) */
+.lockup img{display:block;width:clamp(280px,31vw,500px);height:auto;margin-left:-.4%}
 .tagline{margin:clamp(22px,3vw,40px) 0 0;font-size:clamp(16px,1.45vw,21px);font-weight:500;letter-spacing:.32em}
 .rule{display:block;width:56px;height:2px;background:currentColor;margin:clamp(18px,2.2vw,28px) 0 0;border:0}
 .lead{margin:clamp(16px,2vw,24px) 0 0;font-size:clamp(14px,1.05vw,16px);line-height:1.9;letter-spacing:.06em;color:var(--ink-soft)}
@@ -228,6 +232,8 @@ img.dino{max-width:none}
   .hero .copy{left:22px;right:22px;max-width:none}
   .lockup .wm{font-size:clamp(60px,17vw,96px)}
   .lockup .kk{font-size:clamp(30px,8.4vw,48px)}
+  /* 高さの低いスマホ(iPhone SE 等)では、ボタンが恐竜のヘルメットに重ならないよう画面の高さでも縛る */
+  .lockup img{width:min(300px,74vw,30svh)}
   .tagline{letter-spacing:.24em}
   .actions .btn{flex:1 1 auto;padding:0 20px}
   .svc{grid-template-columns:1fr}
@@ -246,7 +252,7 @@ img.dino{max-width:none}
 </head>
 <body>
 <header class="hd">
-  <a class="logo" href="#top" aria-label="T-rex株式会社 トップへ"><img src="assets/trex-logo.png" alt="T-rex株式会社" width="231" height="150"></a>
+  <a class="logo" href="#top" aria-label="T-rex株式会社 トップへ"><img src="assets/trex-logo@4x.png" alt="T-rex株式会社" width="231" height="150"></a>
   <nav class="nav" aria-label="メイン">
     <ul>
       <li><a href="#service">事業内容</a></li>
@@ -265,7 +271,7 @@ img.dino{max-width:none}
 
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="メニュー" hidden>
   <div class="top">
-    <a class="logo" href="#top"><img src="assets/trex-logo.png" alt="T-rex株式会社" width="231" height="150"></a>
+    <a class="logo" href="#top"><img src="assets/trex-logo@4x.png" alt="T-rex株式会社" width="231" height="150"></a>
     <button class="close" type="button" aria-label="メニューを閉じる"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
   <ul>
@@ -284,7 +290,7 @@ img.dino{max-width:none}
   <img class="dino" alt="ヘルメットをかぶった青い恐竜のキャラクター" src="assets/fallback.webp" width="1672" height="941" hidden>
   <div class="ledge"></div>
   <div class="copy">
-    <h1 class="lockup" id="hero-title"><span class="wm"><span class="t">T</span>-rex</span><span class="kk">株式会社</span></h1>
+    <h1 class="lockup" id="hero-title"><img src="assets/trex-logo@4x.png" alt="T-rex株式会社" width="231" height="150"></h1>
     <p class="tagline">技術で、未来の現場を支える。</p>
     <hr class="rule">
     <p class="lead">鈑金塗装・荷台換装・出張修理。<br>北九州から、福岡・山口の現場へ。</p>
@@ -445,7 +451,7 @@ img.dino{max-width:none}
 
 <footer class="ft">
   <div class="row">
-    <a class="logo" href="#top"><img src="assets/trex-logo.png" alt="T-rex株式会社" width="231" height="150"></a>
+    <a class="logo" href="#top"><img src="assets/trex-logo@4x.png" alt="T-rex株式会社" width="231" height="150"></a>
     <ul>
       <li><a href="#service">事業内容</a></li>
       <li><a href="#works">施工実績</a></li>
