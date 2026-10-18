@@ -1,0 +1,13 @@
+T-Rex 背骨ロゴ／4形式の受け渡しデータ
+
+T-Rex_spine.svg：SVGベクターデータ
+T-Rex_spine.ai：Illustrator編集用データ（PDF互換あり）
+T-Rex_spine.pdf：ベクターPDF（画像の埋め込みなし）
+T-Rex_spine.eps：EPSベクターデータ（Illustrator 17互換、PostScript Level 3）
+T-Rex_spine_transparent.png：背景透過PNG（参考用）
+
+文字を含む全形状をパス化済み。フォント、リンク画像、埋め込み画像は不要です。
+白い背景オブジェクトは含まれていません。PDF等で白く見える部分はページの表示色です。
+RGBカラー。青の濃淡はベクターグラデーションです。
+拡大縮小時は縦横比を固定してください。
+仕上がりサイズと用途を業者様へ伝え、印刷用の色変換や加工用の調整は制作条件に合わせてください。
