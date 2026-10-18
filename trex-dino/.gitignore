@@ -1,0 +1,8 @@
+node_modules/
+__pycache__/
+tools/preview/out/
+tools/v2_*
+tools/geo5.json
+tools/geo6.json
+tools/atlas_*.png
+tools/orig_nt.png

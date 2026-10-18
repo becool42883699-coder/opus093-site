@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>T-rex株式会社｜鈑金塗装・荷台換装・出張修理｜北九州</title>
+<meta name="description" content="T-rex株式会社は北九州を拠点に、福岡・山口で鈑金塗装、荷台換装、出張修理を行っています。車両修理・事故対応・点検・陸送もご相談ください。TEL 090-7531-5428（9:00〜18:00）">
+<meta name="theme-color" content="#0164cc">
+<meta property="og:type" content="website">
+<meta property="og:title" content="T-rex株式会社｜技術で、未来の現場を支える。">
+<meta property="og:description" content="北九州から、福岡・山口の現場へ。鈑金塗装・荷台換装・出張修理。">
+<meta property="og:image" content="assets/fallback.webp">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230164cc'/%3E%3Ctext x='32' y='46' text-anchor='middle' font-family='Arial Black,Arial' font-weight='900' font-style='italic' font-size='40' fill='%2300cfff'%3ET%3C/text%3E%3C/svg%3E">
+<!-- JS が動かない時は、恐竜を動かない絵で出す -->
+<noscript><style>
+  canvas.dino{display:none}
+  .hero img.dino[hidden]{display:block;right:0;bottom:0;width:min(100%,calc(100svh*1672/941));height:auto}
+  .hero .copy{top:max(110px,calc(50svh - 260px))}
+  .stage img.dino[hidden]{display:block}
+  @media (max-width:899px){
+    .hero img.dino[hidden]{right:auto;left:-60vw;width:170vw}
+    .hero .copy{top:96px}
+  }
+</style></noscript>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@1,125,900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"AutoRepair","name":"T-rex株式会社","description":"北九州を拠点に、福岡・山口で鈑金塗装・荷台換装・出張修理を行う会社","telephone":"+81-90-7531-5428","faxNumber":"+81-93-967-2347","email":"info@t-rex-works.com","address":{"@type":"PostalAddress","addressRegion":"福岡県","addressLocality":"北九州市","addressCountry":"JP"},"areaServed":["福岡県","山口県"],"openingHours":"Mo-Fr 09:00-18:00","foundingDate":"2025-01"}
+</script>
+<style>
+:root{
+  --blue:#0164cc; --ledge:#0160c6; --ledge-hi:#0474e1; --blue-ink:#0a4fa3;
+  --ink:#ffffff; --ink-soft:#dceaff; --navy:#071d3d; --navy-soft:#3d5270; --line:#d5e1f0;
+  --paper:#ffffff; --mist:#eef4fb; --cyan:#00cfff; --black:#000000; --focus:#ffe14d;
+  --wm:"Archivo","Arial Black","Hiragino Sans",sans-serif;
+  --jp:"Noto Sans JP","Hiragino Sans","Yu Gothic UI",sans-serif;
+  --pad:clamp(20px,6vw,96px);
+  color-scheme:light; box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --paper:#0b1426; --mist:#0f1c33; --navy:#eef4fb; --navy-soft:#a9bcd6; --line:#24375a; --blue-ink:#6fb3ff; color-scheme:dark; } }
+:root[data-theme="dark"]{ --paper:#0b1426; --mist:#0f1c33; --navy:#eef4fb; --navy-soft:#a9bcd6; --line:#24375a; --blue-ink:#6fb3ff; color-scheme:dark; }
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 84px)}
+@media (prefers-reduced-motion:no-preference){ html{scroll-behavior:smooth} }
+html,body{margin:0}
+body{background:var(--paper);color:var(--navy);font-family:var(--jp);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--blue)}
+a{color:inherit}
+img{max-width:100%}
+:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:4px}
+.t{color:var(--cyan)}
+.wm{font-family:var(--wm);font-style:italic;font-weight:900;font-stretch:125%;letter-spacing:-.03em}
+.sr{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- header */
+.hd{position:fixed;top:0;left:0;right:0;z-index:9;display:flex;align-items:center;gap:32px;color:#fff;
+  padding:calc(16px + env(safe-area-inset-top,0px)) clamp(20px,4vw,56px) 16px;transition:background .3s,box-shadow .3s,padding .3s}
+.hd.solid{background:var(--blue);box-shadow:0 1px 0 rgba(255,255,255,.12);padding-top:calc(10px + env(safe-area-inset-top,0px));padding-bottom:10px}
+.logo{display:flex;align-items:baseline;gap:10px;text-decoration:none;line-height:1}
+.logo .wm{font-size:26px}
+.logo .kk{font-weight:900;font-size:14px;letter-spacing:.08em}
+.nav{margin-left:auto;display:flex;align-items:center;gap:clamp(18px,2.4vw,36px)}
+.nav ul{display:flex;gap:clamp(18px,2.4vw,36px);list-style:none;margin:0;padding:0}
+.nav ul a{text-decoration:none;font-weight:500;font-size:15px;letter-spacing:.06em;padding:10px 0;display:inline-block}
+.nav ul a:hover{text-decoration:underline;text-underline-offset:6px;text-decoration-thickness:2px}
+/* PCのヘッダーの電話番号(すぐ電話したい人のために常に見える位置) */
+.nav .hd-tel{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-family:var(--wm);font-style:italic;font-weight:900;font-size:18px;letter-spacing:.01em;white-space:nowrap}
+.nav .hd-tel svg{width:18px;height:18px}
+.nav .hd-tel:hover{text-decoration:underline;text-underline-offset:5px}
+.btn{white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;padding:0 26px;border-radius:999px;font-weight:700;font-size:15px;letter-spacing:.08em;text-decoration:none;transition:background .2s,color .2s,border-color .2s}
+.btn svg{width:18px;height:18px;flex:none}
+.btn-black{background:var(--black);color:#fff;border:2px solid var(--black)}
+.btn-black:hover{background:#fff;color:#000;border-color:#fff}
+.btn-line{border:2px solid rgba(255,255,255,.9);color:#fff}
+.btn-line:hover{background:#fff;color:var(--blue)}
+.btn-blue{background:var(--blue);color:#fff;border:2px solid var(--blue)}
+.btn-blue:hover{background:transparent;color:var(--blue-ink);border-color:var(--blue-ink)}
+.nav .btn{min-height:44px;padding:0 22px;font-size:14px}
+/* スマホのヘッダー: 電話ボタン + メニュー */
+.call-btn{display:none;margin-left:auto;width:48px;height:48px;border-radius:50%;background:#fff;color:var(--blue);align-items:center;justify-content:center;text-decoration:none}
+.call-btn svg{width:22px;height:22px}
+.menu-btn{display:none;width:48px;height:48px;border:0;border-radius:50%;background:var(--black);color:#fff;cursor:pointer;align-items:center;justify-content:center}
+.menu-btn svg{width:22px;height:22px}
+.sheet{position:fixed;inset:0;z-index:20;background:var(--black);color:#fff;display:flex;flex-direction:column;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px))}
+.sheet[hidden]{display:none}
+.sheet .top{display:flex;align-items:center}
+.sheet .close{margin-left:auto;width:48px;height:48px;border-radius:50%;border:2px solid #fff;background:transparent;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sheet ul{list-style:none;margin:40px 0 0;padding:0}
+.sheet li a{display:block;padding:18px 0;font-size:22px;font-weight:700;letter-spacing:.08em;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.18)}
+.sheet .btn{margin-top:32px;background:var(--blue);border:0;color:#fff;min-height:56px;font-size:17px}
+.sheet .sheet-tel{margin-top:auto;padding-top:32px;display:flex;flex-direction:column;gap:4px;text-decoration:none}
+.sheet .sheet-tel b{font-family:var(--wm);font-style:italic;font-weight:900;font-size:30px;letter-spacing:.01em}
+.sheet .sheet-tel span{font-size:13px;letter-spacing:.06em;color:#c9d3e0}
+
+/* ---------- dino stage (shared by hero and contact) */
+.dino{position:absolute;display:block;z-index:1;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 10%),linear-gradient(to right,transparent,#000 6%);
+  mask-image:linear-gradient(to bottom,transparent,#000 10%),linear-gradient(to right,transparent,#000 6%);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
+.dino[hidden]{display:none}
+/* 静止画の控え(WebGL非対応・JS無効)。スマホでは画面より広く置くので、全体の img{max-width:100%} を外す */
+img.dino{max-width:none}
+.ledge{position:absolute;left:0;right:0;bottom:0;z-index:0;background:var(--ledge);box-shadow:inset 0 2px 0 var(--ledge-hi)}
+
+/* ---------- hero */
+.hero{position:relative;height:100vh;height:100svh;min-height:600px;overflow:hidden;isolation:isolate;background:var(--blue);color:#fff}
+.hero .copy{position:absolute;z-index:3;left:var(--pad);display:flex;flex-direction:column;align-items:flex-start;max-width:min(560px,44vw)}
+.lockup{margin:0;line-height:.9;display:flex;flex-direction:column;align-items:flex-start}
+.lockup .wm{font-size:clamp(68px,9.4vw,152px);letter-spacing:-.035em;margin-left:-.04em}
+.lockup .kk{font-weight:900;font-size:clamp(36px,4.9vw,80px);letter-spacing:.06em;margin-top:.12em}
+.tagline{margin:clamp(22px,3vw,40px) 0 0;font-size:clamp(16px,1.45vw,21px);font-weight:500;letter-spacing:.32em}
+.rule{display:block;width:56px;height:2px;background:currentColor;margin:clamp(18px,2.2vw,28px) 0 0;border:0}
+.lead{margin:clamp(16px,2vw,24px) 0 0;font-size:clamp(14px,1.05vw,16px);line-height:1.9;letter-spacing:.06em;color:var(--ink-soft)}
+.actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:clamp(22px,2.6vw,34px)}
+
+/* ---------- sections */
+.sec{padding:clamp(80px,11vw,160px) var(--pad)}
+.wrap{max-width:1200px;margin:0 auto}
+.h2{margin:0;font-weight:900;font-size:clamp(32px,4.2vw,58px);line-height:1.25;letter-spacing:.04em}
+.sec-lead{margin:24px 0 0;max-width:36em;font-size:clamp(15px,1.15vw,17px);line-height:2;letter-spacing:.05em;color:var(--navy-soft)}
+.sec .rule{color:var(--blue-ink)}
+
+/* service */
+.svc{display:grid;grid-template-columns:repeat(3,1fr);margin-top:clamp(48px,6vw,80px);border-top:2px solid var(--navy)}
+.svc article{padding:40px clamp(20px,2.4vw,36px) 8px 0;display:flex;flex-direction:column}
+.svc article+article{padding-left:clamp(20px,2.4vw,36px);border-left:1px solid var(--line)}
+.svc svg{width:64px;height:64px;color:var(--blue-ink)}
+.svc a svg{width:16px;height:16px}
+.svc h3{margin:28px 0 0;font-size:clamp(22px,2vw,28px);font-weight:900;letter-spacing:.06em}
+.svc p{margin:16px 0 0;line-height:1.95;letter-spacing:.04em;color:var(--navy-soft)}
+.svc a{margin-top:auto;padding-top:28px;font-weight:700;letter-spacing:.06em;color:var(--blue-ink);text-decoration:none;display:inline-flex;gap:8px;align-items:center;min-height:44px}
+.svc a:hover{text-decoration:underline;text-underline-offset:5px}
+/* そのほかの対応 */
+.more{margin-top:clamp(48px,6vw,72px);padding-top:28px;border-top:1px solid var(--line)}
+.more-h{margin:0;font-weight:900;font-size:15px;letter-spacing:.12em;color:var(--blue-ink)}
+.more ul{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0 0;padding:0;list-style:none}
+.more li{padding:18px 20px 20px;border-radius:14px;background:var(--mist)}
+.more b{display:block;font-size:17px;font-weight:900;letter-spacing:.06em}
+.more span{display:block;margin-top:8px;font-size:14px;line-height:1.8;letter-spacing:.04em;color:var(--navy-soft)}
+
+/* area */
+.area{background:var(--blue);color:#fff;position:relative;overflow:hidden}
+.area .grid{display:grid;grid-template-columns:1fr 1.1fr;gap:clamp(40px,6vw,96px);align-items:center}
+.area .h2{font-size:clamp(34px,4.6vw,64px)}
+.area .sec-lead{color:var(--ink-soft)}
+.area .rule{color:#fff}
+.map{width:100%;height:auto;display:block}
+.map text{font-family:var(--jp);font-weight:900;fill:#fff}
+.map .sub{font-weight:500;fill:var(--ink-soft)}
+.ways{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 0;padding:0;list-style:none}
+.ways li{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:999px;border:2px solid rgba(255,255,255,.9);font-weight:700;font-size:15px;letter-spacing:.06em}
+.ways svg{width:18px;height:18px}
+
+/* works */
+.works{background:var(--mist)}
+.works .head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(16px,2vw,28px);margin-top:clamp(40px,5vw,64px);list-style:none;padding:0}
+.card{background:var(--paper);border-radius:18px;overflow:hidden;margin:0}
+.ph{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;background:var(--line)}
+.card .body{padding:22px 24px 26px}
+.card .tag{display:inline-block;font-size:13px;font-weight:700;letter-spacing:.06em;color:#fff;background:var(--blue);border-radius:999px;padding:4px 12px}
+.card h3{margin:14px 0 0;font-size:18px;font-weight:700;line-height:1.6;letter-spacing:.04em}
+.card p{margin:6px 0 0;font-size:14px;line-height:1.8;letter-spacing:.04em;color:var(--navy-soft)}
+
+/* company */
+.company .grid{display:grid;grid-template-columns:1fr 2fr;gap:clamp(32px,6vw,96px)}
+.dl{margin:0;border-top:2px solid var(--navy)}
+.dl div{display:grid;grid-template-columns:9em 1fr;gap:16px;padding:22px 0;border-bottom:1px solid var(--line)}
+.dl dt{font-weight:700;letter-spacing:.06em}
+.dl dd{margin:0;line-height:1.8;letter-spacing:.04em;color:var(--navy-soft)}
+.dl dd a{color:var(--blue-ink);font-weight:700}
+
+/* recruit */
+.recruit{background:var(--black);color:#fff;position:relative;overflow:hidden}
+.recruit .bigmark{position:absolute;right:-.06em;bottom:-.2em;font-size:clamp(160px,26vw,420px);line-height:1;color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.12);pointer-events:none;user-select:none}
+.recruit .bigmark .t{color:transparent;-webkit-text-stroke-color:rgba(0,207,255,.35)}
+.recruit .wrap{position:relative}
+.recruit .sec-lead{color:#c9d3e0}
+.recruit .rule{color:var(--cyan)}
+.jobs{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;margin:clamp(36px,4vw,56px) 0 0;padding:0;list-style:none;max-width:860px;border:1px solid rgba(255,255,255,.18);border-radius:18px;overflow:hidden;background:rgba(255,255,255,.18)}
+.jobs li{padding:24px 26px 26px;background:#000}
+.jobs b{display:block;font-size:18px;font-weight:900;letter-spacing:.06em}
+.jobs small{display:block;margin-top:4px;font-family:var(--wm);font-style:italic;font-weight:900;font-size:13px;letter-spacing:.04em;color:var(--cyan)}
+.jobs span{display:block;margin-top:10px;font-size:14px;line-height:1.8;letter-spacing:.04em;color:#c9d3e0}
+
+/* contact */
+.contact{position:relative;background:var(--blue);color:#fff;overflow:hidden;isolation:isolate;padding:clamp(80px,10vw,140px) var(--pad) 0}
+.contact .grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(24px,4vw,64px);align-items:end;max-width:1200px;margin:0 auto}
+.contact .info{padding-bottom:clamp(110px,12vw,170px);position:relative;z-index:3}
+.contact .sec-lead{color:var(--ink-soft)}
+.contact .rule{color:#fff}
+.tel{margin-top:36px;display:flex;flex-direction:column;gap:6px}
+.tel .num{display:inline-flex;align-items:center;gap:.3em;font-family:var(--wm);font-style:italic;font-weight:900;font-size:clamp(32px,3.6vw,50px);letter-spacing:.01em;text-decoration:none;white-space:nowrap}
+.tel .num svg{width:.62em;height:.62em;flex:none}
+.tel .num:hover{text-decoration:underline;text-underline-offset:8px;text-decoration-thickness:3px}
+.tel .hours{font-size:14px;line-height:1.8;letter-spacing:.06em;color:var(--ink-soft)}
+.tel .sub{font-size:14px;letter-spacing:.06em;color:var(--ink-soft)}
+.tel .sub a{color:#fff;font-weight:700}
+.stage{position:relative;aspect-ratio:1.137;overflow:hidden;z-index:1}
+.stage .dino{width:156.25%;height:auto;left:-56.25%;bottom:0;top:auto;aspect-ratio:1672/941;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 12%),linear-gradient(to right,transparent 36%,#000 38.5%,#000 97%,transparent);
+  mask-image:linear-gradient(to bottom,transparent,#000 12%),linear-gradient(to right,transparent 36%,#000 38.5%,#000 97%,transparent)}
+.contact .ledge{z-index:0;pointer-events:none}
+
+/* footer */
+.ft{background:var(--black);color:#fff;padding:56px var(--pad) calc(32px + env(safe-area-inset-bottom,0px))}
+.ft .row{max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;gap:24px 48px;align-items:center}
+.ft ul{display:flex;flex-wrap:wrap;gap:8px 28px;list-style:none;margin:0 0 0 auto;padding:0}
+.ft ul a{text-decoration:none;font-size:14px;letter-spacing:.06em;display:inline-block;padding:10px 0}
+.ft address{max-width:1200px;margin:28px auto 0;display:flex;flex-wrap:wrap;gap:2px 24px;font-style:normal;font-size:13px;line-height:1.9;letter-spacing:.06em;color:#c9d3e0}
+.ft address span{white-space:nowrap}
+.ft address span:last-child{white-space:normal}
+.ft address a{color:#fff;text-decoration:none}
+.ft small{display:block;max-width:1200px;margin:24px auto 0;color:#8b97a8;font-size:12px;letter-spacing:.06em}
+
+@media (max-width:1099px){ .nav .hd-tel{display:none} .more ul{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:899px){
+  .nav{display:none}
+  .call-btn,.menu-btn{display:inline-flex}
+  .hd{gap:10px}
+  .hero .copy{left:22px;right:22px;max-width:none}
+  .lockup .wm{font-size:clamp(60px,17vw,96px)}
+  .lockup .kk{font-size:clamp(30px,8.4vw,48px)}
+  .tagline{letter-spacing:.24em}
+  .actions .btn{flex:1 1 auto;padding:0 20px}
+  .svc{grid-template-columns:1fr}
+  .svc article,.svc article+article{padding:32px 0 8px;border-left:0;border-bottom:1px solid var(--line)}
+  .area .grid,.company .grid,.contact .grid{grid-template-columns:1fr}
+  .cards{grid-template-columns:1fr}
+  .dl div{grid-template-columns:1fr;gap:6px}
+  .jobs{grid-template-columns:1fr}
+  .contact .info{padding-bottom:0}
+  .ft ul{margin-left:0}
+}
+@media (max-width:519px){ .more ul{grid-template-columns:1fr} }
+@media (max-width:899px) and (max-height:760px){ .hero .rule,.hero .lead{display:none} }
+@media (prefers-reduced-motion:reduce){ .btn,.hd{transition:none} }
+</style>
+</head>
+<body>
+<header class="hd">
+  <a class="logo" href="#top" aria-label="T-rex株式会社 トップへ"><span class="wm"><span class="t">T</span>-rex</span><span class="kk">株式会社</span></a>
+  <nav class="nav" aria-label="メイン">
+    <ul>
+      <li><a href="#service">事業内容</a></li>
+      <li><a href="#works">施工実績</a></li>
+      <li><a href="#company">会社概要</a></li>
+      <li><a href="#recruit">採用情報</a></li>
+    </ul>
+    <a class="hd-tel" href="tel:09075315428" aria-label="電話する 090-7531-5428"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>090-7531-5428</a>
+    <a class="btn btn-black" href="#contact">お問い合わせ</a>
+  </nav>
+  <a class="call-btn" href="tel:09075315428" aria-label="電話する 090-7531-5428"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg></a>
+  <button class="menu-btn" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="sheet">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 8h16M4 16h16"/></svg>
+  </button>
+</header>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="メニュー" hidden>
+  <div class="top">
+    <a class="logo" href="#top"><span class="wm"><span class="t">T</span>-rex</span><span class="kk">株式会社</span></a>
+    <button class="close" type="button" aria-label="メニューを閉じる"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <ul>
+    <li><a href="#service">事業内容</a></li>
+    <li><a href="#works">施工実績</a></li>
+    <li><a href="#company">会社概要</a></li>
+    <li><a href="#recruit">採用情報</a></li>
+  </ul>
+  <a class="btn" href="#contact">お問い合わせ</a>
+  <a class="sheet-tel" href="tel:09075315428"><b>090-7531-5428</b><span>受付 9:00〜18:00　タップで電話できます</span></a>
+</div>
+
+<main id="top">
+<section class="hero" aria-labelledby="hero-title">
+  <canvas class="dino" data-intro role="img" aria-label="ヘルメットをかぶった青い恐竜のキャラクター。こちらの動きを目で追う"></canvas>
+  <img class="dino" alt="ヘルメットをかぶった青い恐竜のキャラクター" src="assets/fallback.webp" width="1672" height="941" hidden>
+  <div class="ledge"></div>
+  <div class="copy">
+    <h1 class="lockup" id="hero-title"><span class="wm"><span class="t">T</span>-rex</span><span class="kk">株式会社</span></h1>
+    <p class="tagline">技術で、未来の現場を支える。</p>
+    <hr class="rule">
+    <p class="lead">鈑金塗装・荷台換装・出張修理。<br>北九州から、福岡・山口の現場へ。</p>
+    <div class="actions">
+      <a class="btn btn-black" href="#contact">お問い合わせ</a>
+      <a class="btn btn-line" href="#service">事業内容を見る</a>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="service" aria-labelledby="svc-title">
+  <div class="wrap">
+    <h2 class="h2" id="svc-title">事業内容</h2>
+    <hr class="rule">
+    <p class="sec-lead">直す、変える、駆けつける。<br>車両の困りごとを、ひとつの窓口で引き受けます。</p>
+    <div class="svc">
+      <article>
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 40h30l6-10H22l-6 10"/><path d="M8 40v8h44v-8"/><circle cx="18" cy="50" r="4"/><circle cx="44" cy="50" r="4"/><path d="M40 12l8 8M44 8l12 12M36 16l4 4"/><path d="M48 20l-8 8"/></svg>
+        <h3>鈑金塗装</h3>
+        <p>へこみ、キズ、サビの補修から塗装まで。傷んだ車体を、元の姿に戻します。</p>
+        <a href="#contact">相談する<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+      </article>
+      <article>
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 44V30h12l6-8h8v22"/><path d="M32 18h26v26H32"/><path d="M6 44h52"/><circle cx="16" cy="48" r="4"/><circle cx="46" cy="48" r="4"/><path d="M40 10v8M50 10v8M36 10h18"/></svg>
+        <h3>荷台換装</h3>
+        <p>仕事の中身が変われば、荷台も変わる。用途に合わせた載せ替えや改装を行います。</p>
+        <a href="#contact">相談する<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+      </article>
+      <article>
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M32 56s16-14 16-28a16 16 0 0 0-32 0c0 14 16 28 16 28z"/><path d="M26 30l4-4a5 5 0 0 1 7-7l-3 3 1 3 3 1 3-3a5 5 0 0 1-7 7l-4 4"/></svg>
+        <h3>出張修理</h3>
+        <p>動かせない車両の元へ、こちらから伺います。現場での修理に対応します。</p>
+        <a href="#contact">相談する<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+      </article>
+    </div>
+    <div class="more">
+      <p class="more-h">そのほかの対応</p>
+      <ul>
+        <li><b>車両修理</b><span>エンジンから足回りまで、整備士が一括で対応します。</span></li>
+        <li><b>事故対応・保険修理</b><span>事故後の対応から、保険修理までサポートします。</span></li>
+        <li><b>メンテナンス・点検</b><span>定期点検で、トラブルを未然に防ぎます。</span></li>
+        <li><b>車両陸送・軽運送</b><span>車両や資材を、安全・確実にお届けします。</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="sec area" aria-labelledby="area-title">
+  <div class="wrap grid">
+    <div>
+      <h2 class="h2" id="area-title">北九州から、<br>福岡・山口へ。</h2>
+      <hr class="rule">
+      <p class="sec-lead">北九州を拠点に、福岡県と山口県の現場に対応しています。工場への持ち込みも、現場への出張も承ります。その他の地域もご相談ください。</p>
+      <ul class="ways">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s7-6.1 7-12a7 7 0 0 0-14 0c0 5.9 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>出張修理</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21V9l9-6 9 6v12"/><path d="M8 21v-7h8v7"/></svg>持込修理</li>
+      </ul>
+    </div>
+    <svg class="map" viewBox="0 0 560 360" role="img" aria-label="北九州を中心に、西の福岡県と東の山口県へ対応エリアが広がる図">
+      <g fill="none" stroke="rgba(255,255,255,.35)" stroke-width="1.5" stroke-dasharray="4 8">
+        <circle cx="280" cy="180" r="70"/><circle cx="280" cy="180" r="130"/><circle cx="280" cy="180" r="190"/>
+      </g>
+      <path d="M280 180 C 220 200, 160 230, 96 252" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <path d="M280 180 C 340 150, 400 118, 468 96" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="96" cy="252" r="9" fill="#fff"/><circle cx="468" cy="96" r="9" fill="#fff"/>
+      <circle cx="280" cy="180" r="26" fill="var(--cyan)"/><circle cx="280" cy="180" r="10" fill="#000"/>
+      <text x="280" y="132" text-anchor="middle" font-size="30">北九州</text>
+      <text x="232" y="232" text-anchor="middle" font-size="15" class="sub">拠点</text>
+      <text x="96" y="300" text-anchor="middle" font-size="26">福岡県</text>
+      <text x="468" y="68" text-anchor="middle" font-size="26">山口県</text>
+    </svg>
+  </div>
+</section>
+
+<section class="sec works" id="works" aria-labelledby="works-title">
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <h2 class="h2" id="works-title">施工実績</h2>
+        <hr class="rule">
+        <p class="sec-lead">シャーシだけの状態から、根太を据え、床を張って仕上げる。実際の現場の一部です。</p>
+      </div>
+    </div>
+    <ul class="cards">
+      <li class="card"><img class="ph" src="assets/works/works-photo-7.webp" alt="荷台換装の施工前。荷台を外してシャーシだけになったトラック" width="870" height="654" loading="lazy" decoding="async"><div class="body"><span class="tag">荷台換装</span><h3>施工前 — シャーシのみ</h3><p>荷台を外し、骨組みの状態から確認します。</p></div></li>
+      <li class="card"><img class="ph" src="assets/works/works-photo-1.webp" alt="荷台換装の施工中。シャーシの上に根太を並べて固定している" width="870" height="653" loading="lazy" decoding="async"><div class="body"><span class="tag">荷台換装</span><h3>施工中 — 根太の設置</h3><p>用途と積み荷に合わせて、根太を据えます。</p></div></li>
+      <li class="card"><img class="ph" src="assets/works/works-photo-2.webp" alt="荷台換装の完成。木の床板を張り終えたトラックの荷台" width="870" height="654" loading="lazy" decoding="async"><div class="body"><span class="tag">荷台換装</span><h3>床板張替え — 完成</h3><p>床板を張り、仕事に戻れる荷台に仕上げました。</p></div></li>
+      <li class="card"><img class="ph" src="assets/works/works-photo-4.webp" alt="鈑金塗装で鏡面に仕上げたパネル" width="870" height="652" loading="lazy" decoding="async"><div class="body"><span class="tag">鈑金塗装</span><h3>塗装仕上げ — 鏡面パネル</h3><p>下地処理から塗装、磨きまで自社で仕上げます。</p></div></li>
+      <li class="card"><img class="ph" src="assets/works/works-photo-5.webp" alt="塗装ブースで部品を塗装している様子" width="870" height="1160" loading="lazy" decoding="async"><div class="body"><span class="tag">鈑金塗装</span><h3>部品の塗装作業</h3><p>取り外した部品も、一つずつ塗り直します。</p></div></li>
+      <li class="card"><img class="ph" src="assets/works/works-photo-6.webp" alt="工場で特殊車両の架装を行っている様子" width="870" height="654" loading="lazy" decoding="async"><div class="body"><span class="tag">架装</span><h3>特殊車両の架装作業</h3><p>用途に合わせた架装・特装にも対応します。</p></div></li>
+    </ul>
+  </div>
+</section>
+
+<section class="sec company" id="company" aria-labelledby="co-title">
+  <div class="wrap grid">
+    <div>
+      <h2 class="h2" id="co-title">会社概要</h2>
+      <hr class="rule">
+    </div>
+    <dl class="dl">
+      <div><dt>会社名</dt><dd>T-rex株式会社</dd></div>
+      <div><dt>代表者</dt><dd>中津留 龍也</dd></div>
+      <div><dt>設立</dt><dd>2025年1月</dd></div>
+      <div><dt>資本金</dt><dd>300万円</dd></div>
+      <div><dt>所在地</dt><dd>福岡県北九州市</dd></div>
+      <div><dt>事業内容</dt><dd>鈑金塗装、荷台換装・修理、出張修理、車両修理、事故対応・保険修理、メンテナンス・点検、車両陸送・軽運送</dd></div>
+      <div><dt>主な取引先</dt><dd>建設機械リース会社、解体業、建設業、土木業、運送業</dd></div>
+      <div><dt>対応エリア</dt><dd>福岡県、山口県（その他の地域もご相談ください）</dd></div>
+      <div><dt>電話番号</dt><dd><a href="tel:09075315428">090-7531-5428</a></dd></div>
+      <div><dt>FAX</dt><dd>093-967-2347</dd></div>
+      <div><dt>メール</dt><dd><a href="mailto:info@t-rex-works.com">info@t-rex-works.com</a></dd></div>
+      <div><dt>営業時間</dt><dd>9:00〜18:00（定休日：祝日・日曜日・土曜日（営業日あり））</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section class="sec recruit" id="recruit" aria-labelledby="rc-title">
+  <div class="bigmark wm" aria-hidden="true"><span class="t">T</span>-rex</div>
+  <div class="wrap">
+    <h2 class="h2" id="rc-title">現場を支える仲間を、<br>募集しています。</h2>
+    <hr class="rule">
+    <p class="sec-lead">鈑金塗装や車両整備の仕事に興味がある方、まずは気軽に話を聞きに来てください。未経験の方も歓迎します。</p>
+    <ul class="jobs">
+      <li><b>管理士・作業スタッフ</b><small>Site Crew</small><span>現場の安全・管理・調整・記録など、作業が円滑に進むよう現場を支える仕事です。</span></li>
+      <li><b>鈑金・塗装スタッフ</b><small>Body &amp; Paint</small><span>鈑金・塗装や仕上げ作業など、確かな技術で車両や機械をよみがえらせます。</span></li>
+      <li><b>出張サービススタッフ</b><small>Field Service</small><span>お客様の現場へ出向き、点検・修理・作業サポートを行います。</span></li>
+      <li><b>事務・サポートスタッフ</b><small>Office Support</small><span>見積や書類の作成など、現場と会社を内側から支えます。</span></li>
+    </ul>
+    <div class="actions"><a class="btn btn-line" href="#contact">採用について問い合わせる</a></div>
+  </div>
+</section>
+
+<section class="contact" id="contact" aria-labelledby="ct-title">
+  <div class="grid">
+    <div class="info">
+      <h2 class="h2" id="ct-title">お問い合わせ</h2>
+      <hr class="rule">
+      <p class="sec-lead">修理の相談、見積もりの依頼など、お気軽にご連絡ください。急ぎの方はお電話が確実です。</p>
+      <div class="tel">
+        <a class="num" href="tel:09075315428"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z"/></svg>090-7531-5428</a>
+        <span class="hours">受付時間　9:00〜18:00<br>定休日　祝日・日曜日・土曜日（営業日あり）</span>
+        <span class="sub">FAX 093-967-2347　／　<a href="mailto:info@t-rex-works.com">info@t-rex-works.com</a></span>
+      </div>
+      <div class="actions">
+        <a class="btn btn-black" href="tel:09075315428">電話をかける</a>
+        <a class="btn btn-line" href="mailto:info@t-rex-works.com?subject=%E3%81%8A%E5%95%8F%E3%81%84%E5%90%88%E3%82%8F%E3%81%9B%EF%BC%88T-rex%E6%A0%AA%E5%BC%8F%E4%BC%9A%E7%A4%BE%EF%BC%89">メールで問い合わせる</a>
+      </div>
+    </div>
+    <div class="stage">
+      <canvas class="dino" role="img" aria-label="台から顔を出した青い恐竜のキャラクター。こちらを目で追う"></canvas>
+      <img class="dino" alt="台から顔を出した青い恐竜のキャラクター" src="assets/fallback.webp" width="1672" height="941" loading="lazy" hidden>
+    </div>
+  </div>
+  <div class="ledge"></div>
+</section>
+</main>
+
+<footer class="ft">
+  <div class="row">
+    <a class="logo" href="#top"><span class="wm"><span class="t">T</span>-rex</span><span class="kk">株式会社</span></a>
+    <ul>
+      <li><a href="#service">事業内容</a></li>
+      <li><a href="#works">施工実績</a></li>
+      <li><a href="#company">会社概要</a></li>
+      <li><a href="#recruit">採用情報</a></li>
+      <li><a href="#contact">お問い合わせ</a></li>
+    </ul>
+  </div>
+  <address><span>福岡県北九州市</span><span>TEL <a href="tel:09075315428">090-7531-5428</a></span><span>FAX 093-967-2347</span><span>営業時間 9:00〜18:00（定休日：祝日・日曜日・土曜日（営業日あり））</span></address>
+  <small>© 2025 T-rex株式会社</small>
+</footer>
+
+<script src="dino/geo.js"></script>
+<script src="dino/dino-renderer.js"></script>
+<script>
+(()=>{
+// ---------- header + menu
+const hd=document.querySelector('.hd');
+const onScroll=()=>hd.classList.toggle('solid',scrollY>40); addEventListener('scroll',onScroll,{passive:true}); onScroll();
+const mb=document.querySelector('.menu-btn'), sheet=document.getElementById('sheet'), cl=sheet.querySelector('.close');
+function openSheet(o){ sheet.hidden=!o; mb.setAttribute('aria-expanded',o); document.documentElement.style.overflow=o?'hidden':''; (o?cl:mb).focus(); }
+mb.addEventListener('click',()=>openSheet(true)); cl.addEventListener('click',()=>openSheet(false));
+sheet.addEventListener('keydown',e=>{ if(e.key==='Escape') openSheet(false); });
+sheet.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>openSheet(false)));
+
+// ---------- shared data
+const IW=1672, IH=941, HC=[1080,470], LEDGE=825/941;
+const SRC={base:'assets/base.webp',eye:'assets/eye-atlas.png',mask:'assets/mask-atlas.png'};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const makeRenderer=window.TrexDino&&window.TrexDino.makeRenderer;
+
+const load=s=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=s;});
+const imgs=Promise.all(Object.entries(SRC).map(([k,s])=>load(s).then(i=>[k,i]))).then(Object.fromEntries);
+
+// pointer, shared by every dino on the page (client coordinates)
+let px=null, py=null, lastInput=-1e9;
+const setP=e=>{px=e.clientX;py=e.clientY;lastInput=performance.now();};
+addEventListener('pointermove',setP,{passive:true}); addEventListener('pointerdown',setP,{passive:true});
+
+// critically damped spring: smooth start and stop instead of a sudden jump
+function spring(s,target,w,dt){ const a=w*w*(target-s.x)-2*w*s.v; s.v+=a*dt; s.x+=s.v*dt; }
+
+function createDino(cv,{intro=false,lookAt=null}={}){
+  const fb=cv.nextElementSibling;
+  const gl=makeRenderer&&cv.getContext('webgl',{premultipliedAlpha:true,antialias:false});
+  if(!gl){ cv.hidden=true; fb.hidden=false; return {resize(){}}; }
+  function resize(){ const r=cv.getBoundingClientRect(); if(!r.width) return; const dpr=Math.min(2,devicePixelRatio||1);
+    cv.width=Math.min(Math.round(r.width*dpr),IW*1.5|0); cv.height=Math.round(cv.width*IH/IW); gl.viewport(0,0,cv.width,cv.height); }
+  resize();
+  const toImg=(x,y)=>{const r=cv.getBoundingClientRect();return [(x-r.left)/r.width*IW,(y-r.top)/r.height*IH];};
+  let draw=null, raf=0, visible=false, prev=0, firstSeen=-1;
+  const H={x:{x:0,v:0},y:{x:0,v:0}}, E={x:{x:0,v:0},y:{x:0,v:0}};
+  let wx=HC[0], wy=HC[1], nextWander=0, blinkT=-1, nextBlink=performance.now()+3500, lastG=[0,0];
+  let mx=0,my=0,nextMicro=0;
+  imgs.then(I=>{ draw=makeRenderer(gl,I); kick(); }).catch(()=>{cv.hidden=true;fb.hidden=false;});
+
+  function idleTarget(now){
+    if(now<nextWander) return;
+    const r=Math.random();
+    if(r<.45){ wx=HC[0]+(Math.random()-.5)*60; wy=HC[1]+(Math.random()-.5)*40; }
+    else if(r<.65 && lookAt){ const b=lookAt.getBoundingClientRect(); [wx,wy]=toImg(b.left+b.width*.6,b.top+b.height*.5); }
+    else { const s=[[.97,.3],[.6,.92],[.85,.08],[.25,.85],[.95,.8]][Math.floor(Math.random()*5)]; wx=s[0]*IW; wy=s[1]*IH; }
+    nextWander=now+1600+Math.random()*2600;
+  }
+  function blinkAmt(now){
+    if(blinkT<0){ if(now>nextBlink&&!reduce) blinkT=now; else return 0; }
+    const t=now-blinkT, ease=x=>x*x*(3-2*x);
+    if(t<75) return ease(t/75); if(t<115) return 1; if(t<255) return 1-ease((t-115)/140);
+    blinkT=-1; nextBlink=now+(Math.random()<.15?240:2400+Math.random()*4000); return 0;
+  }
+  function frame(now){
+    raf=0; const dt=Math.min(.05,(now-prev)/1000); prev=now;
+    if(firstSeen<0) firstSeen=now;
+    const el=now-firstSeen;
+    const doIntro=intro && !reduce && el<2600 && lastInput<firstSeen;
+    let gx,gy;
+    if(doIntro){ if(el<1500 && lookAt){ const b=lookAt.getBoundingClientRect(); [gx,gy]=toImg(b.left+b.width*.55,b.top+b.height*.45); } else { gx=HC[0]; gy=HC[1]; } }
+    else if(px===null || now-lastInput>3200){ idleTarget(now); gx=wx; gy=wy; }
+    else [gx,gy]=toImg(px,py);
+    let vx=(gx-HC[0])/700, vy=(gy-HC[1])/480; const L=Math.hypot(vx,vy); if(L>1){vx/=L;vy/=L;}
+    if(!doIntro && Math.hypot(vx-lastG[0],vy-lastG[1])>.6 && blinkT<0 && Math.random()<.35 && !reduce) nextBlink=now;
+    lastG=[vx,vy];
+    // tiny fixational eye movements keep the gaze alive while it rests
+    if(!reduce && now>nextMicro){ mx=(Math.random()-.5)*.07; my=(Math.random()-.5)*.05; nextMicro=now+500+Math.random()*1300; }
+    spring(H.x,vx,reduce?9:4.2,dt); spring(H.y,vy,reduce?9:4.2,dt);
+    spring(E.x,vx+mx,reduce?30:26,dt); spring(E.y,vy+my,reduce?30:26,dt);
+    const breath=reduce?0:Math.sin(now/1000*1.4)*.045;
+    let b = doIntro && el<620 ? (el<380?1:1-(el-380)/240) : blinkAmt(now);
+    if(draw) draw(H.x.x,H.y.x*.6+breath,E.x.x,E.y.x,Math.max(0,Math.min(1,b)),.85);
+    kick();
+  }
+  function kick(){ if(draw&&visible&&!raf&&!document.hidden){ prev=performance.now(); raf=requestAnimationFrame(frame);} }
+  new IntersectionObserver(es=>{ visible=es[0].isIntersecting; kick(); }).observe(cv);
+  document.addEventListener('visibilitychange',kick);
+  return {resize};
+}
+
+// ---------- hero layout (character anchored to the ledge, copy in the free space)
+const hero=document.querySelector('.hero'), hcv=hero.querySelector('canvas.dino'), hfb=hcv.nextElementSibling;
+const hledge=hero.querySelector('.ledge'), hcopy=hero.querySelector('.copy'), title=document.getElementById('hero-title');
+function heroLayout(){
+  const vw=hero.clientWidth, vh=hero.clientHeight, mobile=vw<900; let cw,cx0;
+  if(!mobile){ cw=Math.min(vw,vh*IW/IH); cx0=vw-cw; }
+  else { cw=Math.min(vw/0.6,(vh*0.5)*IW/IH); cx0=Math.min(0,vw/2-0.70*cw); if(cx0+cw<vw*0.98) cx0=Math.max(vw-cw,cx0); }
+  const ch=cw*IH/IW, cy0=vh-ch;
+  for(const el of [hcv,hfb]) Object.assign(el.style,{left:cx0+'px',top:cy0+'px',width:cw+'px',height:ch+'px'});
+  hledge.style.height=(ch*(1-LEDGE))+'px';
+  const hdb=hd.offsetHeight;
+  const avail=mobile?cy0+ch*0.06:vh-ch*(1-LEDGE);
+  hcopy.style.top=(hdb+Math.max(8,(avail-hdb-hcopy.offsetHeight)*(mobile?0.45:0.5)))+'px';
+}
+heroLayout();
+const contact=document.getElementById('contact'), ccv=contact.querySelector('canvas.dino'), cledge=contact.querySelector('.ledge');
+function contactLayout(){ const r=ccv.getBoundingClientRect(); cledge.style.height=(r.height*(1-LEDGE))+'px'; }
+contactLayout();
+const dinos=[createDino(hcv,{intro:true,lookAt:title}), createDino(ccv,{lookAt:document.getElementById('ct-title')})];
+function onResize(){ heroLayout(); contactLayout(); dinos.forEach(d=>d.resize()); }
+addEventListener('resize',onResize);
+document.fonts&&document.fonts.ready.then(onResize);
+})();
+</script>
+</body>
+</html>
